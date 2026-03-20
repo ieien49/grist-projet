@@ -53,7 +53,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text-primar
 .tab {
   display: flex; align-items: center; gap: 6px;
   padding: 0 12px; height: 42px;
-  font-size: 13px; font-weight: 400;
+  font-size: 11.5px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase;
   color: var(--text-muted);
   border-bottom: 2px solid transparent;
   cursor: pointer; white-space: nowrap;
@@ -451,6 +451,7 @@ tr:hover .cr-del-btn { opacity: 1; }
 .tl-children { padding-left: 10px; border-left: 1px solid var(--border); margin-left: 3px; margin-bottom: 7px; display: flex; flex-direction: column; gap: 0; }
 #actionTable .tl-children { border-left: none; padding-left: 12px; margin-left: 6px; }
 #spTable .tl-children { border-left: none; padding-left: 12px; margin-left: 6px; }
+#panel-objectifs .sp-wrap { max-width: none; }
 
 /* ══ Shared action row helpers ══ */
 .acp-add-btn { opacity: 0; transition: opacity 0.12s; font-size: 11px; font-weight: 400; color: var(--text-muted); background: none; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 2px 8px; cursor: pointer; font-family: var(--font); white-space: nowrap; flex-shrink: 0; }
@@ -618,6 +619,10 @@ tr:hover .cr-del-btn { opacity: 1; }
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
       Cadre du projet
     </div>
+    <div class="tab" data-tab="objectifs" onclick="switchTab('objectifs')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      Objectifs
+    </div>
     <div class="tab" data-tab="actions" onclick="switchTab('actions')">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
       Plan d'action
@@ -684,10 +689,7 @@ tr:hover .cr-del-btn { opacity: 1; }
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
           Instances
         </div>
-        <div class="cadre-subtab" data-sub="sousprojets" onclick="switchCadreTab('sousprojets')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-          Objectifs opérationnels
-        </div>
+
       </nav>
       <div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
     <div class="cadre-subpanel" id="cadre-acteurs">
@@ -745,7 +747,12 @@ tr:hover .cr-del-btn { opacity: 1; }
       </div>
     </div>
 
-    <div class="cadre-subpanel" id="cadre-sousprojets">
+
+      </div>
+    </div>
+
+    <!-- ── OBJECTIFS ── -->
+    <div class="panel" id="panel-objectifs">
       <div class="panel-header">
         <span class="panel-title">Objectifs opérationnels</span>
         <span class="count-badge" id="spCount">—</span>
@@ -771,10 +778,6 @@ tr:hover .cr-del-btn { opacity: 1; }
         <div id="spTable"><div class="loading"><div class="spinner"></div> Chargement…</div></div>
       </div>
     </div>
-
-      </div>
-    </div>
-
 
     <!-- ── DÉCISIONS ── -->
     <div class="panel" id="panel-decisions">
@@ -1331,12 +1334,15 @@ tr:hover .cr-del-btn { opacity: 1; }
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   var code = document.getElementById('__app_code__').textContent;
-  var blob = new Blob([code], {type: 'application/javascript'});
-  var url  = URL.createObjectURL(blob);
-  var s    = document.createElement('script');
-  s.src    = url;
-  s.onload = function() { URL.revokeObjectURL(url); };
-  document.head.appendChild(s);
+  try {
+    var blob = new Blob([code], {type: 'application/javascript'});
+    var url  = URL.createObjectURL(blob);
+    var s    = document.createElement('script');
+    s.src    = url;
+    s.onload = function() { URL.revokeObjectURL(url); };
+    s.onerror = function() { URL.revokeObjectURL(url); try { (new Function(code))(); } catch(e2) { console.error('Load error:', e2); } };
+    document.head.appendChild(s);
+  } catch(e) { try { (new Function(code))(); } catch(e2) { console.error('Load error:', e2); } }
 });
 </script>
 <script id="__app_code__" type="text/plain">
@@ -1374,7 +1380,6 @@ grist.onRecords(async (records, mappings) => {
   renderActeurs();
   renderInstances();
   renderDefinition();
-  renderSousProjets();
   populateDecisionSelects();
   populateActionSelects();
   if (decMode === 'suivi') renderSuivi();
@@ -1382,6 +1387,8 @@ grist.onRecords(async (records, mappings) => {
   // Re-rendre KPI si visible
   const activeDefSub = document.querySelector('#panel-definition .cadre-subtab.active');
   if (activeDefSub?.dataset.sub === 'def-kpi') renderKpi();
+  // Re-rendre objectifs si visible
+  if (document.getElementById('panel-objectifs')?.classList.contains('active')) renderSousProjets();
 });
 
 // ══ FETCH REF DATA ══
@@ -1485,16 +1492,15 @@ function switchTab(name) {
   document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + name));
   if (name === 'definition') {
     renderDefinition();
-    renderSousProjets();
-    // Re-rendre KPI si l'onglet chiffres clés est actif
     const activeDefSub = document.querySelector('#panel-definition .cadre-subtab.active');
     if (activeDefSub?.dataset.sub === 'def-kpi') renderKpi();
   }
   if (name === 'cadre') {
-    // Activate first sub-tab if none active
-    const activeSub = document.querySelector('.cadre-subtab.active');
-    if (!activeSub) switchCadreTab('acteurs');
-    else switchCadreTab(activeSub.dataset.sub);
+    // Toujours ouvrir sur Acteurs par défaut
+    switchCadreTab('acteurs');
+  }
+  if (name === 'objectifs') {
+    renderSousProjets();
   }
   if (name === 'decisions') {
     switchDecMode('suivi');
@@ -1879,27 +1885,18 @@ document.addEventListener('keydown', e => { if(e.key==='Escape'){closeActeurModa
 // Init compte rendu rows + initial data load on ready
 document.addEventListener('DOMContentLoaded', () => {
   initCrRows();
+  // Bootstrap: load ref data and projets independently of onRecords
+  // so the Définition tab renders even when Acteurs table is empty.
   (async () => {
     try {
       await fetchRefData();
       await fetchProjets();
       await fetchDecisions();
-      await fetchActions();
       renderDefinition();
       renderSousProjets();
       renderInstances();
-      renderActeurs();
       populateDecisionSelects();
-      populateActionSelects();
       if (decMode === 'suivi') renderSuivi();
-      renderActions();
-      // Vider les spinners résiduels si toujours présents
-      ['acteurTable','instanceTable','spTable','actionTable'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el && el.querySelector('.loading')) {
-          el.innerHTML = emptyState('Aucune donnée', 'Aucun enregistrement trouvé.', 'folder');
-        }
-      });
     } catch(e) { console.warn('Bootstrap load error', e); }
   })();
 });
@@ -2205,260 +2202,205 @@ function renderGantt() {
   const cont = document.getElementById('ganttContainer');
   if (!cont) return;
 
-  // ── Construire l'arbre des sous-projets ──
+  // ── Tous les sous-projets (hors maître) ──
   const subs = allProjets.filter(p => p.ref && p.ref !== 0);
   if (!subs.length) {
     cont.innerHTML = `<div style="padding:40px;text-align:center;color:var(--text-muted);font-size:13px">Aucun objectif opérationnel à afficher.</div>`;
     return;
   }
 
-  // Hiérarchie : niveau 1 = enfants directs du maître, niveau 2 = leurs enfants
-  const byId = {};
-  allProjets.forEach(p => { byId[p.id] = { ...p, children: [] }; });
-  allProjets.forEach(p => { if (p.ref && byId[p.ref]) byId[p.ref].children.push(byId[p.id]); });
-  const level1 = masterProjet && byId[masterProjet.id]
-    ? byId[masterProjet.id].children.sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999))
-    : subs.filter(p => { const par = allProjets.find(x => x.id === p.ref); return par && (!par.ref || par.ref === 0); })
-          .sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999));
+  // ── Aplatir en liste ordonnée ──
+  const masterId = masterProjet ? masterProjet.id : null;
+  const lvl1 = subs
+    .filter(p => p.ref === masterId || (!masterId && !subs.find(x => x.id === p.ref)))
+    .sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999));
 
-  // Aplatir en lignes avec profondeur
   const rows = [];
-  const flatten = (node, depth) => {
-    rows.push({ ...node, depth });
-    node.children.sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999)).forEach(c => flatten(c, depth + 1));
-  };
-  level1.forEach(p => flatten(p, 0));
+  lvl1.forEach(p1 => {
+    rows.push({ ...p1, depth: 0 });
+    subs.filter(c => c.ref === p1.id)
+      .sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999))
+      .forEach(c => rows.push({ ...c, depth: 1 }));
+  });
 
   // ── Bornes temporelles ──
-  const allDates = [];
+  const datesMs = [];
   rows.forEach(p => {
-    if (p.debut)     allDates.push(p.debut * 86400000);
-    if (p.fin)       allDates.push(p.fin   * 86400000);
-    if (p.finreelle) allDates.push(p.finreelle * 86400000);
+    if (p.debut     > 0) datesMs.push(p.debut     * 86400000);
+    if (p.fin       > 0) datesMs.push(p.fin       * 86400000);
+    if (p.finreelle > 0) datesMs.push(p.finreelle * 86400000);
   });
-  if (ganttShowActions) {
-    allActions.forEach(a => { if (a.echeance) allDates.push(a.echeance * 86400000); });
-  }
+  if (ganttShowActions) allActions.forEach(a => { if (a.echeance > 0) datesMs.push(a.echeance * 86400000); });
+  datesMs.push(Date.now());
 
-  const nowMs = Date.now();
-  allDates.push(nowMs);
-
-  if (allDates.length < 2) {
+  if (datesMs.length < 2) {
     cont.innerHTML = `<div style="padding:40px;text-align:center;color:var(--text-muted);font-size:13px">Aucune date renseignée sur les objectifs.</div>`;
     return;
   }
 
-  // Cadrer sur le premier/dernier mois + marge 1 mois de chaque côté
-  const addMonths = (ms, n) => {
-    const d = new Date(ms); d.setMonth(d.getMonth() + n); return d.getTime();
-  };
-  const startMs = addMonths(Math.min(...allDates), -1);
-  const endMs   = addMonths(Math.max(...allDates),  1);
+  const minMs = Math.min(...datesMs);
+  const maxMs = Math.max(...datesMs);
+  const dStart = new Date(minMs); dStart.setDate(1); dStart.setHours(0,0,0,0); dStart.setMonth(dStart.getMonth() - 1);
+  const dEnd   = new Date(maxMs); dEnd.setDate(1);   dEnd.setHours(0,0,0,0);   dEnd.setMonth(dEnd.getMonth() + 2);
+  const spanMs = dEnd.getTime() - dStart.getTime();
 
-  // Aligner sur le début du mois
-  const startDate = new Date(startMs); startDate.setDate(1); startDate.setHours(0,0,0,0);
-  const endDate   = new Date(endMs);   endDate.setDate(1);   endDate.setHours(0,0,0,0);
-  endDate.setMonth(endDate.getMonth() + 1); // fin du dernier mois
+  // pct retourne un nombre 0-100
+  const pct = ms => Math.max(0, Math.min(100, (ms - dStart.getTime()) / spanMs * 100));
 
-  const totalMs = endDate.getTime() - startDate.getTime();
-  const msToX = (ms) => (ms - startDate.getTime()) / totalMs;
+  // Mois
+  const months = [];
+  const cur = new Date(dStart);
+  while (cur.getTime() < dEnd.getTime()) { months.push(new Date(cur)); cur.setMonth(cur.getMonth() + 1); }
+
+  const dotColor = { 'A faire':'#7c3aed','En cours':'#1d4ed8','En attente':'#b45309','Réalisé':'#15803d','Pour information':'#6b7280' };
+  const todayPct = pct(Date.now());
 
   // ── Dimensions ──
-  const LABEL_W  = 220;  // largeur colonne gauche
-  const CHART_W  = 900;  // largeur zone Gantt (scrollable)
-  const ROW_H    = 32;
-  const ACT_H    = 24;
-  const BAR_H    = 14;
-  const BAR_Y    = (ROW_H - BAR_H) / 2;
-  const HEADER_H = 40;
+  const LABEL_W  = 240;   // px colonne label (élargie)
+  const CHART_W  = 860;   // px zone frise (élargie)
   const TOTAL_W  = LABEL_W + CHART_W;
+  const HEADER_H = 44;    // double ligne : année + mois
+  const ROW_H    = 30;
+  const ACT_H    = 22;
+  const BAR_H0   = 12;
+  const BAR_H1   = 9;
 
-  // Construire les mois pour l'en-tête
-  const months = [];
-  const cur = new Date(startDate);
-  while (cur < endDate) {
-    months.push(new Date(cur));
-    cur.setMonth(cur.getMonth() + 1);
-  }
+  const msX = ms => LABEL_W + pct(ms) / 100 * CHART_W;
 
-  const monthX = (d) => LABEL_W + msToX(d.getTime()) * CHART_W;
-  const msX    = (ms) => LABEL_W + msToX(ms) * CHART_W;
+  // ── Construire le SVG ──
+  let svgBody = '';
+  let y = HEADER_H;
 
-  // ── Couleurs ──
-  const etatDotColor = {
-    'A faire':         '#7c3aed',
-    'En cours':        '#1d4ed8',
-    'En attente':      '#b45309',
-    'Réalisé':         '#15803d',
-    'Pour information':'#6b7280',
-  };
+  // Lignes de grille mois + labels header
+  months.forEach((m, i) => {
+    const x = msX(m.getTime());
+    svgBody += `<line x1="${x}" y1="0" x2="${x}" y2="9999" stroke="#e5e5e5" stroke-width="0.5"/>`;
+  });
 
-  // ── Générer les lignes ──
-  let svgRows = '';
-  let yOffset = HEADER_H;
-  const rowMeta = []; // pour les tooltips
+  // Ligne aujourd'hui
+  const todayX = msX(Date.now());
+  svgBody += `<line x1="${todayX}" y1="${HEADER_H}" x2="${todayX}" y2="9999" stroke="#DC2626" stroke-width="1.2" stroke-dasharray="4 3" opacity="0.7"/>`;
 
-  rows.forEach((p, i) => {
-    const isEven = i % 2 === 0;
-    const bg = isEven ? 'transparent' : 'rgba(0,0,0,0.018)';
-    const termine = !!p.finreelle;
-    const barColor = termine ? '#C93E3E' : (p.depth === 0 ? '#1A1A1A' : '#1A7A4F');
-    const barOpacity = termine ? '0.7' : '1';
-
-    const startBar = p.debut     ? p.debut     * 86400000 : null;
-    const endBar   = p.finreelle ? p.finreelle * 86400000 : (p.fin ? p.fin * 86400000 : null);
-
-    // Ligne fond alternée
-    svgRows += `<rect x="0" y="${yOffset}" width="${TOTAL_W}" height="${ROW_H}" fill="${bg}"/>`;
-    // Séparateur colonne
-    svgRows += `<line x1="${LABEL_W}" y1="${yOffset}" x2="${LABEL_W}" y2="${yOffset + ROW_H}" stroke="var(--border)" stroke-width="0.5"/>`;
-
-    // Label gauche
+  // Lignes projets
+  rows.forEach((p, ri) => {
+    const bg = ri % 2 === 1 ? 'rgba(0,0,0,0.015)' : 'none';
+    const termine  = p.finreelle > 0;
+    const barColor = termine ? '#C93E3E' : (p.depth === 0 ? '#374151' : '#1A7A4F');
+    const sMs = p.debut     > 0 ? p.debut     * 86400000 : null;
+    const eMs = p.finreelle > 0 ? p.finreelle * 86400000 : (p.fin > 0 ? p.fin * 86400000 : null);
     const indent = p.depth * 12;
-    const fontW  = p.depth === 0 ? '600' : '400';
-    const label  = (p.code ? p.code + ' – ' : '') + (p.nom || 'Sans nom');
-    const maxChars = Math.floor((LABEL_W - indent - 16) / 6.5);
-    const labelTrunc = label.length > maxChars ? label.slice(0, maxChars - 1) + '…' : label;
-    svgRows += `<text x="${8 + indent}" y="${yOffset + ROW_H / 2}" dominant-baseline="central" font-size="11.5" font-weight="${fontW}" fill="var(--text-primary)" font-family="var(--font)">${esc(labelTrunc)}</text>`;
+    const bh = p.depth === 0 ? BAR_H0 : BAR_H1;
+
+    // Fond alterné
+    svgBody += `<rect x="0" y="${y}" width="${TOTAL_W}" height="${ROW_H}" fill="${bg}"/>`;
+    // Séparateur vertical label/frise
+    svgBody += `<line x1="${LABEL_W}" y1="${y}" x2="${LABEL_W}" y2="${y + ROW_H}" stroke="#e5e5e5" stroke-width="0.5"/>`;
+
+    // Label (tronqué)
+    const labelText = (p.code ? p.code + ' – ' : '') + (p.nom || '—');
+    const maxLen = Math.floor((LABEL_W - indent - 12) / 6.0);
+    const labelTrunc = labelText.length > maxLen ? labelText.slice(0, maxLen - 1) + '…' : labelText;
+    const fw = p.depth === 0 ? '600' : '400';
+    const fs = p.depth === 0 ? 11.5 : 11;
+    svgBody += `<g><title>${esc(labelText)}</title><text x="${6 + indent}" y="${y + ROW_H / 2}" dominant-baseline="central" font-size="${fs}" font-weight="${fw}" fill="#111" font-family="system-ui,sans-serif">${esc(labelTrunc)}</text></g>`;
 
     // Barre
-    if (startBar && endBar) {
-      const x1 = Math.min(Math.max(msX(startBar), LABEL_W), LABEL_W + CHART_W);
-      const x2 = Math.min(Math.max(msX(endBar),   LABEL_W), LABEL_W + CHART_W);
-      const bw = Math.max(x2 - x1, 4);
-      const barY = yOffset + BAR_Y + (p.depth > 0 ? 2 : 0);
-      const bh   = p.depth === 0 ? BAR_H : BAR_H - 3;
-      svgRows += `<rect class="gantt-bar" x="${x1}" y="${barY}" width="${bw}" height="${bh}" rx="3"
-        fill="${barColor}" opacity="${barOpacity}"
-        data-id="${p.id}" data-type="proj"/>`;
-
-      // Texte sur la barre si assez large
-      if (bw > 50) {
-        const shortLabel = p.code || p.nom.slice(0, 10);
-        svgRows += `<text x="${x1 + 5}" y="${barY + bh / 2}" dominant-baseline="central" font-size="10" fill="white" font-family="var(--font)" pointer-events="none" style="overflow:hidden">${esc(shortLabel)}</text>`;
-      }
+    if (sMs && eMs) {
+      const x1 = msX(sMs), x2 = msX(eMs);
+      const bw = Math.max(x2 - x1, 3);
+      const by = y + (ROW_H - bh) / 2;
+      svgBody += `<rect x="${x1.toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(1)}" height="${bh}" rx="3" fill="${barColor}" opacity="${termine ? 0.75 : 1}"/>`;
     } else {
-      // Aucune date : tiret
-      svgRows += `<text x="${LABEL_W + 8}" y="${yOffset + ROW_H / 2}" dominant-baseline="central" font-size="11" fill="var(--text-muted)" font-family="var(--font)">—</text>`;
+      svgBody += `<text x="${(LABEL_W + 8).toFixed(0)}" y="${y + ROW_H / 2}" dominant-baseline="central" font-size="11" fill="#aaa" font-family="system-ui,sans-serif">—</text>`;
     }
 
-    rowMeta.push({ id: p.id, y: yOffset, h: ROW_H, nom: p.nom, code: p.code,
-      debut: p.debut, fin: p.fin, finreelle: p.finreelle,
-      pilote: p.pilote ? allActors.find(a => a.id === p.pilote)?.nom || '—' : '—',
-      termine });
+    y += ROW_H;
 
-    yOffset += ROW_H;
-
-    // Actions de ce projet
+    // Actions
     if (ganttShowActions) {
-      const projActions = allActions.filter(a => a.projet === p.id && a.echeance);
-      if (projActions.length) {
-        projActions.sort((a, b) => (a.echeance ?? 0) - (b.echeance ?? 0)).forEach(a => {
-          svgRows += `<rect x="0" y="${yOffset}" width="${TOTAL_W}" height="${ACT_H}" fill="transparent"/>`;
-          svgRows += `<line x1="${LABEL_W}" y1="${yOffset}" x2="${LABEL_W}" y2="${yOffset + ACT_H}" stroke="var(--border)" stroke-width="0.5"/>`;
-          const aLabel = '    ' + (a.action || '').slice(0, 40);
-          svgRows += `<text x="${16 + indent}" y="${yOffset + ACT_H / 2}" dominant-baseline="central" font-size="10.5" fill="var(--text-muted)" font-family="var(--font)">${esc(aLabel)}</text>`;
-          const ax = msX(a.echeance * 86400000);
-          if (ax >= LABEL_W && ax <= LABEL_W + CHART_W) {
-            const dc = etatDotColor[a.etat] || '#6b7280';
-            // Losange
-            const r = 5;
-            const cy = yOffset + ACT_H / 2;
-            svgRows += `<polygon class="gantt-action-dot" points="${ax},${cy-r} ${ax+r},${cy} ${ax},${cy+r} ${ax-r},${cy}"
-              fill="${dc}" data-id="${a.id}" data-type="action"/>`;
-          }
-          rowMeta.push({ id: a.id, y: yOffset, h: ACT_H, type: 'action',
-            nom: a.action, etat: a.etat, echeance: a.echeance });
-          yOffset += ACT_H;
-        });
+      const acts = allActions.filter(a => a.projet === p.id && a.echeance > 0).sort((a,b) => a.echeance - b.echeance);
+      acts.forEach(a => {
+        svgBody += `<rect x="0" y="${y}" width="${TOTAL_W}" height="${ACT_H}" fill="none"/>`;
+        svgBody += `<line x1="${LABEL_W}" y1="${y}" x2="${LABEL_W}" y2="${y + ACT_H}" stroke="#e5e5e5" stroke-width="0.5"/>`;
+        const aLabelRaw = (a.action || '').slice(0, 35);
+        const aLabel = aLabelRaw.length < (a.action||'').length ? aLabelRaw + '…' : aLabelRaw;
+        svgBody += `<g><title>${esc(a.action || '')}</title><text x="${8 + indent + 10}" y="${y + ACT_H / 2}" dominant-baseline="central" font-size="10" fill="#888" font-family="system-ui,sans-serif">${esc(aLabel)}</text></g>`;
+        const ax = msX(a.echeance * 86400000);
+        const dc = dotColor[a.etat] || '#6b7280';
+        const r = 4;
+        const cy = y + ACT_H / 2;
+        // Losange en coordonnées absolues (pas de calc)
+        svgBody += `<polygon points="${ax},${cy - r} ${ax + r},${cy} ${ax},${cy + r} ${ax - r},${cy}" fill="${dc}" opacity="0.9"/>`;
+        y += ACT_H;
+      });
+    }
+  });
+
+  const totalH = y;
+
+  // ── Header : 2 lignes (années haut, mois bas, centrés dans leur cellule) ──
+  const ROW1_H = 20;  // hauteur ligne années
+  const ROW2_H = 24;  // hauteur ligne mois
+  let svgHeader = `<rect x="0" y="0" width="${TOTAL_W}" height="${HEADER_H}" fill="#f4f4f2"/>`;
+  svgHeader += `<line x1="0" y1="${HEADER_H}" x2="${TOTAL_W}" y2="${HEADER_H}" stroke="#d0d0ce" stroke-width="1"/>`;
+  // Ligne de séparation entre les deux lignes d'en-tête
+  svgHeader += `<line x1="${LABEL_W}" y1="${ROW1_H}" x2="${TOTAL_W}" y2="${ROW1_H}" stroke="#e0e0de" stroke-width="0.5"/>`;
+  // Label colonne objectifs
+  svgHeader += `<text x="8" y="${HEADER_H / 2}" dominant-baseline="central" font-size="10" font-weight="600" fill="#888" font-family="system-ui,sans-serif" letter-spacing="0.05em">OBJECTIF</text>`;
+  svgHeader += `<line x1="${LABEL_W}" y1="0" x2="${LABEL_W}" y2="${HEADER_H}" stroke="#d0d0ce" stroke-width="1"/>`;
+
+  // Construire les cellules de mois avec leur largeur
+  months.forEach((m, i) => {
+    const x1 = msX(m.getTime());
+    const nextM = new Date(m); nextM.setMonth(nextM.getMonth() + 1);
+    const x2 = Math.min(msX(nextM.getTime()), TOTAL_W);
+    const cellW = x2 - x1;
+    const cx = x1 + cellW / 2;
+
+    // Séparateur vertical de mois
+    svgHeader += `<line x1="${x1.toFixed(1)}" y1="${ROW1_H}" x2="${x1.toFixed(1)}" y2="${HEADER_H}" stroke="#e0e0de" stroke-width="0.5"/>`;
+
+    // Ligne 1 : année (uniquement en janvier ou premier mois)
+    if (i === 0 || m.getMonth() === 0) {
+      const yearLabel = m.getFullYear().toString();
+      svgHeader += `<text x="${x1 + 4}" y="${ROW1_H / 2}" dominant-baseline="central" font-size="9" font-weight="600" fill="#aaa" font-family="system-ui,sans-serif">${yearLabel}</text>`;
+      // Séparateur d'année vertical (plus marqué)
+      if (i > 0) {
+        svgHeader += `<line x1="${x1.toFixed(1)}" y1="0" x2="${x1.toFixed(1)}" y2="${ROW1_H}" stroke="#c0c0be" stroke-width="1"/>`;
       }
     }
+
+    // Ligne 2 : nom du mois, centré dans la cellule
+    const monthLabel = m.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '');
+    // N'afficher que si la cellule est assez large
+    if (cellW > 18) {
+      svgHeader += `<text x="${cx.toFixed(1)}" y="${ROW1_H + ROW2_H / 2}" dominant-baseline="central" text-anchor="middle" font-size="9.5" fill="#666" font-family="system-ui,sans-serif">${monthLabel}</text>`;
+    }
   });
 
-  const totalH = yOffset;
-
-  // ── En-tête mois ──
-  let svgHeader = '';
-  svgHeader += `<rect x="0" y="0" width="${TOTAL_W}" height="${HEADER_H}" fill="var(--surface2)"/>`;
-  svgHeader += `<line x1="0" y1="${HEADER_H}" x2="${TOTAL_W}" y2="${HEADER_H}" stroke="var(--border)" stroke-width="0.5"/>`;
-  svgHeader += `<text x="12" y="${HEADER_H/2}" dominant-baseline="central" font-size="11" font-weight="600" fill="var(--text-muted)" font-family="var(--font)" text-transform="uppercase">Objectif</text>`;
-
-  months.forEach((m, i) => {
-    const x1 = monthX(m);
-    const nextM = new Date(m); nextM.setMonth(nextM.getMonth() + 1);
-    const x2 = monthX(nextM);
-    const label = m.toLocaleDateString('fr-FR', { month: 'short', year: i === 0 || m.getMonth() === 0 ? '2-digit' : undefined });
-    const cx = (x1 + x2) / 2;
-    svgHeader += `<line x1="${x1}" y1="0" x2="${x1}" y2="${totalH}" stroke="var(--border)" stroke-width="0.5" opacity="0.5"/>`;
-    svgHeader += `<text x="${cx}" y="${HEADER_H/2}" dominant-baseline="central" text-anchor="middle" font-size="10.5" fill="var(--text-muted)" font-family="var(--font)">${esc(label)}</text>`;
-  });
-
-  // ── Ligne "Aujourd'hui" ──
-  const todayX = msX(nowMs);
-  let svgToday = '';
-  if (todayX >= LABEL_W && todayX <= LABEL_W + CHART_W) {
-    svgToday = `
-      <line x1="${todayX}" y1="${HEADER_H}" x2="${todayX}" y2="${totalH}" stroke="#DC2626" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.6"/>
-      <text x="${todayX + 3}" y="${HEADER_H + 10}" font-size="9.5" fill="#DC2626" font-family="var(--font)">Aujourd'hui</text>`;
+  // Étiquette aujourd'hui dans le header
+  if (todayX > LABEL_W && todayX < TOTAL_W) {
+    svgHeader += `<line x1="${todayX.toFixed(1)}" y1="0" x2="${todayX.toFixed(1)}" y2="${HEADER_H}" stroke="#DC2626" stroke-width="1" opacity="0.5"/>`;
+    svgHeader += `<text x="${todayX + 2}" y="${ROW1_H + ROW2_H / 2}" dominant-baseline="central" font-size="8.5" fill="#DC2626" font-family="system-ui,sans-serif">auj.</text>`;
   }
 
-  const svgEl = `<svg xmlns="http://www.w3.org/2000/svg" width="${TOTAL_W}" height="${totalH}" style="display:block">
-    ${svgRows}
-    ${svgHeader}
-    ${svgToday}
-  </svg>`;
-
-  // Stocker les métadonnées pour les tooltips
-  window._ganttRowMeta = rowMeta;
-  window._ganttMsX = msX;
-
-  cont.innerHTML = `<div style="padding:20px 28px;min-width:${TOTAL_W + 56}px">${svgEl}</div>`;
-
-  // ── Bind tooltip ──
-  const tooltip = document.getElementById('ganttTooltip');
-  cont.querySelectorAll('.gantt-bar, .gantt-action-dot').forEach(el => {
-    el.addEventListener('mouseenter', (e) => {
-      const id   = parseInt(el.dataset.id);
-      const type = el.dataset.type;
-      let html = '';
-      if (type === 'proj') {
-        const m = rowMeta.find(r => r.id === id && !r.type);
-        if (m) {
-          html = `<strong>${esc(m.code ? m.code + ' – ' + m.nom : m.nom)}</strong>`;
-          if (m.debut) html += `<br><span style="color:#777">Début :</span> ${fmtDateShort(m.debut)}`;
-          if (m.fin)   html += `<br><span style="color:#777">Fin prév. :</span> ${fmtDateShort(m.fin)}`;
-          if (m.finreelle) html += `<br><span style="color:#777">Clôturé le :</span> ${fmtDateShort(m.finreelle)}`;
-          if (m.pilote !== '—') html += `<br><span style="color:#777">Pilote :</span> ${esc(m.pilote)}`;
-          html += `<br><span style="color:${m.termine?'#C93E3E':'#15803d'}">${m.termine?'Terminé':'En cours'}</span>`;
-        }
-      } else {
-        const m = rowMeta.find(r => r.id === id && r.type === 'action');
-        if (m) {
-          html = `<strong>${esc(m.nom)}</strong>`;
-          if (m.echeance) html += `<br><span style="color:#777">Échéance :</span> ${fmtDateShort(m.echeance)}`;
-          const dotC = etatDotColor[m.etat] || '#6b7280';
-          html += `<br><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${dotC};margin-right:4px;vertical-align:middle"></span>${esc(m.etat)}`;
-        }
-      }
-      if (!html) return;
-      tooltip.innerHTML = html;
-      tooltip.classList.add('show');
-    });
-    el.addEventListener('mousemove', (e) => {
-      tooltip.style.left = (e.clientX + 14) + 'px';
-      tooltip.style.top  = (e.clientY - 10) + 'px';
-    });
-    el.addEventListener('mouseleave', () => tooltip.classList.remove('show'));
-  });
+  cont.innerHTML = `<div style="padding:8px 10px;width:100%;box-sizing:border-box">
+    <svg xmlns="http://www.w3.org/2000/svg"
+         viewBox="0 0 ${TOTAL_W} ${totalH}"
+         width="100%"
+         style="display:block;min-height:${totalH}px">
+      ${svgBody}
+      ${svgHeader}
+    </svg>
+    <div style="margin-top:10px;display:flex;gap:14px;flex-wrap:wrap">
+      <span style="font-size:10.5px;color:var(--text-muted);display:inline-flex;align-items:center;gap:4px"><span style="width:12px;height:7px;border-radius:2px;background:#374151;display:inline-block"></span>Niveau 1</span>
+      <span style="font-size:10.5px;color:var(--text-muted);display:inline-flex;align-items:center;gap:4px"><span style="width:12px;height:7px;border-radius:2px;background:#1A7A4F;display:inline-block"></span>Niveau 2</span>
+      <span style="font-size:10.5px;color:var(--text-muted);display:inline-flex;align-items:center;gap:4px"><span style="width:12px;height:7px;border-radius:2px;background:#C93E3E;opacity:0.75;display:inline-block"></span>Terminé</span>
+      <span style="font-size:10.5px;color:#DC2626;display:inline-flex;align-items:center;gap:4px"><span style="width:1.5px;height:10px;background:#DC2626;display:inline-block"></span>Aujourd'hui</span>
+      ${ganttShowActions ? '<span style="font-size:10.5px;color:var(--text-muted);display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;background:#7c3aed;display:inline-block;transform:rotate(45deg)"></span>Action (échéance)</span>' : ''}
+    </div>
+  </div>`;
 }
-
-const etatDotColor = {
-  'A faire':         '#7c3aed',
-  'En cours':        '#1d4ed8',
-  'En attente':      '#b45309',
-  'Réalisé':         '#15803d',
-  'Pour information':'#6b7280',
-};
 
 function toggleAcNode(gId) {
   const body = document.getElementById(gId);
