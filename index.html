@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gestion de projet</title>
+<title>Suivi de projet</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiIgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIj4KICA8cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjMWQ0ZWQ4Ii8+CiAgPHJlY3QgeD0iNSIgeT0iMTgiIHdpZHRoPSI2IiBoZWlnaHQ9IjkiIHJ4PSIxLjUiIGZpbGw9IndoaXRlIi8+CiAgPHJlY3QgeD0iMTMiIHk9IjExIiB3aWR0aD0iNiIgaGVpZ2h0PSIxNiIgcng9IjEuNSIgZmlsbD0id2hpdGUiLz4KICA8cmVjdCB4PSIyMSIgeT0iNSIgd2lkdGg9IjYiIGhlaWdodD0iMjIiIHJ4PSIxLjUiIGZpbGw9IndoaXRlIi8+CiAgPHJlY3QgeD0iNCIgeT0iMjgiIHdpZHRoPSIyNCIgaGVpZ2h0PSIxLjUiIHJ4PSIwLjc1IiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuNCkiLz4KPC9zdmc+">
 <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -1338,9 +1339,9 @@ document.addEventListener('DOMContentLoaded', function() {
     var blob = new Blob([code], {type: 'application/javascript'});
     var url  = URL.createObjectURL(blob);
     var s    = document.createElement('script');
-    s.src    = url;
     s.onload = function() { URL.revokeObjectURL(url); };
     s.onerror = function() { URL.revokeObjectURL(url); try { (new Function(code))(); } catch(e2) { console.error('Load error:', e2); } };
+    s.src = url;
     document.head.appendChild(s);
   } catch(e) { try { (new Function(code))(); } catch(e2) { console.error('Load error:', e2); } }
 });
@@ -3323,12 +3324,12 @@ function renderSousProjets() {
         <div class="sp-tl-head" style="display:flex;align-items:center;gap:7px;padding-left:6px;border-left:2.5px solid ${markerColor};border-radius:0 var(--radius-sm) var(--radius-sm) 0;transition:opacity 0.15s;"
              onmouseenter="this.querySelector('.tl-hbtns').style.opacity='1'"
              onmouseleave="this.querySelector('.tl-hbtns').style.opacity='0'">
-          <div style="display:flex;align-items:center;gap:7px;flex:1;min-width:0;cursor:pointer;overflow:hidden" onclick="toggleSpChildren('${cid}')">
+          <div style="display:flex;align-items:center;gap:7px;flex:1;min-width:0;cursor:pointer" onclick="toggleSpChildren('${cid}')">
             ${hasChildren
               ? `<svg class="sp-acc-toggle${isOpen?' open':''}" id="${cid}_t" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;color:var(--text-muted)"><path d="M9 18l6-6-6-6"/></svg>`
               : `<span style="width:9px;flex-shrink:0;display:inline-block"></span>`}
             ${p.code ? `<span class="tl-code">${esc(p.code)}</span>` : ''}
-            <span class="tl-name" style="font-weight:${isTop?'600':'500'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.nom||'Sans nom')}</span>
+            <span class="tl-name" style="font-weight:${isTop?'600':'500'}">${esc(p.nom||'Sans nom')}</span>
             ${childCount > 0 ? `<span class="tl-count">${childCount}</span>` : ''}
           </div>
           <span class="tl-spacer"></span>
