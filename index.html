@@ -2643,6 +2643,95 @@ function etatPdfClass(etat) {
   return 'cr-pdf-etat-ec';
 }
 
+
+// ── Construit le bloc participants (présents + excusés) pour le PDF ──
+// rows : décisions de la séance ; inst : objet instance
+function buildParticipantsHtml(rows, inst, forPrint) {
+  // Récupérer le JSON participants depuis la première décision qui en a un
+  let presents = [], excuses = [];
+  const withPart = rows.find(d => d.participants);
+  if (withPart) {
+    try {
+      const p = JSON.parse(withPart.participants);
+      presents = p.presents || [];
+      excuses  = p.excuses  || [];
+    } catch(e) {}
+  }
+
+  // Tous les membres de l'instance
+  const allMembers = inst ? allActors.filter(a => {
+    const ids = getRefList(a.instance).map(v => resolveInstId(v));
+    return ids.includes(inst.id);
+  }).sort((a, b) => {
+    const o = ['Commanditaire','Directeur de projet','Chef de projet',"Pilote d'actions",'Contributeur interne','Contributeur externe'];
+    return (o.indexOf(a.role)+1||99) - (o.indexOf(b.role)+1||99);
+  }) : [];
+
+  if (!allMembers.length) return '';
+
+  // Si aucun participant enregistré : afficher tous les membres sans statut
+  const hasData = presents.length > 0 || excuses.length > 0;
+
+  const memberPill = (a, status) => {
+    const prc = roleColors[a.role] || { avatar: '#6B7280' };
+    const ini = (a.nom||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const av = `<span style="display:inline-flex;width:18px;height:18px;border-radius:3px;background:${prc.avatar};align-items:center;justify-content:center;font-size:7px;font-weight:700;color:white;flex-shrink:0;vertical-align:middle">${ini}</span>`;
+    const nameSpan = `<span style="font-size:11px;color:#333">${esc(a.nom)}</span>`;
+
+    if (!hasData) {
+      // Pas de données : pill neutre
+      return `<span class="cr-pdf-member">${av}${nameSpan}</span>`;
+    }
+    if (status === 'present') {
+      const dot = forPrint
+        ? `<span style="font-size:9px;color:#15803d;font-weight:700">✓</span>`
+        : `<span style="font-size:9px;color:#15803d;font-weight:700">✓</span>`;
+      return `<span class="cr-pdf-member" style="border-color:#86efac;background:#f0fdf4">${av}${nameSpan}${dot}</span>`;
+    }
+    if (status === 'excuse') {
+      const dot = `<span style="font-size:9px;color:#c2410c;font-weight:700">~</span>`;
+      return `<span class="cr-pdf-member" style="border-color:#fdba74;background:#fff7ed;opacity:0.75">${av}${nameSpan}${dot}</span>`;
+    }
+    // Absent : pill grisé
+    return `<span class="cr-pdf-member" style="opacity:0.35">${av}${nameSpan}</span>`;
+  };
+
+  const presentsHtml = allMembers
+    .filter(a => presents.includes(a.id))
+    .map(a => memberPill(a, 'present')).join('');
+  const excusesHtml  = allMembers
+    .filter(a => excuses.includes(a.id))
+    .map(a => memberPill(a, 'excuse')).join('');
+  const absentsHtml  = hasData ? allMembers
+    .filter(a => !presents.includes(a.id) && !excuses.includes(a.id))
+    .map(a => memberPill(a, 'absent')).join('') : '';
+
+  if (!hasData) {
+    // Pas de données de présence → liste complète sans statut
+    return `<div class="cr-pdf-members">${allMembers.map(a => memberPill(a, null)).join('')}</div>`;
+  }
+
+  let out = '';
+  if (presentsHtml) {
+    out += `<div style="margin-bottom:6px">
+      <div style="font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#15803d;margin-bottom:4px">Présents</div>
+      <div class="cr-pdf-members" style="margin-bottom:0">${presentsHtml}</div>
+    </div>`;
+  }
+  if (excusesHtml) {
+    out += `<div style="margin-bottom:6px">
+      <div style="font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#c2410c;margin-bottom:4px">Excusés</div>
+      <div class="cr-pdf-members" style="margin-bottom:0">${excusesHtml}</div>
+    </div>`;
+  }
+  if (absentsHtml) {
+    out += `<div style="margin-bottom:6px">
+      <div style="font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#aaa;margin-bottom:4px">Absents</div>
+      <div class="cr-pdf-members" style="margin-bottom:0">${absentsHtml}</div>
+    </div>`;
+  }
+  return `<div style="margin-bottom:16px">${out}</div>`;
+}
 function renderPdfView() {
   const cont      = document.getElementById('pdfContainer');
   const fInstance = document.getElementById('pdfFilterInstance')?.value || '';
@@ -2752,7 +2841,7 @@ function renderPdfView() {
             <div class="cr-pdf-title">${esc(g.label)}</div>
             <div class="cr-pdf-subtitle">${suiviFmtDate(dg.dateVal)}</div>
           </div>
-          ${instMembers(g.inst)}
+          ${buildParticipantsHtml(dg.rows, g.inst, false)}
           <div class="cr-pdf-divider"></div>
           <div class="cr-pdf-list">
             ${dg.rows.map(d => decItem(d)).join('')}
@@ -2782,15 +2871,7 @@ function printSeance(instanceId, dateVal) {
     return `<span class="cr-pdf-etat ${cls}">${esc(etat)}</span>`;
   };
 
-  // Members
-  const members = allActors
-    .filter(a => { const ids = getRefList(a.instance).map(v => resolveInstId(v)); return inst && ids.includes(inst.id); })
-    .sort((a, b) => { const o = ['Commanditaire','Directeur de projet','Chef de projet',"Pilote d'actions",'Contributeur interne','Contributeur externe']; return (o.indexOf(a.role)+1||99) - (o.indexOf(b.role)+1||99); });
-  const membersHtml = members.length ? `<div class="cr-pdf-members">${members.map(a => {
-    const prc = roleColors[a.role] || { avatar: '#6B7280' };
-    const ini = (a.nom||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-    return `<span class="cr-pdf-member"><span style="display:inline-flex;width:18px;height:18px;border-radius:3px;background:${prc.avatar};align-items:center;justify-content:center;font-size:7px;font-weight:700;color:white;flex-shrink:0;vertical-align:middle">${ini}</span><span style="font-size:11px;color:#333">${esc(a.nom)}</span></span>`;
-  }).join('')}</div>` : '';
+  const membersHtml = buildParticipantsHtml(rows, inst, true);
 
   const itemsHtml = rows.map(d => {
     const code = projCode(d.projet);
@@ -4560,6 +4641,16 @@ function renderSuivi() {
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-muted);flex-shrink:0"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
           <span class="suivi-subgroup-label">${suiviFmtDate(dg.dateVal)}</span>
           <span class="suivi-subgroup-count">${dg.rows.length} décision${dg.rows.length > 1 ? 's' : ''}</span>
+          ${(() => {
+            const withP = dg.rows.find(r => r.participants);
+            if (!withP) return '';
+            try {
+              const p = JSON.parse(withP.participants);
+              const n = (p.presents||[]).length;
+              if (!n) return '';
+              return '<span style="font-size:10.5px;color:#15803d;background:#f0fdf4;border:1px solid #86efac;border-radius:20px;padding:0 7px;margin-left:2px">'+n+' présent'+(n>1?'s':'')+'</span>';
+            } catch(e) { return ''; }
+          })()}
           ${etatBadges ? `<span style="display:flex;gap:4px;margin-left:4px">${etatBadges}</span>` : ''}
           <span style="flex:1"></span>
           <button class="btn-icon" title="Imprimer ce compte rendu" style="opacity:0.5;flex-shrink:0" onclick="event.stopPropagation();printSeance(${iKey},${dg.dateVal||0})">
