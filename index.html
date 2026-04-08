@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Suivi de projet</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiIgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIj4KICA8cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjMWQ0ZWQ4Ii8+CiAgPHJlY3QgeD0iNSIgeT0iMTgiIHdpZHRoPSI2IiBoZWlnaHQ9IjkiIHJ4PSIxLjUiIGZpbGw9IndoaXRlIi8+CiAgPHJlY3QgeD0iMTMiIHk9IjExIiB3aWR0aD0iNiIgaGVpZ2h0PSIxNiIgcng9IjEuNSIgZmlsbD0id2hpdGUiLz4KICA8cmVjdCB4PSIyMSIgeT0iNSIgd2lkdGg9IjYiIGhlaWdodD0iMjIiIHJ4PSIxLjUiIGZpbGw9IndoaXRlIi8+CiAgPHJlY3QgeD0iNCIgeT0iMjgiIHdpZHRoPSIyNCIgaGVpZ2h0PSIxLjUiIHJ4PSIwLjc1IiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuNCkiLz4KPC9zdmc+">
+<title>Gestion de projet</title>
 <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -622,11 +621,11 @@ tr:hover .cr-del-btn { opacity: 1; }
     </div>
     <div class="tab" data-tab="objectifs" onclick="switchTab('objectifs')">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-      Objectifs
+      Plan d'actions
     </div>
     <div class="tab" data-tab="actions" onclick="switchTab('actions')">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-      Plan d'action
+      Suivi des tâches
     </div>
     <div class="tab" data-tab="decisions" onclick="switchTab('decisions')">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
@@ -963,11 +962,11 @@ tr:hover .cr-del-btn { opacity: 1; }
       <nav class="cadre-subnav">
         <div class="cadre-subtab" id="acModeActions" data-sub="actions" onclick="switchAcMode('actions')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-          Par actions
+          Suivi des tâches
         </div>
         <div class="cadre-subtab active" id="acModeProjets" data-sub="projets" onclick="switchAcMode('projets')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-          Par projet
+          Par action
         </div>
         <div class="cadre-subtab" id="acModeGantt" data-sub="gantt" onclick="switchAcMode('gantt')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="15" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="12" y2="18"/></svg>
@@ -980,7 +979,7 @@ tr:hover .cr-del-btn { opacity: 1; }
             <input type="text" class="search-input" id="actionSearch" placeholder="Rechercher…" oninput="renderActions()">
           </div>
           <select class="filter-select" id="actionFilterProjet" onchange="renderActions()" style="display:none">
-            <option value="">Tous les sous-projets</option>
+            <option value="">Toutes les actions</option>
           </select>
           <select class="filter-select" id="actionFilterEtat" onchange="renderActions()">
             <option value="">Tous les états</option>
@@ -3331,9 +3330,9 @@ function renderSousProjets() {
             ${p.code ? `<span class="tl-code">${esc(p.code)}</span>` : ''}
             <span class="tl-name" style="font-weight:${isTop?'600':'500'}">${esc(p.nom||'Sans nom')}</span>
             ${childCount > 0 ? `<span class="tl-count">${childCount}</span>` : ''}
+            ${piloteBadge(p)}
           </div>
           <span class="tl-spacer"></span>
-          ${piloteBadge(p)}
           ${dates ? `<span class="tl-dates-meta">${dates}</span>` : ''}
           <span class="sp-status-tag ${termine?'sp-status-te':'sp-status-ec'}">
             <span style="width:4px;height:4px;border-radius:50%;background:${markerColor};display:inline-block"></span>
