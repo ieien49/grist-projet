@@ -3320,28 +3320,34 @@ function renderSousProjets() {
 
     return `<div class="tl-node${isTop?' tl-node-top':''}" data-sp-node="${cid}" data-depth="${depth}">
       <div class="tl-content">
-        <div class="sp-tl-head" style="display:flex;align-items:center;gap:7px;padding-left:6px;border-left:2.5px solid ${markerColor};border-radius:0 var(--radius-sm) var(--radius-sm) 0;transition:opacity 0.15s;"
+        <div class="sp-tl-head" style="display:flex;align-items:center;gap:0;padding-left:6px;border-left:2.5px solid ${markerColor};border-radius:0 var(--radius-sm) var(--radius-sm) 0;transition:opacity 0.15s;"
              onmouseenter="this.querySelector('.tl-hbtns').style.opacity='1'"
              onmouseleave="this.querySelector('.tl-hbtns').style.opacity='0'">
-          <div style="display:flex;align-items:center;gap:7px;flex:1;min-width:0;cursor:pointer" onclick="toggleSpChildren('${cid}')">
+          <!-- Zone nom (flex:1) -->
+          <div style="display:flex;align-items:center;gap:7px;flex:1;min-width:0;cursor:pointer;padding-right:12px" onclick="toggleSpChildren('${cid}')">
             ${hasChildren
               ? `<svg class="sp-acc-toggle${isOpen?' open':''}" id="${cid}_t" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;color:var(--text-muted)"><path d="M9 18l6-6-6-6"/></svg>`
               : `<span style="width:9px;flex-shrink:0;display:inline-block"></span>`}
             ${p.code ? `<span class="tl-code">${esc(p.code)}</span>` : ''}
             <span class="tl-name" style="font-weight:${isTop?'600':'500'}">${esc(p.nom||'Sans nom')}</span>
             ${childCount > 0 ? `<span class="tl-count">${childCount}</span>` : ''}
+          </div>
+          <!-- Zone pilote (colonne centrale fixe 160px) -->
+          <div style="flex:0 0 160px;display:flex;align-items:center;justify-content:flex-start;padding:0 8px;border-left:1px solid var(--border);">
             ${piloteBadge(p)}
           </div>
-          <span class="tl-spacer"></span>
-          ${dates ? `<span class="tl-dates-meta">${dates}</span>` : ''}
-          <span class="sp-status-tag ${termine?'sp-status-te':'sp-status-ec'}">
-            <span style="width:4px;height:4px;border-radius:50%;background:${markerColor};display:inline-block"></span>
-            ${termine ? 'Termin\u00e9' : 'En cours'}
-          </span>
-          <div class="tl-hbtns" style="opacity:0">
-            <button class="btn-icon" title="Voir le d\u00e9tail" onclick="openSpDetail(${p.id})"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
-            <button class="btn-icon" title="Modifier" onclick="editSousProjet(${p.id})"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-            <button class="btn-icon del" title="Supprimer" onclick="deleteProjet(${p.id})"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/></svg></button>
+          <!-- Zone méta droite -->
+          <div style="display:flex;align-items:center;gap:7px;flex-shrink:0;padding-left:8px;border-left:1px solid var(--border);">
+            ${dates ? `<span class="tl-dates-meta">${dates}</span>` : ''}
+            <span class="sp-status-tag ${termine?'sp-status-te':'sp-status-ec'}">
+              <span style="width:4px;height:4px;border-radius:50%;background:${markerColor};display:inline-block"></span>
+              ${termine ? 'Termin\u00e9' : 'En cours'}
+            </span>
+            <div class="tl-hbtns" style="opacity:0">
+              <button class="btn-icon" title="Voir le d\u00e9tail" onclick="openSpDetail(${p.id})"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+              <button class="btn-icon" title="Modifier" onclick="editSousProjet(${p.id})"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+              <button class="btn-icon del" title="Supprimer" onclick="deleteProjet(${p.id})"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/></svg></button>
+            </div>
           </div>
         </div>
         ${hasChildren ? `<div id="${cid}" style="display:${isOpen?'flex':'none'};flex-direction:column" class="tl-children">${childrenHtml}</div>` : ''}
