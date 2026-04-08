@@ -598,6 +598,32 @@ tr:hover .cr-del-btn { opacity: 1; }
 .gantt-toggle-actions { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-secondary); cursor: pointer; user-select: none; padding: 3px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface2); transition: background 0.1s; }
 .gantt-toggle-actions:hover { background: var(--surface3); }
 .gantt-toggle-actions.on { background: var(--text-primary); color: #fff; border-color: var(--text-primary); }
+
+/* ══ PARTICIPANTS ══ */
+.cr-participants { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 0 4px; }
+.cr-participant-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px 4px 6px; border-radius: 20px;
+  border: 1.5px solid var(--border-strong);
+  background: var(--bg); cursor: pointer;
+  font-size: 11.5px; color: var(--text-muted);
+  transition: all 0.12s; user-select: none;
+}
+.cr-participant-pill:hover { border-color: var(--text-secondary); }
+.cr-participant-pill.present {
+  background: #f0fdf4; border-color: #86efac; color: #15803d;
+}
+.cr-participant-pill.excuse {
+  background: #fff7ed; border-color: #fdba74; color: #c2410c;
+}
+.cr-participant-pill .cp-av {
+  width: 18px; height: 18px; border-radius: 3px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 7px; font-weight: 700; color: white; flex-shrink: 0;
+}
+.cr-participant-pill .cp-status {
+  font-size: 10px; font-weight: 600; margin-left: 1px;
+}
 </style>
 </head>
 <body>
@@ -886,6 +912,11 @@ tr:hover .cr-del-btn { opacity: 1; }
                 <option value="">— Sélectionner —</option>
               </select>
             </div>
+          </div>
+          <!-- Section participants -->
+          <div id="crParticipantsSection" style="display:none">
+            <div style="font-size:10.5px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px">Participants</div>
+            <div class="cr-participants" id="crParticipantsList"></div>
           </div>
           <!-- Bandeau session — boutons injectes dynamiquement par onCrHeaderChange -->
           <div id="crSessionBanner" style="display:none;align-items:center;gap:8px;padding:10px 16px;background:var(--surface3);border:1px solid var(--border-strong);border-radius:var(--radius);font-size:13px;flex-wrap:wrap">
@@ -2190,6 +2221,7 @@ function switchAcMode(mode) {
 }
 
 let ganttShowActions = false;
+let crParticipants = {}; // { actorId: 'present' | 'excuse' | '' }
 
 function toggleGanttActions() {
   ganttShowActions = !ganttShowActions;
@@ -3657,6 +3689,7 @@ async function fetchDecisions() {
           echeance:    t.echeance?.[i]    || null,
           etat:        t.etat?.[i]        || '',
           commentaire: t.commentaire?.[i] || '',
+          participants: t.participants?.[i]  || '',
         });
       });
     }
@@ -4090,6 +4123,80 @@ function resetCr() {
   document.getElementById('cr_instance').value = '';
   initCrRows();
   document.getElementById('crStatus').textContent = '';
+  resetCrParticipants();
+}
+
+
+// ── Participants du CR ──
+function renderCrParticipants() {
+  const instVal = document.getElementById('cr_instance').value;
+  const section = document.getElementById('crParticipantsSection');
+  const list    = document.getElementById('crParticipantsList');
+  if (!section || !list) return;
+
+  if (!instVal) { section.style.display = 'none'; return; }
+  const instId = parseInt(instVal);
+
+  // Membres de l'instance
+  const members = allActors.filter(a => {
+    const ids = getRefList(a.instance).map(v => resolveInstId(v));
+    return ids.includes(instId);
+  }).sort((a, b) => {
+    const order = ['Commanditaire','Directeur de projet','Chef de projet',"Pilote d'actions",'Contributeur interne','Contributeur externe'];
+    return (order.indexOf(a.role)+1||99) - (order.indexOf(b.role)+1||99);
+  });
+
+  if (!members.length) { section.style.display = 'none'; return; }
+  section.style.display = '';
+
+  // Charger les participants depuis une décision existante de la séance
+  const dateEl  = document.getElementById('cr_date');
+  const dateNum = dateEl?.value ? fromDateInput(dateEl.value) : null;
+  const existing = allDecisions.find(d =>
+    d.instance === instId && (!dateNum || d.date === dateNum) && d.participants
+  );
+  if (existing && existing.participants && !Object.keys(crParticipants).length) {
+    try {
+      const parsed = JSON.parse(existing.participants);
+      (parsed.presents || []).forEach(id => { crParticipants[id] = 'present'; });
+      (parsed.excuses  || []).forEach(id => { crParticipants[id] = 'excuse'; });
+    } catch(e) {}
+  }
+
+  // Initialiser les absents non encore définis
+  members.forEach(a => {
+    if (!(a.id in crParticipants)) crParticipants[a.id] = '';
+  });
+
+  list.innerHTML = members.map(a => {
+    const prc  = roleColors[a.role] || { avatar: '#6B7280' };
+    const ini  = (a.nom||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const stat = crParticipants[a.id] || '';
+    const cls  = stat === 'present' ? 'present' : stat === 'excuse' ? 'excuse' : '';
+    const icon = stat === 'present' ? ' ✓' : stat === 'excuse' ? ' ~' : '';
+    return `<span class="cr-participant-pill ${cls}" onclick="toggleParticipant(${a.id})" title="${esc(a.nom)}${a.role ? ' — '+esc(a.role) : ''}">
+      <span class="cp-av" style="background:${prc.avatar}">${ini}</span>
+      ${esc(a.nom)}<span class="cp-status">${icon}</span>
+    </span>`;
+  }).join('');
+}
+
+function toggleParticipant(actorId) {
+  const cur = crParticipants[actorId] || '';
+  crParticipants[actorId] = cur === '' ? 'present' : cur === 'present' ? 'excuse' : '';
+  renderCrParticipants();
+}
+
+function crParticipantsJson() {
+  const presents = Object.entries(crParticipants).filter(([,v]) => v === 'present').map(([k]) => parseInt(k));
+  const excuses  = Object.entries(crParticipants).filter(([,v]) => v === 'excuse').map(([k]) => parseInt(k));
+  if (!presents.length && !excuses.length) return '';
+  return JSON.stringify({ presents, excuses });
+}
+
+function resetCrParticipants() {
+  crParticipants = {};
+  renderCrParticipants();
 }
 
 // ══ SESSION PICKER (Compte rendu) ══
@@ -4107,8 +4214,10 @@ function onCrHeaderChange() {
   // Instance requise — date optionnelle
   if (!instVal) {
     banner.style.display = 'none';
+    document.getElementById('crParticipantsSection').style.display = 'none';
     return;
   }
+  renderCrParticipants();
 
   const dateNum = dateVal ? fromDateInput(dateVal) : null;
   const instId  = parseInt(instVal);
@@ -4284,6 +4393,7 @@ async function saveCr() {
 
   const dateNum = fromDateInput(dateVal);
   const instanceId  = parseInt(instanceVal);
+  const participantsVal = crParticipantsJson();
 
   const makeFields = (r) => ({
     date:        dateNum,
@@ -4295,6 +4405,7 @@ async function saveCr() {
     echeance:    fromDateInput(r.echeance),
     etat:        r.etat               || 'En cours',
     commentaire: r.commentaire.trim() || null,
+    participants: participantsVal     || null,
   });
 
   // Only create rows not yet in Grist; update those already saved via autoSave
