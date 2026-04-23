@@ -2933,7 +2933,7 @@ function renderGanttProjet() {
     if (p.depth === 0) {
       svgBody += `<rect x="0" y="${y+4}" width="2" height="${ROW_H-8}" rx="1" fill="${barColor}"/>`;
     }
-    svgBody += `<g><title>${esc(labelRaw)}</title><text x="${5+indent}" y="${y+ROW_H/2}" dominant-baseline="central" font-size="${fs}" font-weight="${fw}" fill="#1a1a1a" font-family="system-ui,sans-serif">${esc(label)}</text></g>`;
+    svgBody += `<g><text x="${5+indent}" y="${y+ROW_H/2}" dominant-baseline="central" font-size="${fs}" font-weight="${fw}" fill="#1a1a1a" font-family="system-ui,sans-serif">${esc(label)}</text></g>`;
 
     // Barre Gantt
     const sMs = p.debut     > 0 ? p.debut     * 86400000 : null;
