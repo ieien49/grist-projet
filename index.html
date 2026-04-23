@@ -878,10 +878,10 @@ tr:hover .cr-del-btn { opacity: 1; }
             <select class="filter-select" id="gpFilterPilote" onchange="renderGanttProjet()">
               <option value="">Tous les pilotes</option>
             </select>
-            <label style="display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--text-secondary);cursor:pointer;user-select:none;padding:3px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2)">
-              <input type="checkbox" id="gpShowDep" onchange="renderGanttProjet()" style="accent-color:var(--text-primary)">
+            <button class="gantt-toggle-actions on" id="gpShowDepBtn" onclick="toggleGanttDep()" title="Masquer les dépendances">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 0 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
               Dépendances
-            </label>
+            </button>
           </div>
           <div style="flex:1;overflow:auto;background:var(--bg)">
             <div id="ganttProjetContainer" style="padding:8px 14px;min-width:700px"></div>
@@ -2586,6 +2586,14 @@ function toggleGanttActions() {
   renderGantt();
 }
 
+function toggleGanttDep() {
+  const btn = document.getElementById('gpShowDepBtn');
+  if (!btn) return;
+  const isOn = btn.classList.toggle('on');
+  btn.title = isOn ? 'Masquer les dépendances' : 'Afficher les dépendances';
+  renderGanttProjet();
+}
+
 function renderGantt() {
   const cont = document.getElementById('ganttContainer');
   if (!cont) return;
@@ -2811,7 +2819,7 @@ function renderGanttProjet() {
   const fNiveau  = document.getElementById('gpFilterNiveau')?.value  || '';
   const fEtat    = document.getElementById('gpFilterEtat')?.value    || '';
   const fPilote  = document.getElementById('gpFilterPilote')?.value  || '';
-  const showDep  = document.getElementById('gpShowDep')?.checked || false;
+  const showDep  = document.getElementById('gpShowDepBtn')?.classList.contains('on') ?? true;
 
   // Tous les sous-projets (hors maître)
   let subs = allProjets.filter(p => p.ref && p.ref !== 0);
@@ -3007,7 +3015,11 @@ function renderGanttProjet() {
   // Marqueur flèche
   const defs = showDep ? `<defs><marker id="arrowGP" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><polygon points="0 0, 7 3.5, 0 7" fill="#6366f1" opacity="0.7"/></marker></defs>` : '';
 
-  cont.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${TOTAL_W} ${totalH}" width="100%" style="display:block;min-height:${totalH}px">
+  // Stocker les lignes pour le tooltip
+  cont._ganttRows = rows;
+  cont._ganttDims = { HEADER_H, ROW_H, LABEL_W, TOTAL_W };
+
+  cont.innerHTML = `<svg id="ganttProjetSvg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${TOTAL_W} ${totalH}" width="100%" style="display:block;min-height:${totalH}px;cursor:default">
     ${defs}
     ${svgBody}
     ${svgArrows}
@@ -3021,6 +3033,33 @@ function renderGanttProjet() {
     ${showDep ? '<span style="font-size:10.5px;color:#6366f1;display:inline-flex;align-items:center;gap:4px"><span style="width:14px;height:1.5px;background:#6366f1;display:inline-block;border-top:1.5px dashed #6366f1"></span>Dépendance</span>' : ''}
     <span style="font-size:10.5px;color:var(--text-muted);display:inline-flex;align-items:center;gap:4px"><span style="width:12px;height:7px;border-radius:2px;background:linear-gradient(90deg,#374151 50%,rgba(55,65,81,0.15) 50%);display:inline-block"></span>Progression</span>
   </div>`;
+
+  // Tooltip survol colonne label
+  const svg = document.getElementById('ganttProjetSvg');
+  const tip = document.getElementById('ganttTooltip');
+  if (svg && tip) {
+    svg.addEventListener('mousemove', function(e) {
+      const rect  = svg.getBoundingClientRect();
+      const scaleX = TOTAL_W / rect.width;
+      const scaleY = totalH / rect.height;
+      const svgX  = (e.clientX - rect.left) * scaleX;
+      const svgY  = (e.clientY - rect.top)  * scaleY;
+      if (svgX > LABEL_W || svgY < HEADER_H) { tip.classList.remove('show'); return; }
+      const ri = Math.floor((svgY - HEADER_H) / ROW_H);
+      const r  = cont._ganttRows?.[ri];
+      if (!r) { tip.classList.remove('show'); return; }
+      const label = (r.code ? r.code + ' – ' : '') + (r.nom || '—');
+      const pilote = r.pilote ? allActors.find(a => a.id === r.pilote) : null;
+      const dateStr = [r.debut > 0 ? '▶ ' + new Date(r.debut*86400000).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}) : null,
+        (r.finreelle > 0 ? r.finreelle : r.fin) > 0 ? '■ ' + new Date(((r.finreelle||0) > 0 ? r.finreelle : r.fin)*86400000).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}) : null
+      ].filter(Boolean).join('&nbsp;&nbsp;');
+      tip.innerHTML = `<strong style="display:block;margin-bottom:3px">${esc(label)}</strong>${pilote?`<span style="font-size:11px;color:var(--text-muted)">${esc(pilote.nom)}</span><br>`:''}<span style="font-size:11px;color:var(--text-muted)">${dateStr}</span>`;
+      tip.style.left = (e.clientX + 12) + 'px';
+      tip.style.top  = (e.clientY - 8)  + 'px';
+      tip.classList.add('show');
+    });
+    svg.addEventListener('mouseleave', () => tip.classList.remove('show'));
+  }
 }
 
 function toggleAcNode(gId) {
