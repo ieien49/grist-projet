@@ -1111,10 +1111,7 @@ tr:hover .cr-del-btn { opacity: 1; }
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
           Par action
         </div>
-        <div class="cadre-subtab" id="acModeGantt" data-sub="gantt" onclick="switchAcMode('gantt')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="15" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="12" y2="18"/></svg>
-          Gantt
-        </div>
+
         <div class="subnav-spacer"></div>
         <div class="subnav-controls">
           <div class="search-wrap" style="min-width:130px;max-width:190px">
@@ -1144,19 +1141,10 @@ tr:hover .cr-del-btn { opacity: 1; }
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Nouvelle tâche
           </button>
-          <!-- Contrôles Gantt (masqués sur les autres modes) -->
-          <button class="gantt-toggle-actions" id="ganttToggleActions" onclick="toggleGanttActions()" style="display:none">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-            Actions
-          </button>
         </div>
       </nav>
       <div class="table-wrap" id="actionTable">
         <div class="loading"><div class="spinner"></div> Chargement…</div>
-      </div>
-      <!-- Gantt view -->
-      <div id="ganttView" style="display:none;flex:1;overflow:auto;background:var(--bg)">
-        <div id="ganttContainer"></div>
       </div>
     </div>
     <!-- Tooltip Gantt -->
@@ -2552,28 +2540,22 @@ function switchAcMode(mode) {
   acMode = mode;
   document.getElementById('acModeActions').classList.toggle('active', mode === 'actions');
   document.getElementById('acModeProjets').classList.toggle('active', mode === 'projets');
-  document.getElementById('acModeGantt').classList.toggle('active', mode === 'gantt');
 
   const fpEl   = document.getElementById('actionFilterProjet');
   const fEtat  = document.getElementById('actionFilterEtat');
   const expEl  = document.getElementById('acExpandBtns');
   const srEl   = document.querySelector('#panel-actions .search-wrap');
   const addBtn = document.getElementById('acAddBtn');
-  const ganttCtrl = document.getElementById('ganttToggleActions');
-  const tblView   = document.getElementById('actionTable');
-  const ganttView = document.getElementById('ganttView');
+  const tblView = document.getElementById('actionTable');
 
-  if (fpEl)      fpEl.style.display      = mode === 'actions' ? '' : 'none';
-  if (fEtat)     fEtat.style.display     = mode !== 'gantt'   ? '' : 'none';
-  if (srEl)      srEl.style.display      = mode !== 'gantt'   ? '' : 'none';
-  if (expEl)     expEl.style.display     = mode === 'projets' ? 'flex' : 'none';
-  if (addBtn)    addBtn.style.display    = mode !== 'gantt'   ? '' : 'none';
-  if (ganttCtrl) ganttCtrl.style.display = mode === 'gantt'   ? '' : 'none';
-  if (tblView)   tblView.style.display   = mode !== 'gantt'   ? '' : 'none';
-  if (ganttView) ganttView.style.display = mode === 'gantt'   ? 'flex' : 'none';
+  if (fpEl)    fpEl.style.display    = mode === 'actions' ? '' : 'none';
+  if (fEtat)   fEtat.style.display   = '';
+  if (srEl)    srEl.style.display    = '';
+  if (expEl)   expEl.style.display   = mode === 'projets' ? 'flex' : 'none';
+  if (addBtn)  addBtn.style.display  = '';
+  if (tblView) tblView.style.display = '';
 
-  if (mode === 'gantt') renderGantt();
-  else renderActions();
+  renderActions();
 }
 
 let ganttShowActions = false;
