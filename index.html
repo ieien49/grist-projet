@@ -215,9 +215,7 @@ textarea.form-control { resize: vertical; min-height: 64px; line-height: 1.5; }
 .kb-card-date { font-size:10px; color:var(--text-muted); margin-left:auto; }
 .kb-card-date.overdue { color:#DC2626; font-weight:600; }
 .kb-card-prio { font-size:9px; padding:1px 5px; border-radius:3px; font-weight:600; letter-spacing:.03em; }
-.kb-drop-zone { border:2px dashed var(--border); border-radius:var(--radius-sm); height:44px; display:none; align-items:center; justify-content:center; color:var(--text-muted); font-size:11px; }
-.kb-drop-zone.active { display:flex; border-color:#3B5BDB; background:rgba(59,91,219,0.04); color:#3B5BDB; }
-.kb-col.drag-over .kb-drop-zone { display:flex; border-color:#3B5BDB; background:rgba(59,91,219,0.04); }
+.kb-col-body.drag-over { background:rgba(59,91,219,0.05); outline:2px dashed #3B5BDB; outline-offset:-3px; border-radius:0 0 var(--radius) var(--radius); }
 .kb-empty { padding:20px 10px; text-align:center; color:var(--text-muted); font-size:11.5px; font-style:italic; }
 
 
@@ -2929,17 +2927,16 @@ function renderKanban() {
       ? `<div class="kb-empty">Aucune tâche</div>`
       : cards.map(a => kanbanCard(a)).join('');
 
-    return `<div class="kb-col" data-col-id="${esc(col.id)}"
-        ondragover="kbDragOver(event, this)"
-        ondragleave="kbDragLeave(this)"
-        ondrop="kbDrop(event, '${esc(col.id)}')">
+    return `<div class="kb-col" data-col-id="${esc(col.id)}">
       <div class="kb-col-header">
         <span class="kb-col-dot" style="background:${col.dot}"></span>
         <span class="kb-col-title">${esc(col.title)}</span>
         <span class="kb-col-count">${cards.length}</span>
       </div>
-      <div class="kb-col-body" id="kb_body_${esc(col.id)}">
-        <div class="kb-drop-zone">Déposer ici</div>
+      <div class="kb-col-body" id="kb_body_${esc(col.id)}"
+          ondragover="kbDragOver(event, '${esc(col.id)}')"
+          ondragleave="kbDragLeave(event, '${esc(col.id)}')"
+          ondrop="kbDrop(event, '${esc(col.id)}')">
         ${cardsHtml}
       </div>
     </div>`;
@@ -3003,20 +3000,26 @@ function kbDragStart(e, id, col) {
 }
 function kbDragEnd(e) {
   e.currentTarget.classList.remove('dragging');
-  document.querySelectorAll('.kb-col').forEach(c => c.classList.remove('drag-over'));
+  document.querySelectorAll('.kb-col-body').forEach(b => b.classList.remove('drag-over'));
 }
-function kbDragOver(e, colEl) {
+function kbDragOver(e, colId) {
   e.preventDefault();
+  e.stopPropagation();
   e.dataTransfer.dropEffect = 'move';
-  document.querySelectorAll('.kb-col').forEach(c => c.classList.remove('drag-over'));
-  colEl.classList.add('drag-over');
+  document.querySelectorAll('.kb-col-body').forEach(b => b.classList.remove('drag-over'));
+  const body = document.getElementById('kb_body_' + colId);
+  if (body) body.classList.add('drag-over');
 }
-function kbDragLeave(colEl) {
-  colEl.classList.remove('drag-over');
+function kbDragLeave(e, colId) {
+  // Ignorer si on reste dans le même body (enfant → parent)
+  const body = document.getElementById('kb_body_' + colId);
+  if (body && body.contains(e.relatedTarget)) return;
+  if (body) body.classList.remove('drag-over');
 }
 async function kbDrop(e, colId) {
   e.preventDefault();
-  document.querySelectorAll('.kb-col').forEach(c => c.classList.remove('drag-over'));
+  e.stopPropagation();
+  document.querySelectorAll('.kb-col-body').forEach(b => b.classList.remove('drag-over'));
   if (kbDragId === null) return;
 
   // En mode "par statut" : on met à jour l'état
