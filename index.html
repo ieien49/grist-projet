@@ -832,9 +832,9 @@ tr:hover .cr-del-btn { opacity: 1; }
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="15" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="12" y2="18"/></svg>
           Gantt
         </div>
-        <div class="cadre-subtab" id="spModeRoadmap" data-sub="sp-roadmap" onclick="switchSpMode('roadmap')">
+        <div class="cadre-subtab" id="spModeFeuille de route" data-sub="sp-feuilleroute" onclick="switchSpMode('feuilleroute')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="6" height="10" rx="1"/><rect x="9" y="4" width="6" height="13" rx="1"/><rect x="16" y="9" width="6" height="8" rx="1"/></svg>
-          Roadmap
+          Feuille de route
         </div>
         <div class="cadre-subtab" id="spModeGraphe" data-sub="sp-graphe" onclick="switchSpMode('graphe')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="19" cy="19" r="2"/><line x1="7" y1="12" x2="17" y2="6"/><line x1="7" y1="12" x2="17" y2="18"/></svg>
@@ -891,26 +891,26 @@ tr:hover .cr-del-btn { opacity: 1; }
             <div id="ganttProjetContainer" style="padding:8px 14px;min-width:700px"></div>
           </div>
         </div>
-        <!-- Vue Roadmap -->
-        <div id="sp-roadmap" style="flex:1;flex-direction:column;overflow:hidden;display:none">
-          <div id="roadmapFilters" style="padding:8px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;background:var(--bg)">
-            <select class="filter-select" id="rmFilterZoom" onchange="renderRoadmap()">
+        <!-- Vue Feuille de route -->
+        <div id="sp-feuilleroute" style="flex:1;flex-direction:column;overflow:hidden;display:none">
+          <div id="feuillerouteFilters" style="padding:8px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;background:var(--bg)">
+            <select class="filter-select" id="frFilterZoom" onchange="renderFeuille de route()">
               <option value="quarter">Vue trimestrielle</option>
               <option value="semester">Vue semestrielle</option>
               <option value="year">Vue annuelle</option>
             </select>
-            <select class="filter-select" id="rmFilterEtat" onchange="renderRoadmap()">
+            <select class="filter-select" id="frFilterEtat" onchange="renderFeuille de route()">
               <option value="">Tous les états</option>
               <option value="encours">En cours</option>
               <option value="termine">Terminé</option>
             </select>
             <label style="display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--text-secondary);cursor:pointer;user-select:none;padding:3px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2)">
-              <input type="checkbox" id="rmShowMilestones" onchange="renderRoadmap()" checked style="accent-color:var(--text-primary)">
+              <input type="checkbox" id="frShowMilestones" onchange="renderFeuille de route()" checked style="accent-color:var(--text-primary)">
               Jalons
             </label>
           </div>
           <div style="flex:1;overflow:auto;background:var(--bg)">
-            <div id="roadmapContainer" style="padding:12px 14px;min-width:700px"></div>
+            <div id="feuillerouteContainer" style="padding:12px 14px;min-width:700px"></div>
           </div>
         </div>
         <!-- Vue graphique -->
@@ -1692,16 +1692,16 @@ function switchSpMode(mode) {
   spMode = mode;
   document.getElementById('spModeListe').classList.toggle('active',   mode === 'liste');
   document.getElementById('spModeGantt').classList.toggle('active',   mode === 'gantt');
-  document.getElementById('spModeRoadmap').classList.toggle('active', mode === 'roadmap');
+  document.getElementById('spModeFeuille de route').classList.toggle('active', mode === 'feuilleroute');
   document.getElementById('spModeGraphe').classList.toggle('active',  mode === 'graphe');
   document.getElementById('sp-liste').style.display   = mode === 'liste'   ? 'flex' : 'none';
   document.getElementById('sp-gantt').style.display   = mode === 'gantt'   ? 'flex' : 'none';
-  document.getElementById('sp-roadmap').style.display = mode === 'roadmap' ? 'flex' : 'none';
+  document.getElementById('sp-feuilleroute').style.display = mode === 'feuilleroute' ? 'flex' : 'none';
   document.getElementById('sp-graphe').style.display  = mode === 'graphe'  ? 'flex' : 'none';
   document.getElementById('spListeControls').style.display = mode === 'liste' ? '' : 'none';
   if (mode === 'liste')   renderSousProjets();
   if (mode === 'gantt')   { populateGanttProjetFilters(); renderGanttProjet(); }
-  if (mode === 'roadmap') renderRoadmap();
+  if (mode === 'feuilleroute') renderFeuille de route();
   if (mode === 'graphe')  renderGraph();
 }
 
@@ -1717,13 +1717,13 @@ const LANE_COLORS = [
   { bar:'#374151', bg:'#F9FAFB', text:'#111827' },
 ];
 
-function renderRoadmap() {
-  const cont = document.getElementById('roadmapContainer');
+function renderFeuille de route() {
+  const cont = document.getElementById('feuillerouteContainer');
   if (!cont) return;
 
-  const zoom        = document.getElementById('rmFilterZoom')?.value || 'quarter';
-  const fEtat       = document.getElementById('rmFilterEtat')?.value || '';
-  const showMilest  = document.getElementById('rmShowMilestones')?.checked ?? true;
+  const zoom        = document.getElementById('frFilterZoom')?.value || 'quarter';
+  const fEtat       = document.getElementById('frFilterEtat')?.value || '';
+  const showMilest  = document.getElementById('frShowMilestones')?.checked ?? true;
 
   // Sous-projets seulement
   let subs = allProjets.filter(p => p.ref && p.ref !== 0);
@@ -2523,7 +2523,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function fetchActions() {
   try {
-    const t = await grist.docApi.fetchTable('Actions');
+    const t = await grist.docApi.fetchTable('Taches');
     allActions = [];
     if (t && t.id) {
       t.id.forEach((id, i) => {
@@ -2754,10 +2754,10 @@ async function saveAction() {
   };
   try {
     if (editingActionId) {
-      await grist.docApi.applyUserActions([['UpdateRecord','Actions',editingActionId,fields]]);
+      await grist.docApi.applyUserActions([['UpdateRecord','Taches',editingActionId,fields]]);
       showToast('Action mise à jour');
     } else {
-      await grist.docApi.applyUserActions([['AddRecord','Actions',null,fields]]);
+      await grist.docApi.applyUserActions([['AddRecord','Taches',null,fields]]);
       showToast('Action créée');
     }
     closeActionModal();
@@ -2770,7 +2770,7 @@ async function deleteAction(id) {
   const a = allActions.find(x => x.id === id);
   if (!a || !confirm('Supprimer cette action ?')) return;
   try {
-    await grist.docApi.applyUserActions([['RemoveRecord','Actions',id]]);
+    await grist.docApi.applyUserActions([['RemoveRecord','Taches',id]]);
     showToast('Action supprimée');
     await fetchActions();
     renderActions();
@@ -3299,7 +3299,7 @@ function toggleAcNode(gId) {
 async function saveActionEtat(id, newEtat, selectEl) {
   selectEl.className = 'etat-select ' + etatAcClass(newEtat);
   try {
-    await grist.docApi.applyUserActions([['UpdateRecord', 'Actions', id, { etat: newEtat }]]);
+    await grist.docApi.applyUserActions([['UpdateRecord', 'Taches', id, { etat: newEtat }]]);
     const ac = allActions.find(a => a.id === id);
     if (ac) ac.etat = newEtat;
     showToast('État mis à jour');
