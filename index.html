@@ -832,6 +832,10 @@ tr:hover .cr-del-btn { opacity: 1; }
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="15" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="12" y2="18"/></svg>
           Gantt
         </div>
+        <div class="cadre-subtab" id="spModeRoadmap" data-sub="sp-roadmap" onclick="switchSpMode('roadmap')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="6" height="10" rx="1"/><rect x="9" y="4" width="6" height="13" rx="1"/><rect x="16" y="9" width="6" height="8" rx="1"/></svg>
+          Roadmap
+        </div>
         <div class="cadre-subtab" id="spModeGraphe" data-sub="sp-graphe" onclick="switchSpMode('graphe')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="19" cy="19" r="2"/><line x1="7" y1="12" x2="17" y2="6"/><line x1="7" y1="12" x2="17" y2="18"/></svg>
           Vue graphique
@@ -885,6 +889,28 @@ tr:hover .cr-del-btn { opacity: 1; }
           </div>
           <div style="flex:1;overflow:auto;background:var(--bg)">
             <div id="ganttProjetContainer" style="padding:8px 14px;min-width:700px"></div>
+          </div>
+        </div>
+        <!-- Vue Roadmap -->
+        <div id="sp-roadmap" style="flex:1;flex-direction:column;overflow:hidden;display:none">
+          <div id="roadmapFilters" style="padding:8px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;background:var(--bg)">
+            <select class="filter-select" id="rmFilterZoom" onchange="renderRoadmap()">
+              <option value="quarter">Vue trimestrielle</option>
+              <option value="semester">Vue semestrielle</option>
+              <option value="year">Vue annuelle</option>
+            </select>
+            <select class="filter-select" id="rmFilterEtat" onchange="renderRoadmap()">
+              <option value="">Tous les états</option>
+              <option value="encours">En cours</option>
+              <option value="termine">Terminé</option>
+            </select>
+            <label style="display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--text-secondary);cursor:pointer;user-select:none;padding:3px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2)">
+              <input type="checkbox" id="rmShowMilestones" onchange="renderRoadmap()" checked style="accent-color:var(--text-primary)">
+              Jalons
+            </label>
+          </div>
+          <div style="flex:1;overflow:auto;background:var(--bg)">
+            <div id="roadmapContainer" style="padding:12px 14px;min-width:700px"></div>
           </div>
         </div>
         <!-- Vue graphique -->
@@ -1664,16 +1690,233 @@ let spMode = 'liste';
 
 function switchSpMode(mode) {
   spMode = mode;
-  document.getElementById('spModeListe').classList.toggle('active', mode === 'liste');
-  document.getElementById('spModeGantt').classList.toggle('active', mode === 'gantt');
-  document.getElementById('spModeGraphe').classList.toggle('active', mode === 'graphe');
-  document.getElementById('sp-liste').style.display  = mode === 'liste'  ? 'flex'  : 'none';
-  document.getElementById('sp-gantt').style.display  = mode === 'gantt'  ? 'flex'  : 'none';
-  document.getElementById('sp-graphe').style.display = mode === 'graphe' ? 'flex'  : 'none';
+  document.getElementById('spModeListe').classList.toggle('active',   mode === 'liste');
+  document.getElementById('spModeGantt').classList.toggle('active',   mode === 'gantt');
+  document.getElementById('spModeRoadmap').classList.toggle('active', mode === 'roadmap');
+  document.getElementById('spModeGraphe').classList.toggle('active',  mode === 'graphe');
+  document.getElementById('sp-liste').style.display   = mode === 'liste'   ? 'flex' : 'none';
+  document.getElementById('sp-gantt').style.display   = mode === 'gantt'   ? 'flex' : 'none';
+  document.getElementById('sp-roadmap').style.display = mode === 'roadmap' ? 'flex' : 'none';
+  document.getElementById('sp-graphe').style.display  = mode === 'graphe'  ? 'flex' : 'none';
   document.getElementById('spListeControls').style.display = mode === 'liste' ? '' : 'none';
-  if (mode === 'liste')  renderSousProjets();
-  if (mode === 'gantt')  { populateGanttProjetFilters(); renderGanttProjet(); }
-  if (mode === 'graphe') renderGraph();
+  if (mode === 'liste')   renderSousProjets();
+  if (mode === 'gantt')   { populateGanttProjetFilters(); renderGanttProjet(); }
+  if (mode === 'roadmap') renderRoadmap();
+  if (mode === 'graphe')  renderGraph();
+}
+
+// ══ ROADMAP ══
+
+const LANE_COLORS = [
+  { bar:'#3B5BDB', bg:'#EDF2FF', text:'#1E3A8A' },
+  { bar:'#1A7A4F', bg:'#ECFDF5', text:'#065F46' },
+  { bar:'#B45309', bg:'#FFFBEB', text:'#92400E' },
+  { bar:'#6D28D9', bg:'#F5F3FF', text:'#4C1D95' },
+  { bar:'#0E7490', bg:'#ECFEFF', text:'#164E63' },
+  { bar:'#BE185D', bg:'#FDF2F8', text:'#831843' },
+  { bar:'#374151', bg:'#F9FAFB', text:'#111827' },
+];
+
+function renderRoadmap() {
+  const cont = document.getElementById('roadmapContainer');
+  if (!cont) return;
+
+  const zoom        = document.getElementById('rmFilterZoom')?.value || 'quarter';
+  const fEtat       = document.getElementById('rmFilterEtat')?.value || '';
+  const showMilest  = document.getElementById('rmShowMilestones')?.checked ?? true;
+
+  // Sous-projets seulement
+  let subs = allProjets.filter(p => p.ref && p.ref !== 0);
+  if (fEtat === 'encours') subs = subs.filter(p => !p.finreelle || p.finreelle === 0);
+  if (fEtat === 'termine') subs = subs.filter(p =>  p.finreelle && p.finreelle > 0);
+
+  if (!subs.length) {
+    cont.innerHTML = `<div style="padding:48px;text-align:center;color:var(--text-muted);font-size:13px">Aucun sous-projet à afficher.</div>`;
+    return;
+  }
+
+  // ── Bornes temporelles ──
+  const datesMs = [];
+  subs.forEach(p => {
+    if (p.debut     > 0) datesMs.push(p.debut     * 86400000);
+    if (p.fin       > 0) datesMs.push(p.fin       * 86400000);
+    if (p.finreelle > 0) datesMs.push(p.finreelle * 86400000);
+  });
+  datesMs.push(Date.now());
+  if (!datesMs.filter(isFinite).length) {
+    cont.innerHTML = `<div style="padding:48px;text-align:center;color:var(--text-muted);font-size:13px">Aucune date renseignée.</div>`;
+    return;
+  }
+
+  const raw0 = new Date(Math.min(...datesMs));
+  const rawN = new Date(Math.max(...datesMs));
+
+  // Aligner les bornes sur début de période
+  function startOfPeriod(d, z) {
+    const r = new Date(d); r.setHours(0,0,0,0);
+    if (z === 'quarter')  { r.setMonth(Math.floor(r.getMonth()/3)*3, 1); }
+    else if (z === 'semester') { r.setMonth(Math.floor(r.getMonth()/6)*6, 1); }
+    else { r.setMonth(0,1); }
+    return r;
+  }
+  function nextPeriod(d, z) {
+    const r = new Date(d);
+    if (z === 'quarter')  r.setMonth(r.getMonth()+3);
+    else if (z === 'semester') r.setMonth(r.getMonth()+6);
+    else r.setFullYear(r.getFullYear()+1);
+    return r;
+  }
+
+  const dStart = startOfPeriod(raw0, zoom); dStart.setMonth(dStart.getMonth() - (zoom==='quarter'?3:zoom==='semester'?6:12));
+  const dEnd   = nextPeriod(startOfPeriod(rawN, zoom), zoom);
+  const spanMs = dEnd.getTime() - dStart.getTime();
+  const pct = ms => Math.max(0, Math.min(100, (ms - dStart.getTime()) / spanMs * 100));
+  const todayPct = pct(Date.now());
+
+  // ── Périodes (colonnes) ──
+  const periods = [];
+  let cur = new Date(dStart);
+  while (cur < dEnd) {
+    const nxt = nextPeriod(cur, zoom);
+    periods.push({ start: new Date(cur), end: new Date(nxt) });
+    cur = nxt;
+  }
+
+  // ── Grouper par projet parent (niveau 1) ──
+  const masterId = masterProjet ? masterProjet.id : null;
+  const lvl1 = allProjets.filter(p => p.ref === masterId || (!masterId && !allProjets.find(x => x.id === p.ref) && p.ref))
+    .sort((a,b) => (a.ordre??9999)-(b.ordre??9999));
+  const lanes = lvl1.map((p1, li) => ({
+    parent: p1,
+    color:  LANE_COLORS[li % LANE_COLORS.length],
+    items:  subs.filter(c => c.ref === p1.id || c.id === p1.id).sort((a,b) => (a.ordre??9999)-(b.ordre??9999)),
+  })).filter(l => l.items.length);
+
+  // Sous-projets orphelins (pas rattachés à un niveau 1 connu dans le filtre)
+  const knownIds = new Set(lanes.flatMap(l => l.items.map(i => i.id)));
+  const orphans  = subs.filter(p => !knownIds.has(p.id));
+  if (orphans.length) lanes.push({ parent: null, color: LANE_COLORS[lanes.length % LANE_COLORS.length], items: orphans });
+
+  if (!lanes.length) {
+    cont.innerHTML = `<div style="padding:48px;text-align:center;color:var(--text-muted);font-size:13px">Aucune donnée.</div>`;
+    return;
+  }
+
+  // ── Calcul des jalons : date de fin du parent (niveau 1) ──
+  const milestones = [];
+  if (showMilest) {
+    lvl1.forEach((p1, li) => {
+      const ms = p1.finreelle > 0 ? p1.finreelle : p1.fin;
+      if (ms > 0) {
+        milestones.push({ label: p1.code || p1.nom, ms: ms*86400000, color: LANE_COLORS[li % LANE_COLORS.length].bar });
+      }
+    });
+  }
+
+  // ── Rendu HTML ──
+  const LABEL_W = 160; // px col gauche (fixe via CSS)
+
+  // Header des périodes
+  function periodLabel(p) {
+    const d = p.start;
+    if (zoom === 'quarter') {
+      const q = Math.floor(d.getMonth()/3)+1;
+      return `T${q} ${d.getFullYear()}`;
+    } else if (zoom === 'semester') {
+      const s = d.getMonth() < 6 ? 'S1' : 'S2';
+      return `${s} ${d.getFullYear()}`;
+    } else {
+      return `${d.getFullYear()}`;
+    }
+  }
+
+  let headerCols = periods.map(p => {
+    const w = pct(p.end.getTime()) - pct(p.start.getTime());
+    const isNow = p.start <= new Date() && p.end > new Date();
+    return `<div style="width:${w}%;min-width:0;text-align:center;font-size:10px;font-weight:600;letter-spacing:.05em;color:${isNow?'var(--text-primary)':'#999'};padding:5px 0;border-right:1px solid var(--border);box-sizing:border-box;${isNow?'background:rgba(59,91,219,0.04)':''}">${periodLabel(p)}</div>`;
+  }).join('');
+
+  // Ligne "aujourd'hui" (overlay)
+  const todayLine = `<div style="position:absolute;left:${todayPct}%;top:0;bottom:0;width:1.5px;background:#DC2626;opacity:0.4;z-index:2;pointer-events:none"></div>`;
+
+  // Jalons (triangles inversés sur la ligne de header)
+  const milestoneMarkers = milestones.map(m => {
+    const x = pct(m.ms);
+    if (x < 0 || x > 100) return '';
+    return `<div title="${esc(m.label)}" style="position:absolute;left:calc(${x}% - 6px);top:3px;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:10px solid ${m.color};opacity:0.85;z-index:3;cursor:default"></div>`;
+  }).join('');
+
+  // Lanes
+  let lanesHtml = lanes.map(lane => {
+    const { parent, color, items } = lane;
+    const laneLabel = parent ? ((parent.code ? parent.code + ' ' : '') + parent.nom) : 'Autres';
+
+    // Empilage des barres : chaque item sur sa propre micro-ligne
+    const rowH = 26; // px par item
+    const laneH = Math.max(items.length * rowH + 12, 44);
+
+    const bars = items.map((item, ii) => {
+      const sMs = item.debut     > 0 ? item.debut     * 86400000 : null;
+      const eMs = item.finreelle > 0 ? item.finreelle * 86400000 : (item.fin > 0 ? item.fin * 86400000 : null);
+      const isParent = item.id === parent?.id;
+      if (!sMs || !eMs) return '';
+
+      const x1   = pct(sMs);
+      const x2   = pct(eMs);
+      const bw   = Math.max(x2 - x1, 0.5);
+      const top  = 8 + ii * rowH;
+      const termine = item.finreelle > 0;
+      const barColor = termine ? '#888' : color.bar;
+      const opacity  = termine ? 0.55 : (isParent ? 1 : 0.85);
+      const h        = isParent ? 14 : 12;
+      const topOff   = top + (rowH - h) / 2;
+      const label    = (item.code ? item.code + ' – ' : '') + item.nom;
+      const maxLabelLen = Math.max(0, Math.round(bw / 100 * (cont.clientWidth - LABEL_W) / 5.8) - 2);
+      const labelTxt = bw > 5 && label.length > 0 ? (label.length > maxLabelLen ? label.slice(0, maxLabelLen-1)+'…' : label) : '';
+
+      return `<div title="${esc(label)}" style="position:absolute;left:${x1}%;width:${bw}%;top:${topOff}px;height:${h}px;background:${barColor};opacity:${opacity};border-radius:3px;box-sizing:border-box;display:flex;align-items:center;overflow:hidden;cursor:default">
+        ${labelTxt ? `<span style="padding:0 5px;font-size:9.5px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:${isParent?600:400}">${esc(labelTxt)}</span>` : ''}
+      </div>`;
+    }).join('');
+
+    // Grille colonnes pour cette lane
+    const colGrid = periods.map(p => {
+      const w = pct(p.end.getTime()) - pct(p.start.getTime());
+      const isNow = p.start <= new Date() && p.end > new Date();
+      return `<div style="width:${w}%;box-sizing:border-box;border-right:1px solid ${isNow?'rgba(59,91,219,0.1)':'var(--border)'};height:100%;${isNow?'background:rgba(59,91,219,0.02)':''}"></div>`;
+    }).join('');
+
+    return `<div style="display:flex;border-bottom:1px solid var(--border)">
+      <!-- Label colonne gauche -->
+      <div style="flex-shrink:0;width:${LABEL_W}px;padding:8px 10px;border-right:1px solid var(--border);display:flex;align-items:flex-start;gap:6px;box-sizing:border-box">
+        <div style="width:3px;flex-shrink:0;margin-top:3px;height:calc(100% - 6px);min-height:14px;border-radius:2px;background:${color.bar}"></div>
+        <span style="font-size:11px;font-weight:600;color:var(--text-primary);line-height:1.35;word-break:break-word">${esc(laneLabel)}</span>
+      </div>
+      <!-- Zone barres -->
+      <div style="flex:1;position:relative;height:${laneH}px;overflow:hidden">
+        <div style="display:flex;height:100%;position:absolute;left:0;right:0;top:0">${colGrid}</div>
+        ${todayLine}
+        ${bars}
+      </div>
+    </div>`;
+  }).join('');
+
+  cont.innerHTML = `<div style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--bg)">
+    <!-- Header périodes -->
+    <div style="display:flex;border-bottom:1px solid var(--border);background:var(--surface2)">
+      <div style="flex-shrink:0;width:${LABEL_W}px;border-right:1px solid var(--border);padding:5px 10px;font-size:10px;font-weight:600;color:#999;letter-spacing:.05em;box-sizing:border-box">SOUS-PROJET</div>
+      <div style="flex:1;position:relative;display:flex">${headerCols}${milestoneMarkers}</div>
+    </div>
+    <!-- Lanes -->
+    ${lanesHtml}
+  </div>
+  <!-- Légende -->
+  <div style="margin-top:12px;display:flex;gap:16px;flex-wrap:wrap;align-items:center">
+    <span style="font-size:10.5px;color:var(--text-muted);display:inline-flex;align-items:center;gap:5px"><span style="width:20px;height:8px;border-radius:2px;background:#3B5BDB;display:inline-block"></span>En cours</span>
+    <span style="font-size:10.5px;color:var(--text-muted);display:inline-flex;align-items:center;gap:5px"><span style="width:20px;height:8px;border-radius:2px;background:#888;opacity:0.6;display:inline-block"></span>Terminé</span>
+    ${showMilest ? '<span style="font-size:10.5px;color:var(--text-muted);display:inline-flex;align-items:center;gap:5px"><span style="display:inline-block;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:10px solid #374151;opacity:0.7"></span>Jalon (fin de projet)</span>' : ''}
+    <span style="font-size:10.5px;color:#DC2626;display:inline-flex;align-items:center;gap:5px"><span style="width:1.5px;height:12px;background:#DC2626;opacity:0.5;display:inline-block"></span>Aujourd'hui</span>
+  </div>`;
 }
 
 function renderGraph() {
