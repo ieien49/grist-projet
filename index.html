@@ -832,7 +832,7 @@ tr:hover .cr-del-btn { opacity: 1; }
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="15" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="12" y2="18"/></svg>
           Gantt
         </div>
-        <div class="cadre-subtab" id="spModeFeuille de route" data-sub="sp-feuilleroute" onclick="switchSpMode('feuilleroute')">
+        <div class="cadre-subtab" id="spModeFeuilleDeroute" data-sub="sp-feuilleroute" onclick="switchSpMode('feuilleroute')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="6" height="10" rx="1"/><rect x="9" y="4" width="6" height="13" rx="1"/><rect x="16" y="9" width="6" height="8" rx="1"/></svg>
           Feuille de route
         </div>
@@ -894,18 +894,18 @@ tr:hover .cr-del-btn { opacity: 1; }
         <!-- Vue Feuille de route -->
         <div id="sp-feuilleroute" style="flex:1;flex-direction:column;overflow:hidden;display:none">
           <div id="feuillerouteFilters" style="padding:8px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;background:var(--bg)">
-            <select class="filter-select" id="frFilterZoom" onchange="renderFeuille de route()">
+            <select class="filter-select" id="frFilterZoom" onchange="renderFeuilleDeroute()">
               <option value="quarter">Vue trimestrielle</option>
               <option value="semester">Vue semestrielle</option>
               <option value="year">Vue annuelle</option>
             </select>
-            <select class="filter-select" id="frFilterEtat" onchange="renderFeuille de route()">
+            <select class="filter-select" id="frFilterEtat" onchange="renderFeuilleDeroute()">
               <option value="">Tous les états</option>
               <option value="encours">En cours</option>
               <option value="termine">Terminé</option>
             </select>
             <label style="display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--text-secondary);cursor:pointer;user-select:none;padding:3px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2)">
-              <input type="checkbox" id="frShowMilestones" onchange="renderFeuille de route()" checked style="accent-color:var(--text-primary)">
+              <input type="checkbox" id="frShowMilestones" onchange="renderFeuilleDeroute()" checked style="accent-color:var(--text-primary)">
               Jalons
             </label>
           </div>
@@ -1692,7 +1692,7 @@ function switchSpMode(mode) {
   spMode = mode;
   document.getElementById('spModeListe').classList.toggle('active',   mode === 'liste');
   document.getElementById('spModeGantt').classList.toggle('active',   mode === 'gantt');
-  document.getElementById('spModeFeuille de route').classList.toggle('active', mode === 'feuilleroute');
+  document.getElementById('spModeFeuilleDeroute').classList.toggle('active', mode === 'feuilleroute');
   document.getElementById('spModeGraphe').classList.toggle('active',  mode === 'graphe');
   document.getElementById('sp-liste').style.display   = mode === 'liste'   ? 'flex' : 'none';
   document.getElementById('sp-gantt').style.display   = mode === 'gantt'   ? 'flex' : 'none';
@@ -1701,7 +1701,7 @@ function switchSpMode(mode) {
   document.getElementById('spListeControls').style.display = mode === 'liste' ? '' : 'none';
   if (mode === 'liste')   renderSousProjets();
   if (mode === 'gantt')   { populateGanttProjetFilters(); renderGanttProjet(); }
-  if (mode === 'feuilleroute') renderFeuille de route();
+  if (mode === 'feuilleroute') renderFeuilleDeroute();
   if (mode === 'graphe')  renderGraph();
 }
 
@@ -1717,7 +1717,7 @@ const LANE_COLORS = [
   { bar:'#374151', bg:'#F9FAFB', text:'#111827' },
 ];
 
-function renderFeuille de route() {
+function renderFeuilleDeroute() {
   const cont = document.getElementById('feuillerouteContainer');
   if (!cont) return;
 
