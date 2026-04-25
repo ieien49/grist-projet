@@ -92,6 +92,20 @@ body { font-family: var(--font); background: var(--bg); color: var(--text-primar
 .search-input:focus { border-color: var(--border-strong); background: var(--bg); box-shadow: 0 0 0 2px rgba(0,0,0,0.06); }
 .filter-select { padding: 4px 22px 4px 7px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface2); font-family: var(--font); font-size: 12.5px; color: var(--text-primary); outline: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='9' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 6px center; cursor: pointer; }
 .filter-select:focus { border-color: var(--border-strong); }
+/* ══ PROJECT MODEL CANVAS ══ */
+.canvas-grid { display:grid; grid-template-columns:1fr 1fr 1fr 1fr 1fr; gap:8px; }
+.canvas-block { border-radius:var(--radius); border:1px solid var(--border); background:var(--bg); display:flex; flex-direction:column; overflow:hidden; min-height:130px; position:relative; }
+.canvas-block-header { padding:7px 10px 5px; display:flex; align-items:center; gap:6px; flex-shrink:0; }
+.canvas-block-num { width:17px; height:17px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; color:#fff; flex-shrink:0; }
+.canvas-block-title { font-size:10px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; }
+.canvas-block-subtitle { font-size:9px; color:var(--text-muted); margin-top:1px; line-height:1.3; }
+.canvas-block-body { flex:1; padding:4px 10px 10px; font-size:12px; line-height:1.55; color:var(--text-primary); }
+.canvas-block-body[contenteditable] { outline:none; cursor:text; }
+.canvas-block-body[contenteditable]:focus { background:rgba(59,91,219,0.03); border-radius:0 0 var(--radius) var(--radius); }
+.canvas-block-body[contenteditable]:empty::before { content:attr(data-placeholder); color:#bbb; font-style:italic; font-size:11.5px; pointer-events:none; }
+.canvas-block-chips { display:flex; flex-wrap:wrap; gap:4px; padding:4px 10px 10px; }
+.canvas-chip { font-size:10.5px; padding:2px 8px; border-radius:10px; font-weight:500; white-space:nowrap; max-width:160px; overflow:hidden; text-overflow:ellipsis; }
+
 .btn-add { display: flex; align-items: center; gap: 4px; padding: 4px 11px; background: var(--text-primary); color: white; border: none; border-radius: var(--radius-sm); font-family: var(--font); font-size: 12.5px; font-weight: 500; cursor: pointer; transition: opacity 0.12s; white-space: nowrap; }
 .btn-add:hover { opacity: 0.78; }
 .btn-add-ghost { display: flex; align-items: center; gap: 4px; padding: 4px 11px; background: transparent; color: var(--text-secondary); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font); font-size: 12.5px; font-weight: 400; cursor: pointer; transition: background 0.12s, border-color 0.12s; white-space: nowrap; }
@@ -732,6 +746,10 @@ tr:hover .cr-del-btn { opacity: 1; }
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
           Chiffres clés
         </div>
+        <div class="cadre-subtab" data-sub="def-canvas" onclick="switchDefTab('def-canvas')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><line x1="2" y1="9" x2="22" y2="9"/><line x1="12" y1="9" x2="12" y2="21"/><line x1="2" y1="15" x2="12" y2="15"/></svg>
+          Canvas
+        </div>
         <!-- Boutons contextuels Définition -->
         <div class="subnav-spacer"></div>
         <div class="subnav-controls" id="defSubnavControls">
@@ -758,6 +776,24 @@ tr:hover .cr-del-btn { opacity: 1; }
             <div class="kpi-inner" id="kpiContainer">
               <div class="loading"><div class="spinner"></div> Chargement…</div>
             </div>
+          </div>
+        </div>
+        <!-- Sous-panel Canvas -->
+        <div class="cadre-subpanel" id="def-canvas" style="overflow:auto;background:var(--surface2)">
+          <div id="canvasToolbar" style="padding:8px 14px;display:flex;align-items:center;gap:8px;background:var(--bg);border-bottom:1px solid var(--border);flex-shrink:0">
+            <span style="font-size:12px;font-weight:600;color:var(--text-secondary);letter-spacing:.04em">PROJECT MODEL CANVAS</span>
+            <span style="flex:1"></span>
+            <button class="btn-add-ghost" id="canvasSaveBtn" onclick="saveCanvas()" style="display:none">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              Enregistrer
+            </button>
+            <button class="btn-add-ghost" onclick="exportCanvasPng()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Exporter PNG
+            </button>
+          </div>
+          <div style="padding:14px;min-width:900px">
+            <div id="canvasGrid"></div>
           </div>
         </div>
       </div>
@@ -2201,13 +2237,12 @@ function switchCadreTab(sub) {
 }
 
 function switchDefTab(sub) {
-  // Sous-nav du tableau de bord
   document.querySelectorAll('#panel-definition .cadre-subtab').forEach(t => t.classList.toggle('active', t.dataset.sub === sub));
   document.querySelectorAll('#panel-definition .cadre-subpanel').forEach(p => p.classList.toggle('active', p.id === sub));
-  // Boutons contextuels : visibles seulement sur l'onglet Définition
   const ctrl = document.getElementById('defSubnavControls');
   if (ctrl) ctrl.style.display = sub === 'def-definition' ? '' : 'none';
-  if (sub === 'def-kpi') renderKpi();
+  if (sub === 'def-kpi')    renderKpi();
+  if (sub === 'def-canvas') renderCanvas();
 }
 
 // ══ RENDER ACTEURS ══
@@ -4307,6 +4342,173 @@ function toggleDefInst(id) {
 }
 
 // ══ RENDER CHIFFRES CLÉS ══
+// ══ PROJECT MODEL CANVAS ══
+
+const CANVAS_BLOCKS = [
+  // row 1
+  { id:'contexte',    col:'1', row:'1', span:'1', title:'Justificatif',     subtitle:'Pourquoi ce projet ?',        num:1,  color:'#6D28D9', field:'contexte',    placeholder:'Décrivez le contexte, les raisons et la justification du projet…' },
+  { id:'objectifs',   col:'2', row:'1', span:'2', title:'Objectifs',        subtitle:'Résultats attendus',          num:2,  color:'#1A7A4F', field:'objectifs',   placeholder:'Listez les objectifs mesurables du projet…' },
+  { id:'livrables',   col:'4', row:'1', span:'2', title:'Livrables',        subtitle:'Ce qui sera produit',         num:3,  color:'#0E7490', field:'livrables',   placeholder:'Livrables principaux…', auto:'livrables' },
+  // row 2
+  { id:'equipe',      col:'1', row:'2', span:'1', title:'Équipe',           subtitle:'Acteurs impliqués',           num:4,  color:'#374151', field:null,          auto:'equipe' },
+  { id:'qualitatif',  col:'2', row:'2', span:'1', title:'Bénéfices qualitatifs', subtitle:'Valeur perçue',         num:5,  color:'#B45309', field:'qualitatif',  placeholder:'Amélioration de la satisfaction, de la qualité…' },
+  { id:'quantitatif', col:'3', row:'2', span:'1', title:'Bénéfices quantitatifs', subtitle:'Valeur mesurable',     num:6,  color:'#3B5BDB', field:'quantitatif', placeholder:'Économies, gains de temps, revenus…' },
+  { id:'risques',     col:'4', row:'2', span:'1', title:'Risques',          subtitle:'Menaces identifiées',        num:7,  color:'#DC2626', field:'risques',     placeholder:'Identifiez les principaux risques et incertitudes…' },
+  { id:'cadrage',     col:'5', row:'2', span:'1', title:'Cadrage',          subtitle:'Périmètre & contraintes',    num:8,  color:'#6B7280', field:'cadrage',     placeholder:'Périmètre, exclusions, contraintes…' },
+  // row 3
+  { id:'moyens',      col:'1', row:'3', span:'2', title:'Ressources & moyens', subtitle:'Humains, techniques, financiers', num:9, color:'#374151', field:'moyens', placeholder:'Équipes, budget, outils nécessaires…' },
+  { id:'etapes',      col:'3', row:'3', span:'3', title:'Étapes clés',      subtitle:'Jalons principaux',          num:10, color:'#0E7490', field:null,          auto:'etapes' },
+];
+
+let canvasDirty = false;
+
+function renderCanvas() {
+  const grid = document.getElementById('canvasGrid');
+  if (!grid) return;
+  if (!masterProjet) {
+    grid.innerHTML = `<div style="padding:40px;text-align:center;color:var(--text-muted);font-size:13px">Aucun projet maître défini.</div>`;
+    return;
+  }
+
+  canvasDirty = false;
+  document.getElementById('canvasSaveBtn').style.display = 'none';
+
+  // Récupérer les sous-projets de niveau 1 pour Livrables et Étapes
+  const masterId  = masterProjet.id;
+  const lvl1      = allProjets.filter(p => p.ref === masterId).sort((a,b)=>(a.ordre??9999)-(b.ordre??9999));
+  const actors    = allActors.filter((a,i,arr) => arr.findIndex(x=>x.id===a.id)===i && typeof a.id==='number');
+
+  grid.style.cssText = 'display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:auto auto auto;gap:8px';
+
+  // Bloc titre
+  const pilote = masterProjet.pilote ? allActors.find(a => a.id === masterProjet.pilote) : null;
+  const dateStr = [
+    masterProjet.debut > 0 ? new Date(masterProjet.debut*86400000).toLocaleDateString('fr-FR',{month:'short',year:'numeric'}) : null,
+    masterProjet.fin   > 0 ? new Date(masterProjet.fin  *86400000).toLocaleDateString('fr-FR',{month:'short',year:'numeric'}) : null,
+  ].filter(Boolean).join(' → ');
+
+  grid.innerHTML = `<div style="grid-column:1/-1;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;display:flex;align-items:center;gap:14px;margin-bottom:0">
+    <div style="flex:1">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px">Project Model Canvas</div>
+      <div style="font-size:18px;font-weight:700;color:var(--text-primary);line-height:1.2">${esc(masterProjet.nom||'—')}</div>
+      ${masterProjet.code ? `<div style="font-size:11.5px;color:var(--text-muted);margin-top:2px">${esc(masterProjet.code)}</div>` : ''}
+    </div>
+    ${pilote ? `<div style="text-align:right"><div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Chef de projet</div><div style="font-size:12.5px;font-weight:600;color:var(--text-primary)">${esc(pilote.nom)}</div></div>` : ''}
+    ${dateStr ? `<div style="text-align:right;border-left:1px solid var(--border);padding-left:14px"><div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Période</div><div style="font-size:12.5px;font-weight:600;color:var(--text-primary)">${dateStr}</div></div>` : ''}
+  </div>`;
+
+  CANVAS_BLOCKS.forEach(b => {
+    const colSpan = parseInt(b.span) || 1;
+    let bodyHtml = '';
+
+    if (b.auto === 'equipe') {
+      // Acteurs auto
+      const chips = actors.slice(0, 12).map(a => {
+        const col = roleColors[a.role] || { bg:'#F3F4F6', text:'#374151' };
+        return `<span class="canvas-chip" style="background:${col.bg||'#F3F4F6'};color:${col.text||'#374151'}" title="${esc(a.nom)} — ${esc(a.role||'')}">${esc(a.nom)}</span>`;
+      }).join('');
+      bodyHtml = `<div class="canvas-block-chips">${chips || '<span style="font-size:11.5px;color:#bbb;font-style:italic;padding:4px 0">Aucun acteur</span>'}</div>`;
+    } else if (b.auto === 'livrables') {
+      // Livrables auto (sous-projets niv1) + champ libre
+      const chips = lvl1.map(p => `<span class="canvas-chip" style="background:#ECFDF5;color:#065F46" title="${esc(p.nom)}">${esc((p.code?p.code+' ':'')+(p.nom||''))}</span>`).join('');
+      const extra = masterProjet[b.field] || '';
+      bodyHtml = `<div class="canvas-block-chips">${chips}</div>
+        ${extra || lvl1.length === 0 ? `<div class="canvas-block-body" contenteditable="true" data-field="${b.field}" data-placeholder="${b.placeholder}" oninput="canvasMarkDirty()">${esc(extra)}</div>` : ''}`;
+    } else if (b.auto === 'etapes') {
+      // Étapes auto depuis sous-projets
+      const today = Date.now();
+      const etapesHtml = lvl1.length === 0
+        ? `<div class="canvas-block-body" contenteditable="true" data-field="livrables" data-placeholder="Aucun sous-projet défini. Saisissez les étapes clés…" oninput="canvasMarkDirty()"></div>`
+        : `<div style="padding:4px 10px 10px;display:flex;flex-direction:column;gap:5px">${lvl1.map(p => {
+            const sMs = p.debut > 0 ? p.debut * 86400000 : null;
+            const eMs = (p.finreelle > 0 ? p.finreelle : p.fin > 0 ? p.fin : null);
+            const eMsMs = eMs ? eMs * 86400000 : null;
+            const done  = p.finreelle > 0;
+            const late  = !done && eMsMs && eMsMs < today;
+            const pct   = sMs && eMsMs && eMsMs > sMs ? Math.min(100, Math.round((today-sMs)/(eMsMs-sMs)*100)) : 0;
+            const barColor = done ? '#888' : late ? '#DC2626' : '#3B5BDB';
+            const dateLabel = [
+              sMs ? new Date(sMs).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'}) : null,
+              eMsMs ? new Date(eMsMs).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'}) : null,
+            ].filter(Boolean).join(' → ');
+            return `<div style="display:flex;align-items:center;gap:8px">
+              <div style="width:8px;height:8px;border-radius:50%;background:${barColor};flex-shrink:0"></div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:11.5px;font-weight:500;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc((p.code?p.code+' – ':'')+p.nom)}</div>
+                ${dateLabel?`<div style="font-size:10px;color:var(--text-muted)">${dateLabel}</div>`:''}
+              </div>
+              ${!done && sMs && eMsMs ? `<div style="width:50px;height:4px;border-radius:2px;background:var(--surface2);flex-shrink:0"><div style="height:4px;border-radius:2px;background:${barColor};width:${pct}%"></div></div>` : done ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2.5" flex-shrink:0><polyline points="20 6 9 17 4 12"/></svg>` : ''}
+            </div>`;
+          }).join('')}</div>`;
+      bodyHtml = etapesHtml;
+    } else {
+      // Champ libre éditable
+      const val = masterProjet[b.field] || '';
+      bodyHtml = `<div class="canvas-block-body" contenteditable="true" data-field="${b.field}" data-placeholder="${b.placeholder}" oninput="canvasMarkDirty()">${esc(val)}</div>`;
+    }
+
+    const blockEl = document.createElement('div');
+    blockEl.className = 'canvas-block';
+    blockEl.style.cssText = `grid-column:span ${colSpan};`;
+    blockEl.innerHTML = `<div class="canvas-block-header" style="border-bottom:2px solid ${b.color}20">
+        <span class="canvas-block-num" style="background:${b.color}">${b.num}</span>
+        <div>
+          <div class="canvas-block-title" style="color:${b.color}">${b.title}</div>
+          <div class="canvas-block-subtitle">${b.subtitle}</div>
+        </div>
+      </div>
+      ${bodyHtml}`;
+    grid.appendChild(blockEl);
+  });
+}
+
+function canvasMarkDirty() {
+  if (!canvasDirty) {
+    canvasDirty = true;
+    const btn = document.getElementById('canvasSaveBtn');
+    if (btn) btn.style.display = '';
+  }
+}
+
+async function saveCanvas() {
+  if (!masterProjet) return;
+  const updates = {};
+  document.querySelectorAll('#canvasGrid [contenteditable][data-field]').forEach(el => {
+    const field = el.dataset.field;
+    if (field) updates[field] = el.innerText.trim();
+  });
+  try {
+    await grist.docApi.applyUserActions([['UpdateRecord', 'Projet', masterProjet.id, updates]]);
+    Object.assign(masterProjet, updates);
+    canvasDirty = false;
+    document.getElementById('canvasSaveBtn').style.display = 'none';
+    showToast('Canvas enregistré');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function exportCanvasPng() {
+  // On utilise html2canvas si disponible, sinon on fallback SVG
+  const grid = document.getElementById('canvasGrid');
+  const toolbar = document.getElementById('canvasToolbar');
+  if (!grid) return;
+  try {
+    // Masquer toolbar pendant l'export
+    if (toolbar) toolbar.style.visibility = 'hidden';
+    const { default: h2c } = await import('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.esm.min.js').catch(() => ({ default: null }));
+    if (!h2c) throw new Error('html2canvas non disponible');
+    const canvas = await h2c(grid, { scale: 2, backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--bg') || '#fff', useCORS: true, logging: false });
+    const link = document.createElement('a');
+    link.download = (masterProjet?.nom || 'canvas') + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    showToast('Export PNG généré');
+  } catch(e) {
+    showToast('Export non disponible dans cet environnement', 'error');
+  } finally {
+    if (toolbar) toolbar.style.visibility = '';
+  }
+}
+
 function renderKpi() {
   const cont = document.getElementById('kpiContainer');
   if (!cont) return;
