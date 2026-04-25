@@ -2561,6 +2561,7 @@ function updateCoulDot(selId, dotId) {
   dot.style.border = hex?'none':'1.5px dashed #C8C3BA';
 }
 function esc(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function textToHtml(s) { return esc(s||'').replace(/\n/g,'<br>'); }
 function fromDateInput(v) {
   if (!v || v === '') return null;
   const d = new Date(v + 'T00:00:00Z');
@@ -4402,18 +4403,21 @@ function renderCanvas() {
     let bodyHtml = '';
 
     if (b.auto === 'equipe') {
-      // Acteurs auto
-      const chips = actors.slice(0, 12).map(a => {
+      // Acteurs dont l'instance a le sigle GR-PROJ uniquement
+      const grProjInst = Object.values(instances).find(inst => inst.sigle === 'GR-PROJ');
+      const grProjId   = grProjInst ? grProjInst.id : null;
+      const teamActors = grProjId
+        ? actors.filter(a => getRefList(a.instance).map(v => resolveInstId(v)).includes(grProjId))
+        : actors;
+      const chips = teamActors.map(a => {
         const col = roleColors[a.role] || { bg:'#F3F4F6', text:'#374151' };
         return `<span class="canvas-chip" style="background:${col.bg||'#F3F4F6'};color:${col.text||'#374151'}" title="${esc(a.nom)} — ${esc(a.role||'')}">${esc(a.nom)}</span>`;
       }).join('');
-      bodyHtml = `<div class="canvas-block-chips">${chips || '<span style="font-size:11.5px;color:#bbb;font-style:italic;padding:4px 0">Aucun acteur</span>'}</div>`;
+      bodyHtml = `<div class="canvas-block-chips">${chips || '<span style="font-size:11.5px;color:#bbb;font-style:italic;padding:4px 0">Aucun membre GR-PROJ</span>'}</div>`;
     } else if (b.auto === 'livrables') {
-      // Livrables auto (sous-projets niv1) + champ libre
-      const chips = lvl1.map(p => `<span class="canvas-chip" style="background:#ECFDF5;color:#065F46" title="${esc(p.nom)}">${esc((p.code?p.code+' ':'')+(p.nom||''))}</span>`).join('');
-      const extra = masterProjet[b.field] || '';
-      bodyHtml = `<div class="canvas-block-chips">${chips}</div>
-        ${extra || lvl1.length === 0 ? `<div class="canvas-block-body" contenteditable="true" data-field="${b.field}" data-placeholder="${b.placeholder}" oninput="canvasMarkDirty()">${esc(extra)}</div>` : ''}`;
+      // Champ texte libre uniquement
+      const val = masterProjet[b.field] || '';
+      bodyHtml = `<div class="canvas-block-body" contenteditable="true" data-field="${b.field}" data-placeholder="${b.placeholder}" oninput="canvasMarkDirty()">${textToHtml(val)}</div>`;
     } else if (b.auto === 'etapes') {
       // Étapes auto depuis sous-projets
       const today = Date.now();
@@ -4442,9 +4446,9 @@ function renderCanvas() {
           }).join('')}</div>`;
       bodyHtml = etapesHtml;
     } else {
-      // Champ libre éditable
+      // Champ libre éditable — sauts de ligne préservés
       const val = masterProjet[b.field] || '';
-      bodyHtml = `<div class="canvas-block-body" contenteditable="true" data-field="${b.field}" data-placeholder="${b.placeholder}" oninput="canvasMarkDirty()">${esc(val)}</div>`;
+      bodyHtml = `<div class="canvas-block-body" contenteditable="true" data-field="${b.field}" data-placeholder="${b.placeholder}" oninput="canvasMarkDirty()">${textToHtml(val)}</div>`;
     }
 
     const blockEl = document.createElement('div');
@@ -4475,7 +4479,12 @@ async function saveCanvas() {
   const updates = {};
   document.querySelectorAll('#canvasGrid [contenteditable][data-field]').forEach(el => {
     const field = el.dataset.field;
-    if (field) updates[field] = el.innerText.trim();
+    if (field) {
+      // Normalise les <br> en \n avant de lire innerText
+      const clone = el.cloneNode(true);
+      clone.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
+      updates[field] = clone.innerText.trim();
+    }
   });
   try {
     await grist.docApi.applyUserActions([['UpdateRecord', 'Projet', masterProjet.id, updates]]);
