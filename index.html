@@ -1149,17 +1149,17 @@ tr:hover .cr-del-btn { opacity: 1; }
     <!-- ── PLAN D'ACTION ── -->
     <div class="panel" id="panel-actions">
       <nav class="cadre-subnav">
+        <div class="cadre-subtab active" id="acModeKanban" data-sub="kanban" onclick="switchAcMode('kanban')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="12" rx="1"/><rect x="17" y="3" width="5" height="15" rx="1"/></svg>
+          Kanban
+        </div>
         <div class="cadre-subtab" id="acModeActions" data-sub="actions" onclick="switchAcMode('actions')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
           Suivi des tâches
         </div>
-        <div class="cadre-subtab active" id="acModeProjets" data-sub="projets" onclick="switchAcMode('projets')">
+        <div class="cadre-subtab" id="acModeProjets" data-sub="projets" onclick="switchAcMode('projets')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
           Par action
-        </div>
-        <div class="cadre-subtab" id="acModeKanban" data-sub="kanban" onclick="switchAcMode('kanban')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="12" rx="1"/><rect x="17" y="3" width="5" height="15" rx="1"/></svg>
-          Kanban
         </div>
 
         <div class="subnav-spacer"></div>
@@ -1206,6 +1206,10 @@ tr:hover .cr-del-btn { opacity: 1; }
               <option value="soon30">Échéance dans 30 jours</option>
               <option value="none">Sans échéance</option>
             </select>
+            <button class="btn-add" onclick="openActionModal(null, null)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Nouvelle tâche
+            </button>
           </div>
         </div>
       </nav>
@@ -1590,7 +1594,24 @@ grist.onRecords(async (records, mappings) => {
   populateDecisionSelects();
   populateActionSelects();
   if (decMode === 'suivi') renderSuivi();
-  renderActions();
+  // Initialiser le kanban par défaut
+  populateKanbanFilters();
+  renderKanban();
+  // Masquer actionTable, montrer kanbanView
+  const _tbl = document.getElementById('actionTable');
+  const _kb  = document.getElementById('kanbanView');
+  const _kbc = document.getElementById('kanbanControls');
+  const _exp = document.getElementById('acExpandBtns');
+  const _fe  = document.getElementById('actionFilterEtat');
+  const _sr  = document.querySelector('#panel-actions .search-wrap');
+  const _add = document.getElementById('acAddBtn');
+  if (_tbl) _tbl.style.display = 'none';
+  if (_kb)  _kb.style.display  = 'flex';
+  if (_kbc) _kbc.style.display = 'flex';
+  if (_exp) _exp.style.display = 'none';
+  if (_fe)  _fe.style.display  = 'none';
+  if (_sr)  _sr.style.display  = 'none';
+  if (_add) _add.style.display = 'none';
   // Re-rendre KPI si visible
   const activeDefSub = document.querySelector('#panel-definition .cadre-subtab.active');
   if (activeDefSub?.dataset.sub === 'def-kpi') renderKpi();
@@ -2741,7 +2762,7 @@ function renderActions() {
   </table></div>`;
 }
 
-function openActionModal(id = null, preProjetId = null) {
+function openActionModal(id = null, preEtat = null, preProjetId = null) {
   editingActionId = id;
   document.getElementById('actionModalTitle').textContent = id ? "Modifier l'action" : "Nouvelle action";
   document.getElementById('ac_saveLabel').textContent = 'Enregistrer';
@@ -2769,11 +2790,11 @@ function openActionModal(id = null, preProjetId = null) {
       document.getElementById('ac_echeance').value    = toDateInput(a.echeance);
     }
   } else {
-    pSel.value = preProjetId ? String(preProjetId) : '';
+    pSel.value = preProjetId ? String(preProjetId) : (document.getElementById('kbFilterProjet')?.value || '');
     document.getElementById('ac_action').value      = '';
     document.getElementById('ac_description').value = '';
-    qSel.value = '';
-    document.getElementById('ac_etat').value        = 'A faire';
+    qSel.value = document.getElementById('kbFilterPilote')?.value || '';
+    document.getElementById('ac_etat').value        = preEtat || 'A faire';
     document.getElementById('ac_echeance').value    = '';
   }
 
@@ -2807,7 +2828,7 @@ async function saveAction() {
     }
     closeActionModal();
     await fetchActions();
-    renderActions();
+    if (acMode === 'kanban') renderKanban(); else renderActions();
   } catch(e) { showToast(e.message, 'error'); }
 }
 
@@ -2818,7 +2839,7 @@ async function deleteAction(id) {
     await grist.docApi.applyUserActions([['RemoveRecord','Taches',id]]);
     showToast('Action supprimée');
     await fetchActions();
-    renderActions();
+    if (acMode === 'kanban') renderKanban(); else renderActions();
   } catch(e) { showToast(e.message, 'error'); }
 }
 
@@ -2947,6 +2968,7 @@ function renderKanban() {
         <span class="kb-col-dot" style="background:${col.dot}"></span>
         <span class="kb-col-title">${esc(col.title)}</span>
         <span class="kb-col-count">${cards.length}</span>
+        <button onclick="openActionModal(null, '${esc(col.id)}')" title="Ajouter une tâche" style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--text-muted);padding:0 2px;line-height:1;font-size:16px" onmouseover="this.style.color='var(--text-primary)'" onmouseout="this.style.color='var(--text-muted)'">+</button>
       </div>
       <div class="kb-col-body" id="kb_body_${esc(col.id)}"
           ondragover="kbDragOver(event, '${esc(col.id)}')"
@@ -4858,7 +4880,7 @@ async function deleteProjet(id) {
 // ══ DÉCISIONS STATE ══
 let allDecisions   = [];
 let decMode        = 'suivi'; // 'compterendu' | 'suivi'
-let acMode         = 'projets'; // 'actions' | 'projets'
+let acMode         = 'kanban'; // 'actions' | 'projets' | 'kanban'
 let crRows         = [];            // [{projet, probleme, decision, qui, echeance, etat, commentaire}]
 
 // ══ FETCH DÉCISIONS ══
