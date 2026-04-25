@@ -1192,10 +1192,20 @@ tr:hover .cr-del-btn { opacity: 1; }
             Nouvelle tâche
           </button>
           <!-- Contrôles Kanban (masqués hors mode kanban) -->
-          <div id="kanbanControls" style="display:none;align-items:center;gap:6px">
-            <span style="font-size:11.5px;color:var(--text-muted)">Grouper par</span>
-            <button class="cadre-subtab active" id="kbGroupEtat" onclick="setKanbanGroup('etat')" style="padding:3px 9px;font-size:11.5px">Statut</button>
-            <button class="cadre-subtab" id="kbGroupPilote" onclick="setKanbanGroup('pilote')" style="padding:3px 9px;font-size:11.5px">Pilote</button>
+          <div id="kanbanControls" style="display:none;align-items:center;gap:6px;flex-wrap:wrap">
+            <select class="filter-select" id="kbFilterProjet" onchange="renderKanban()">
+              <option value="">Tous les sous-projets</option>
+            </select>
+            <select class="filter-select" id="kbFilterPilote" onchange="renderKanban()">
+              <option value="">Tous les pilotes</option>
+            </select>
+            <select class="filter-select" id="kbFilterEcheance" onchange="renderKanban()">
+              <option value="">Toutes les échéances</option>
+              <option value="overdue">En retard</option>
+              <option value="soon7">Échéance dans 7 jours</option>
+              <option value="soon30">Échéance dans 30 jours</option>
+              <option value="none">Sans échéance</option>
+            </select>
           </div>
         </div>
       </nav>
@@ -2839,22 +2849,34 @@ function switchAcMode(mode) {
   if (kbView)  kbView.style.display  = isKanban  ? 'flex' : 'none';
   if (kbCtrl)  kbCtrl.style.display  = isKanban  ? 'flex' : 'none';
 
-  if (isKanban) renderKanban();
+  if (isKanban) { populateKanbanFilters(); renderKanban(); }
   else renderActions();
 }
 
 // ══ KANBAN ══
 
-let kanbanGroup = 'etat'; // 'etat' | 'pilote'
-let kbDragId    = null;
-let kbDragCol   = null;
-
-function setKanbanGroup(g) {
-  kanbanGroup = g;
-  document.getElementById('kbGroupEtat').classList.toggle('active', g === 'etat');
-  document.getElementById('kbGroupPilote').classList.toggle('active', g === 'pilote');
-  renderKanban();
+// ── Peupler les selects filtres Kanban ──
+function populateKanbanFilters() {
+  // Sous-projets
+  const spSel = document.getElementById('kbFilterProjet');
+  if (spSel) {
+    const cur = spSel.value;
+    spSel.innerHTML = '<option value="">Tous les sous-projets</option>' + buildSubProjetsOptions(cur);
+    spSel.value = cur;
+  }
+  // Pilotes
+  const pSel = document.getElementById('kbFilterPilote');
+  if (pSel) {
+    const cur = pSel.value;
+    while (pSel.options.length > 1) pSel.remove(1);
+    allActors.filter(a => typeof a.id === 'number')
+      .sort((a,b) => (a.nom||'').localeCompare(b.nom||'','fr'))
+      .forEach(a => pSel.appendChild(new Option(a.nom, a.id)));
+    pSel.value = cur;
+  }
 }
+
+
 
 // Couleurs colonnes par statut
 const ETAT_KANBAN = [
@@ -2874,51 +2896,44 @@ function kanbanPrioStyle(prio) {
   return { bg:'var(--surface2)', text:'var(--text-muted)', label: prio };
 }
 
+let kbDragId  = null;
+let kbDragCol = null;
+
 function renderKanban() {
   const board = document.getElementById('kanbanBoard');
   if (!board) return;
 
+  const fProjet    = document.getElementById('kbFilterProjet')?.value   || '';
+  const fPilote    = document.getElementById('kbFilterPilote')?.value   || '';
+  const fEcheance  = document.getElementById('kbFilterEcheance')?.value || '';
+  const now        = Date.now();
+  const day7       = now + 7  * 86400000;
+  const day30      = now + 30 * 86400000;
+
   let data = [...allActions];
 
-  // ── Construire les colonnes ──
-  let columns = [];
-  if (kanbanGroup === 'etat') {
-    columns = ETAT_KANBAN.map(e => ({
-      id:    e.key,
-      title: e.key,
-      dot:   e.dot,
-      bg:    e.bg,
-      text:  e.text,
-      cards: data.filter(a => (a.etat || 'A faire') === e.key),
-    }));
-  } else {
-    // Par pilote
-    const pilotes = allActors.filter(a => typeof a.id === 'number')
-      .sort((a,b) => (a.nom||'').localeCompare(b.nom||'','fr'));
-    const noPilote = data.filter(a => !a.qui || a.qui === 0);
-    const PILOTE_COLORS = ['#3B5BDB','#1A7A4F','#B45309','#6D28D9','#0E7490','#BE185D','#374151'];
-    pilotes.forEach((p, i) => {
-      columns.push({
-        id:    'p_' + p.id,
-        title: p.nom,
-        dot:   PILOTE_COLORS[i % PILOTE_COLORS.length],
-        bg:    '#F9FAFB',
-        text:  '#374151',
-        cards: data.filter(a => a.qui === p.id),
-        piloteId: p.id,
-      });
-    });
-    if (noPilote.length) {
-      columns.push({ id:'p_0', title:'Non assigné', dot:'#9CA3AF', bg:'#F9FAFB', text:'#6B7280', cards: noPilote });
-    }
-  }
+  // Filtres
+  if (fProjet)  data = data.filter(a => String(a.projet) === fProjet);
+  if (fPilote)  data = data.filter(a => String(a.qui) === fPilote);
+  if (fEcheance === 'overdue')  data = data.filter(a => a.echeance > 0 && a.echeance * 86400000 < now && a.etat !== 'Réalisé');
+  if (fEcheance === 'soon7')    data = data.filter(a => a.echeance > 0 && a.echeance * 86400000 >= now && a.echeance * 86400000 <= day7);
+  if (fEcheance === 'soon30')   data = data.filter(a => a.echeance > 0 && a.echeance * 86400000 >= now && a.echeance * 86400000 <= day30);
+  if (fEcheance === 'none')     data = data.filter(a => !a.echeance || a.echeance === 0);
 
-  // ── Rendu des colonnes ──
+  // Colonnes par statut
+  const columns = ETAT_KANBAN.map(e => ({
+    id:    e.key,
+    title: e.key,
+    dot:   e.dot,
+    bg:    e.bg,
+    text:  e.text,
+    cards: data.filter(a => (a.etat || 'A faire') === e.key),
+  }));
+
   board.innerHTML = columns.map(col => {
     const cards = col.cards.sort((a,b) => {
-      // Tri : en retard d'abord, puis par échéance, puis sans date
-      const aOver = a.echeance > 0 && a.echeance * 86400000 < Date.now() ? 0 : 1;
-      const bOver = b.echeance > 0 && b.echeance * 86400000 < Date.now() ? 0 : 1;
+      const aOver = a.echeance > 0 && a.echeance * 86400000 < now ? 0 : 1;
+      const bOver = b.echeance > 0 && b.echeance * 86400000 < now ? 0 : 1;
       if (aOver !== bOver) return aOver - bOver;
       return (a.echeance||999999) - (b.echeance||999999);
     });
@@ -3022,30 +3037,15 @@ async function kbDrop(e, colId) {
   document.querySelectorAll('.kb-col-body').forEach(b => b.classList.remove('drag-over'));
   if (kbDragId === null) return;
 
-  // En mode "par statut" : on met à jour l'état
-  if (kanbanGroup === 'etat') {
-    const newEtat = colId;
-    if (newEtat === kbDragCol) return;
-    try {
-      await grist.docApi.applyUserActions([['UpdateRecord', 'Taches', kbDragId, { etat: newEtat }]]);
-      const ac = allActions.find(a => a.id === kbDragId);
-      if (ac) ac.etat = newEtat;
-      showToast('Statut mis à jour');
-      renderKanban();
-    } catch(err) { showToast(err.message, 'error'); }
-  }
-  // En mode "par pilote" : on met à jour le pilote
-  else {
-    const piloteId = colId === 'p_0' ? 0 : parseInt(colId.replace('p_',''));
+  const newEtat = colId;
+  if (newEtat === kbDragCol) { kbDragId = null; kbDragCol = null; return; }
+  try {
+    await grist.docApi.applyUserActions([['UpdateRecord', 'Taches', kbDragId, { etat: newEtat }]]);
     const ac = allActions.find(a => a.id === kbDragId);
-    if (!ac || ac.qui === piloteId) return;
-    try {
-      await grist.docApi.applyUserActions([['UpdateRecord', 'Taches', kbDragId, { qui: piloteId || null }]]);
-      ac.qui = piloteId;
-      showToast('Pilote mis à jour');
-      renderKanban();
-    } catch(err) { showToast(err.message, 'error'); }
-  }
+    if (ac) ac.etat = newEtat;
+    showToast('Statut mis à jour');
+    renderKanban();
+  } catch(err) { showToast(err.message, 'error'); }
   kbDragId = null; kbDragCol = null;
 }
 
