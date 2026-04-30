@@ -2999,7 +2999,15 @@ function renderKanban() {
   let data = [...allActions];
 
   // Filtres
-  if (fProjet)  data = data.filter(a => String(a.projet) === fProjet);
+  if (fProjet) {
+  const subIds = new Set();
+  const collect = (id) => {
+    subIds.add(id);
+    allProjets.filter(p => p.ref === id).forEach(p => collect(p.id));
+  };
+  collect(parseInt(fProjet));
+  data = data.filter(a => subIds.has(a.projet));
+}
   if (fPilote)  data = data.filter(a => String(a.qui) === fPilote);
   if (fEcheance === 'overdue')  data = data.filter(a => a.echeance > 0 && a.echeance * 86400000 < now && a.etat !== 'Réalisé');
   if (fEcheance === 'soon7')    data = data.filter(a => a.echeance > 0 && a.echeance * 86400000 >= now && a.echeance * 86400000 <= day7);
