@@ -2951,15 +2951,17 @@ function populateKanbanFilters() {
     spSel.value = cur;
   }
   // Pilotes
-  const pSel = document.getElementById('kbFilterPilote');
-  if (pSel) {
-    const cur = pSel.value;
-    while (pSel.options.length > 1) pSel.remove(1);
-    allActors.filter(a => typeof a.id === 'number')
-      .sort((a,b) => (a.nom||'').localeCompare(b.nom||'','fr'))
-      .forEach(a => pSel.appendChild(new Option(a.nom, a.id)));
-    pSel.value = cur;
-  }
+const pSel = document.getElementById('kbFilterPilote');
+if (pSel) {
+  const cur = pSel.value;
+  while (pSel.options.length > 1) pSel.remove(1);
+  const piloteIds = new Set(allActions.map(a => a.qui).filter(Boolean));
+  allActors
+    .filter(a => typeof a.id === 'number' && piloteIds.has(a.id))
+    .sort((a,b) => (a.nom||'').localeCompare(b.nom||'','fr'))
+    .forEach(a => pSel.appendChild(new Option(a.nom, a.id)));
+  pSel.value = cur;
+}
 }
 
 
