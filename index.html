@@ -1925,11 +1925,18 @@ function renderFeuilleDeroute() {
   const masterId = masterProjet ? masterProjet.id : null;
   const lvl1 = allProjets.filter(p => p.ref === masterId || (!masterId && !allProjets.find(x => x.id === p.ref) && p.ref))
     .sort((a,b) => (a.ordre??9999)-(b.ordre??9999));
-  const lanes = lvl1.map((p1, li) => ({
-    parent: p1,
-    color:  LANE_COLORS[li % LANE_COLORS.length],
-    items:  subs.filter(c => c.ref === p1.id || c.id === p1.id).sort((a,b) => (a.ordre??9999)-(b.ordre??9999)),
-  })).filter(l => l.items.length);
+  const lanes = lvl1.map((p1, li) => {
+    const hex = projetHex(p1);
+    // Construire un objet color compatible avec LANE_COLORS à partir de la couleur du projet
+    const color = hex && hex !== '#1A1A1A' && hex !== '#1A7A4F'
+      ? { bar: hex, bg: hex + '18', text: hex }
+      : LANE_COLORS[li % LANE_COLORS.length];
+    return {
+      parent: p1,
+      color,
+      items: subs.filter(c => c.ref === p1.id || c.id === p1.id).sort((a,b) => (a.ordre??9999)-(b.ordre??9999)),
+    };
+  }).filter(l => l.items.length);
 
   // Sous-projets orphelins (pas rattachés à un niveau 1 connu dans le filtre)
   const knownIds = new Set(lanes.flatMap(l => l.items.map(i => i.id)));
