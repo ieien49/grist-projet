@@ -5410,6 +5410,21 @@ function openProjetModal(projet = null, mode = null) {
   document.getElementById('p_qualitatif').value  = projet?.qualitatif  || '';
   document.getElementById('p_quantitatif').value = projet?.quantitatif || '';
 
+  // Peupler le select couleur
+  const pCoulSel = document.getElementById('p_couleur');
+  if (pCoulSel) {
+    while (pCoulSel.options.length > 1) pCoulSel.remove(1);
+    const seenC = new Set();
+    Object.values(couleurs)
+      .filter(c => { if (seenC.has(c.id)) return false; seenC.add(c.id); return true; })
+      .forEach(c => {
+        const o = new Option(c.nom + (c.hex ? '  ' + c.hex : ''), c.id);
+        o.setAttribute('data-hex', c.hex);
+        pCoulSel.appendChild(o);
+      });
+    pCoulSel.value = projet?.couleur || '';
+    updateCoulDot('p_couleur', 'p_coulDot');
+  }
   document.getElementById('p_debut').value      = toDateInput(projet?.debut);
   document.getElementById('p_fin').value        = toDateInput(projet?.fin);
   document.getElementById('p_finreelle').value  = toDateInput(projet?.finreelle);
