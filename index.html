@@ -5176,6 +5176,254 @@ function renderKpi() {
   `;
 }
 
+// ══ NOTE DE CADRAGE ══
+function renderNoteCadrage() {
+  const cont = document.getElementById('noteCadrageContainer');
+  if (!cont) return;
+  cont.innerHTML = buildNoteCadrageHtml(false);
+}
+
+function printNoteCadrage() {
+  const today = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',sans-serif;background:white;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    @page{size:A4;margin:16mm 14mm}
+    .nc-page{max-width:680px;margin:0 auto;padding:32px 40px 48px}
+    .nc-header-band{background:#111;color:#fff;padding:24px 32px 20px;border-radius:6px;margin-bottom:28px}
+    .nc-pretitle{font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:8px}
+    .nc-title{font-size:26px;font-weight:700;letter-spacing:-.02em;line-height:1.15;margin-bottom:12px}
+    .nc-dates{display:flex;gap:20px;flex-wrap:wrap}
+    .nc-date-item{display:flex;align-items:center;gap:6px;font-size:11.5px;color:rgba(255,255,255,.75)}
+    .nc-date-label{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.45);display:block;margin-bottom:1px}
+    .nc-date-val{font-size:13px;font-weight:600;color:#fff}
+    .nc-section{margin-bottom:22px}
+    .nc-section-title{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#999;border-bottom:1px solid #e5e5e5;padding-bottom:5px;margin-bottom:12px}
+    .nc-team-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:0}
+    .nc-team-card{display:inline-flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid #e8e8e8;border-radius:5px;background:#fafafa}
+    .nc-avatar{width:28px;height:28px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;flex-shrink:0}
+    .nc-actor-name{font-size:12px;font-weight:500;color:#111}
+    .nc-actor-role{font-size:10px;color:#888;display:block}
+    .nc-text-block{font-size:12.5px;color:#333;line-height:1.75;white-space:pre-wrap;background:#fafafa;border-left:3px solid #e0e0e0;padding:10px 14px;border-radius:0 4px 4px 0}
+    .nc-text-empty{font-size:12px;color:#bbb;font-style:italic}
+    .nc-instances{display:flex;flex-direction:column;gap:8px}
+    .nc-inst-row{border:1px solid #e8e8e8;border-radius:5px;overflow:hidden}
+    .nc-inst-head{display:flex;align-items:center;gap:8px;padding:7px 11px;background:#f7f7f7}
+    .nc-inst-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+    .nc-inst-sigle{font-size:12px;font-weight:600;color:#111}
+    .nc-inst-nom{font-size:11.5px;color:#666}
+    .nc-inst-role{font-size:10.5px;color:#999;margin-left:auto;font-style:italic}
+    .nc-inst-members{display:flex;flex-wrap:wrap;gap:5px;padding:7px 11px;background:#fff}
+    .nc-inst-member{display:inline-flex;align-items:center;gap:4px;padding:2px 7px 2px 4px;border:1px solid #e8e8e8;border-radius:20px;font-size:11px;color:#444}
+    .nc-inst-member-av{width:14px;height:14px;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:6px;font-weight:700;color:#fff;flex-shrink:0}
+    .nc-divider{height:1px;background:#111;margin:24px 0}
+    .nc-footer{margin-top:32px;font-size:10px;color:#ccc;text-align:right;border-top:1px solid #e8e8e8;padding-top:10px}
+    .nc-two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .nc-info-prop{display:flex;align-items:flex-start;border-bottom:1px solid #f0f0f0;padding:6px 0;min-height:28px}
+    .nc-info-label{width:140px;flex-shrink:0;font-size:10.5px;font-weight:500;color:#999}
+    .nc-info-value{flex:1;font-size:12.5px;color:#111}
+  </style>
+  </head><body>
+  <div id="ncPrintArea">${buildNoteCadrageHtml(true)}</div>
+  </body></html>`;
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+  win.onload = () => { win.focus(); win.print(); };
+}
+
+function buildNoteCadrageHtml(forPrint) {
+  if (!masterProjet) {
+    return `<div style="padding:64px;text-align:center;color:var(--text-muted);font-size:13px">Aucun projet maître défini.</div>`;
+  }
+  const p      = masterProjet;
+  const today  = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+  const termine = !!p.finreelle;
+
+  // ── Dates ──
+  const d1 = p.debut    > 0 ? new Date(p.debut    * 86400000).toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' }) : null;
+  const d2 = p.fin      > 0 ? new Date(p.fin      * 86400000).toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' }) : null;
+  const d3 = p.finreelle> 0 ? new Date(p.finreelle* 86400000).toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' }) : null;
+
+  // ── Acteurs clés ──
+  const byRole = (role) => allActors.filter(a => a.role === role && typeof a.id === 'number');
+  const commanditaires = byRole('Commanditaire');
+  const directeurs     = byRole('Directeur de projet');
+  const chefs          = byRole('Chef de projet');
+  const keyActors      = [...commanditaires, ...directeurs, ...chefs];
+
+  // ── Équipe projet ──
+  const grProjInst = Object.values(instances).find(i => i.sigle === 'GR-PROJ');
+  const grProjId   = grProjInst ? grProjInst.id : null;
+  const teamActors = grProjId
+    ? allActors.filter(a => typeof a.id === 'number' && getRefList(a.instance).map(v => resolveInstId(v)).includes(grProjId))
+    : allActors.filter(a => typeof a.id === 'number');
+
+  // ── Instances ──
+  const seenInstIds = new Set();
+  const instList = Object.values(instances).filter(v => {
+    if (typeof v.id !== 'number' || seenInstIds.has(v.id)) return false;
+    seenInstIds.add(v.id); return true;
+  }).sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999));
+
+  // ── Helpers ──
+  const actorCard = (a) => {
+    const rc  = roleColors[a.role] || { bg:'#F3F4F6', text:'#374151', avatar:'#6B7280' };
+    const ini = (a.nom||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const roleShort = { 'Commanditaire':'Commanditaire','Directeur de projet':'Dir. de projet','Chef de projet':'Chef de projet' }[a.role] || a.role;
+    if (forPrint) {
+      return `<div class="nc-team-card">
+        <div class="nc-avatar" style="background:${rc.avatar}">${ini}</div>
+        <div><span class="nc-actor-name">${esc(a.nom)}</span><span class="nc-actor-role">${esc(roleShort)}</span></div>
+      </div>`;
+    }
+    return `<div class="nc-team-card" style="display:inline-flex;align-items:center;gap:8px;padding:7px 11px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg)">
+      <div style="width:28px;height:28px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;background:${rc.avatar};flex-shrink:0">${ini}</div>
+      <div><div style="font-size:12px;font-weight:500;color:var(--text-primary)">${esc(a.nom)}</div><div style="font-size:10.5px;color:var(--text-muted)">${esc(roleShort)}</div></div>
+    </div>`;
+  };
+
+  const teamCard = (a) => {
+    const rc  = roleColors[a.role] || { bg:'#F3F4F6', text:'#374151', avatar:'#6B7280' };
+    const ini = (a.nom||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const roleShort = a.role || '';
+    if (forPrint) {
+      return `<div class="nc-team-card">
+        <div class="nc-avatar" style="background:${rc.avatar}">${ini}</div>
+        <div><span class="nc-actor-name">${esc(a.nom)}</span><span class="nc-actor-role">${esc(roleShort)}</span></div>
+      </div>`;
+    }
+    return `<div style="display:inline-flex;align-items:center;gap:7px;padding:5px 10px 5px 5px;border:1px solid var(--border);border-radius:20px;background:var(--bg)">
+      <div style="width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;color:#fff;background:${rc.avatar};flex-shrink:0">${ini}</div>
+      <span style="font-size:11.5px;color:var(--text-secondary)">${esc(a.nom)}</span>
+      ${roleShort ? `<span style="font-size:10px;color:var(--text-muted)">${esc(roleShort)}</span>` : ''}
+    </div>`;
+  };
+
+  const textBlock = (val) => {
+    if (!val || !val.trim()) {
+      if (forPrint) return `<span class="nc-text-empty">Non renseigné</span>`;
+      return `<span style="font-size:12px;color:var(--text-muted);font-style:italic">Non renseigné</span>`;
+    }
+    if (forPrint) return `<div class="nc-text-block">${esc(val.trim()).split('\n').join('<br>')}</div>`;
+    return `<div style="font-size:12.5px;color:var(--text-secondary);line-height:1.75;white-space:pre-wrap;background:var(--surface2);border-left:3px solid var(--border-strong);padding:10px 14px;border-radius:0 4px 4px 0">${esc(val.trim()).split('\n').join('<br>')}</div>`;
+  };
+
+  const section = (title, bodyHtml) => {
+    if (forPrint) return `<div class="nc-section"><div class="nc-section-title">${title}</div>${bodyHtml}</div>`;
+    return `<div style="margin-bottom:22px">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);border-bottom:1px solid var(--border);padding-bottom:5px;margin-bottom:12px">${title}</div>
+      ${bodyHtml}
+    </div>`;
+  };
+
+  // ── Instances ──
+  const instHtml = instList.map(inst => {
+    const hex = couleurs[inst.couleur]?.hex || '#9B9B9B';
+    const members = allActors.filter(a => {
+      const ids = getRefList(a.instance).map(v => resolveInstId(v));
+      return typeof a.id === 'number' && ids.includes(inst.id);
+    });
+    const membersHtml = members.map(a => {
+      const rc  = roleColors[a.role] || { avatar:'#6B7280' };
+      const ini = (a.nom||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+      if (forPrint) return `<span class="nc-inst-member"><span class="nc-inst-member-av" style="background:${rc.avatar}">${ini}</span>${esc(a.nom)}</span>`;
+      return `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 7px 2px 4px;border:1px solid var(--border);border-radius:20px;font-size:11px;color:var(--text-secondary)">
+        <span style="width:14px;height:14px;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:6px;font-weight:700;color:#fff;background:${rc.avatar};flex-shrink:0">${ini}</span>
+        ${esc(a.nom)}
+      </span>`;
+    }).join('');
+
+    if (forPrint) return `<div class="nc-inst-row">
+      <div class="nc-inst-head">
+        <span class="nc-inst-dot" style="background:${hex}"></span>
+        <span class="nc-inst-sigle">${esc(inst.sigle || inst.nom)}</span>
+        ${inst.nom && inst.sigle ? `<span class="nc-inst-nom">— ${esc(inst.nom)}</span>` : ''}
+        ${inst.role ? `<span class="nc-inst-role">${esc(inst.role)}</span>` : ''}
+      </div>
+      ${members.length ? `<div class="nc-inst-members">${membersHtml}</div>` : ''}
+    </div>`;
+
+    return `<div style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+      <div style="display:flex;align-items:center;gap:8px;padding:7px 11px;background:var(--surface2)">
+        <span style="width:7px;height:7px;border-radius:50%;background:${hex};flex-shrink:0;display:inline-block"></span>
+        <span style="font-size:12px;font-weight:600;color:var(--text-primary)">${esc(inst.sigle||inst.nom)}</span>
+        ${inst.nom && inst.sigle ? `<span style="font-size:11.5px;color:var(--text-muted)">— ${esc(inst.nom)}</span>` : ''}
+        ${inst.role ? `<span style="font-size:11px;color:var(--text-muted);font-style:italic;margin-left:auto">${esc(inst.role)}</span>` : ''}
+      </div>
+      ${members.length ? `<div style="display:flex;flex-wrap:wrap;gap:5px;padding:7px 11px;background:var(--bg)">${membersHtml}</div>` : ''}
+    </div>`;
+  }).join(forPrint ? '' : '<div style="height:6px"></div>');
+
+  // ── Assemblage ──
+  if (forPrint) {
+    return `<div class="nc-page">
+      <div class="nc-header-band">
+        <div class="nc-pretitle">Note de cadrage · ${p.code || 'Projet'}</div>
+        <div class="nc-title">${esc(p.nom || '—')}</div>
+        <div class="nc-dates">
+          ${d1 ? `<div><span class="nc-date-label">Date de début</span><span class="nc-date-val">${d1}</span></div>` : ''}
+          ${d2 ? `<div><span class="nc-date-label">Date de fin prévue</span><span class="nc-date-val">${d2}</span></div>` : ''}
+          ${d3 ? `<div><span class="nc-date-label">Date de clôture</span><span class="nc-date-val">${d3}</span></div>` : ''}
+        </div>
+      </div>
+      ${keyActors.length ? section('Portage du projet',
+        `<div class="nc-team-grid">${keyActors.map(actorCard).join('')}</div>`) : ''}
+      ${teamActors.length ? section("Composition de l'équipe projet",
+        `<div class="nc-team-grid">${teamActors.map(teamCard).join('')}</div>`) : ''}
+      <div class="nc-divider"></div>
+      ${section('Contexte du projet',          textBlock(p.contexte))}
+      ${section('Objectifs visés',             textBlock(p.objectifs))}
+      ${section('Périmètre du projet',         textBlock(p.cadrage))}
+      ${section('Risques et opportunités',     textBlock(p.risques))}
+      ${section('Moyens mis à disposition',    textBlock(p.moyens))}
+      ${section('Bénéfices qualitatifs attendus',  textBlock(p.qualitatif))}
+      ${section('Bénéfices quantitatifs attendus', textBlock(p.quantitatif))}
+      ${instList.length ? section('Instances du projet',
+        `<div class="nc-instances">${instHtml}</div>`) : ''}
+      <div class="nc-footer">Édité le ${today} · ${esc(p.nom || '')}${p.code ? ' · ' + esc(p.code) : ''}</div>
+    </div>`;
+  }
+
+  // ── Vue écran ──
+  return `<div style="max-width:720px;margin:0 auto;padding:32px 40px 48px">
+    <!-- Bandeau titre -->
+    <div style="background:var(--text-primary);color:#fff;padding:22px 28px 18px;border-radius:8px;margin-bottom:28px">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.45);margin-bottom:7px">Note de cadrage${p.code ? ' · ' + esc(p.code) : ''}</div>
+      <div style="font-size:24px;font-weight:700;letter-spacing:-.02em;line-height:1.2;margin-bottom:14px">${esc(p.nom || '—')}</div>
+      <div style="display:flex;gap:24px;flex-wrap:wrap">
+        ${d1 ? `<div><div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:rgba(255,255,255,.45);margin-bottom:2px">Début</div><div style="font-size:13px;font-weight:600">${d1}</div></div>` : ''}
+        ${d2 ? `<div><div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:rgba(255,255,255,.45);margin-bottom:2px">Fin prévue</div><div style="font-size:13px;font-weight:600">${d2}</div></div>` : ''}
+        ${d3 ? `<div><div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:rgba(255,255,255,.45);margin-bottom:2px;color:#fca5a5">Clôturé le</div><div style="font-size:13px;font-weight:600;color:#fca5a5">${d3}</div></div>` : ''}
+      </div>
+    </div>
+
+    ${keyActors.length ? section('Portage du projet',
+      `<div style="display:flex;flex-wrap:wrap;gap:8px">${keyActors.map(actorCard).join('')}</div>`) : ''}
+    ${teamActors.length ? section("Composition de l'équipe projet",
+      `<div style="display:flex;flex-wrap:wrap;gap:6px">${teamActors.map(teamCard).join('')}</div>`) : ''}
+
+    <div style="height:1px;background:var(--border);margin:24px 0"></div>
+
+    ${section('Contexte du projet',          textBlock(p.contexte))}
+    ${section('Objectifs visés',             textBlock(p.objectifs))}
+    ${section('Périmètre du projet',         textBlock(p.cadrage))}
+    ${section('Risques et opportunités',     textBlock(p.risques))}
+    ${section('Moyens mis à disposition',    textBlock(p.moyens))}
+    ${section('Bénéfices qualitatifs attendus',  textBlock(p.qualitatif))}
+    ${section('Bénéfices quantitatifs attendus', textBlock(p.quantitatif))}
+    ${instList.length ? section('Instances du projet',
+      `<div style="display:flex;flex-direction:column;gap:6px">${instHtml}</div>`) : ''}
+
+    <div style="margin-top:32px;font-size:10px;color:var(--text-muted);text-align:right;border-top:1px solid var(--border);padding-top:10px">
+      Édité le ${today}
+    </div>
+  </div>`;
+}
+
+  
 // ══ RENDER SOUS-PROJETS ══
 // ══ RENDER SOUS-PROJETS ══
 function renderSousProjets() {
