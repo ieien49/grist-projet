@@ -1949,6 +1949,10 @@ function renderFeuilleDeroute() {
   const masterId = masterProjet ? masterProjet.id : null;
   const lvl1 = allProjets.filter(p => p.ref === masterId || (!masterId && !allProjets.find(x => x.id === p.ref) && p.ref))
     .sort((a,b) => (a.ordre??9999)-(b.ordre??9999));
+
+  const lvl1Filtered = fProjet
+    ? lvl1.filter(p => String(p.id) === fProjet)
+    : lvl1;
   const lanes = lvl1.map((p1, li) => {
     const hex = projetHex(p1);
     // Construire un objet color compatible avec LANE_COLORS à partir de la couleur du projet
