@@ -4722,7 +4722,7 @@ function openSubCanvas(projetId) {
       bodyHtml = `<div style="padding-top:4px;display:flex;flex-direction:column;gap:1px">${etapesHtml}</div>`;
     } else {
       const val = p[b.field] || '';
-      bodyHtml = `<div class="canvas-block-body" contenteditable="true" data-field="${b.field}" data-placeholder="${val ? '' : 'Non renseigné — cliquez pour éditer'}" oninput="subCanvasMarkDirty()" style="min-height:60px">${textToHtml(val)}</div>`;
+      bodyHtml = `<div class="canvas-block-body" contenteditable="true" data-field="${b.field}" data-placeholder="${val ? '' : 'Non renseigné — cliquez pour éditer'}" oninput="subCanvasMarkDirty()" style="min-height:60px;white-space:pre-wrap">${textToHtml(val)}</div>`;
     }
 
     const blockEl = document.createElement('div');
