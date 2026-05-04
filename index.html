@@ -3095,7 +3095,7 @@ function kanbanCard(a) {
       data-etat="${esc(a.etat||'A faire')}"
       ondragstart="kbDragStart(event, ${a.id}, '${esc(a.etat||'A faire')}')"
       ondragend="kbDragEnd(event)"
-      onclick="openActionDetail(${a.id})">
+      ondblclick="openActionModal(${a.id})" style="cursor:pointer">
     <div class="kb-card-title">${esc(a.action||'—')}</div>
     <div class="kb-card-meta">
       ${badgeHtml}${prioHtml}${avatarHtml}${dateHtml}
