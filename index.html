@@ -2645,7 +2645,7 @@ function updateCoulDot(selId, dotId) {
   dot.style.border = hex?'none':'1.5px dashed #C8C3BA';
 }
 function esc(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function textToHtml(s) { return esc(s||'').replace(/\n/g,'<br>'); }
+function textToHtml(s) { return esc(s||'').replace(/\r\n/g,'<br>').replace(/\r/g,'<br>').replace(/\n/g,'<br>'); }
 function fromDateInput(v) {
   if (!v || v === '') return null;
   const d = new Date(v + 'T00:00:00Z');
