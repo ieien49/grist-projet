@@ -950,6 +950,9 @@ tr:hover .cr-del-btn { opacity: 1; }
         <!-- Vue Feuille de route -->
         <div id="sp-feuilleroute" style="flex:1;flex-direction:column;overflow:hidden;display:none">
           <div id="feuillerouteFilters" style="padding:8px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;background:var(--bg)">
+            <select class="filter-select" id="frFilterProjet" onchange="renderFeuilleDeroute()">
+              <option value="">Tous les projets</option>
+            </select>
             <select class="filter-select" id="frFilterZoom" onchange="renderFeuilleDeroute()">
               <option value="quarter">Vue trimestrielle</option>
               <option value="semester">Vue semestrielle</option>
