@@ -1859,6 +1859,26 @@ const LANE_COLORS = [
   { bar:'#374151', bg:'#F9FAFB', text:'#111827' },
 ];
 
+function populateFeuillerouteFilters() {
+  const sel = document.getElementById('frFilterProjet');
+  if (!sel) return;
+  const cur = sel.value;
+  while (sel.options.length > 1) sel.remove(1);
+  const masterId = masterProjet ? masterProjet.id : null;
+  allProjets
+    .filter(p => p.ref === masterId && masterId !== null)
+    .sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999))
+    .forEach(p => {
+      const label = (p.code ? p.code + ' – ' : '') + p.nom;
+      const opt   = new Option(label, p.id);
+      const hex   = projetHex(p);
+      if (hex) opt.style.borderLeft = '3px solid ' + hex;
+      sel.appendChild(opt);
+    });
+  if (cur && [...sel.options].some(o => o.value === cur)) sel.value = cur;
+}
+
+  
 function renderFeuilleDeroute() {
   const cont = document.getElementById('feuillerouteContainer');
   if (!cont) return;
