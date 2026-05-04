@@ -3090,12 +3090,12 @@ function kanbanCard(a) {
     ? `<span class="kb-card-prio" style="background:${prioStyle.bg};color:${prioStyle.text}">${esc(prioStyle.label)}</span>`
     : '';
 
-  return `<div class="kb-card" draggable="true"
+    return `<div class="kb-card" draggable="true"
       data-id="${a.id}"
       data-etat="${esc(a.etat||'A faire')}"
       ondragstart="kbDragStart(event, ${a.id}, '${esc(a.etat||'A faire')}')"
       ondragend="kbDragEnd(event)"
-      ondblclick="openActionModal(${a.id})" style="cursor:pointer">
+      ondblclick="openActionModal(${a.id})">
     <div class="kb-card-title">${esc(a.action||'—')}</div>
     <div class="kb-card-meta">
       ${badgeHtml}${prioHtml}${avatarHtml}${dateHtml}
