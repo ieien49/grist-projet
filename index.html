@@ -2102,7 +2102,12 @@ function renderGraph() {
   const W = svgEl.clientWidth  || 700;
   const H = svgEl.clientHeight || 400;
 
-  const colorOf  = (n) => n.isMaster ? '#1A1A1A' : n.termine ? '#888888' : '#1A7A4F';
+ const colorOf  = (n) => {
+    if (n.isMaster) return '#1A1A1A';
+    if (n.termine)  return '#888888';
+    const p = allProjets.find(x => x.id === n.id);
+    return projetHex(p) || '#1A7A4F';
+  };
   const radiusOf = (n) => n.isMaster ? 22 : 15;
 
   // ── Position initiale mémorisée entre redessins ──
