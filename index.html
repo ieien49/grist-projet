@@ -5173,7 +5173,7 @@ function renderSousProjets() {
     const cid         = 'spc_' + p.id;
     const isOpen      = autoOpen;
     const isTop       = depth === 0;
-    const markerColor = termine ? '#888888' : '#1A7A4F';
+    const markerColor = termine ? '#888888' : (projetHex(p) || '#1A7A4F');
 
     const childrenHtml = hasChildren
       ? p.children.map(c => renderNode(c, depth + 1, depth < 1)).join('')
