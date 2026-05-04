@@ -755,20 +755,7 @@ tr:hover .cr-del-btn { opacity: 1; }
           Note de cadrage
         </div>
         
-        <!-- Sous-panel Note de cadrage -->
-<div class="cadre-subpanel" id="def-cadrage" style="overflow:auto;background:var(--bg)">
-  <div style="display:flex;align-items:center;gap:8px;padding:8px 20px;border-bottom:1px solid var(--border);background:var(--surface2);flex-shrink:0;flex-wrap:wrap">
-    <span style="font-size:12px;font-weight:600;color:var(--text-secondary);letter-spacing:.04em">NOTE DE CADRAGE</span>
-    <span style="flex:1"></span>
-    <button class="btn-add" onclick="printNoteCadrage()">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-      Imprimer
-    </button>
-  </div>
-  <div style="flex:1;overflow-y:auto;background:var(--bg)" id="noteCadrageContainer">
-    <div class="loading"><div class="spinner"></div> Chargement…</div>
-  </div>
-</div>
+        
         <!-- Boutons contextuels Définition -->
         <div class="subnav-spacer"></div>
         <div class="subnav-controls" id="defSubnavControls">
@@ -813,6 +800,20 @@ tr:hover .cr-del-btn { opacity: 1; }
           </div>
           <div style="padding:14px;min-width:900px">
             <div id="canvasGrid"></div>
+          </div>
+        </div>
+        <!-- Sous-panel Note de cadrage -->
+        <div class="cadre-subpanel" id="def-cadrage" style="overflow:auto;background:var(--bg)">
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 20px;border-bottom:1px solid var(--border);background:var(--surface2);flex-shrink:0;flex-wrap:wrap">
+            <span style="font-size:12px;font-weight:600;color:var(--text-secondary);letter-spacing:.04em">NOTE DE CADRAGE</span>
+            <span style="flex:1"></span>
+            <button class="btn-add" onclick="printNoteCadrage()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+              Imprimer
+            </button>
+          </div>
+          <div style="flex:1;overflow-y:auto;background:var(--bg)" id="noteCadrageContainer">
+            <div class="loading"><div class="spinner"></div> Chargement…</div>
           </div>
         </div>
       </div>
