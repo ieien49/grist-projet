@@ -1979,7 +1979,7 @@ function renderFeuilleDeroute() {
   // ── Calcul des jalons : date de fin du parent (niveau 1) ──
   const milestones = [];
   if (showMilest) {
-    lvl1.forEach((p1, li) => {
+    lvl1Filtered.forEach((p1, li) => {
       const ms = p1.finreelle > 0 ? p1.finreelle : p1.fin;
       if (ms > 0) {
         milestones.push({ label: p1.code || p1.nom, ms: ms*86400000, color: LANE_COLORS[li % LANE_COLORS.length].bar });
