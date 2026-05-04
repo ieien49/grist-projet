@@ -3495,8 +3495,7 @@ function renderGanttProjet() {
     // Couleur barre
     let barColor;
     if (termine) barColor = '#888888';
-    else if (p.depth === 0) barColor = '#374151';
-    else barColor = piloteColor || '#1A7A4F';
+    else barColor = projetHex(p) || (p.depth === 0 ? '#374151' : '#1A7A4F');
 
     svgBody += `<rect x="0" y="${y}" width="${TOTAL_W}" height="${ROW_H}" fill="${bg}"/>`;
     svgBody += `<line x1="${LABEL_W}" y1="${y}" x2="${LABEL_W}" y2="${y+ROW_H}" stroke="#e8e8e8" stroke-width="0.5"/>`;
