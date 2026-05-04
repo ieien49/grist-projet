@@ -1969,10 +1969,12 @@ function renderFeuilleDeroute() {
     };
   }).filter(l => l.items.length);
 
-  // Sous-projets orphelins (pas rattachés à un niveau 1 connu dans le filtre)
-  const knownIds = new Set(lanes.flatMap(l => l.items.map(i => i.id)));
-  const orphans  = subs.filter(p => !knownIds.has(p.id));
-  if (orphans.length) lanes.push({ parent: null, color: LANE_COLORS[lanes.length % LANE_COLORS.length], items: orphans });
+  // Sous-projets orphelins — uniquement si aucun filtre projet actif
+  if (!fProjet) {
+    const knownIds = new Set(lanes.flatMap(l => l.items.map(i => i.id)));
+    const orphans  = subs.filter(p => !knownIds.has(p.id));
+    if (orphans.length) lanes.push({ parent: null, color: LANE_COLORS[lanes.length % LANE_COLORS.length], items: orphans });
+  }
 
   if (!lanes.length) {
     cont.innerHTML = `<div style="padding:48px;text-align:center;color:var(--text-muted);font-size:13px">Aucune donnée.</div>`;
