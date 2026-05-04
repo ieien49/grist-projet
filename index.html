@@ -1843,7 +1843,7 @@ function switchSpMode(mode) {
   document.getElementById('spListeControls').style.display = mode === 'liste' ? '' : 'none';
   if (mode === 'liste')   renderSousProjets();
   if (mode === 'gantt')   { populateGanttProjetFilters(); renderGanttProjet(); }
-  if (mode === 'feuilleroute') renderFeuilleDeroute();
+  if (mode === 'feuilleroute') { populateFeuillerouteFilters(); renderFeuilleDeroute(); }
   if (mode === 'graphe')  renderGraph();
 }
 
