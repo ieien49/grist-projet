@@ -4519,7 +4519,7 @@ function renderCanvas() {
     } else if (b.auto === 'livrables') {
       // Champ texte libre uniquement
       const val = masterProjet[b.field] || '';
-      bodyHtml = `<div class="canvas-block-body" contenteditable="true" data-field="${b.field}" data-placeholder="${b.placeholder}" oninput="canvasMarkDirty()">${textToHtml(val)}</div>`;
+      bodyHtml = `<div class="canvas-block-body" contenteditable="true" data-field="${b.field}" data-placeholder="${b.placeholder}" oninput="canvasMarkDirty()" style="white-space:pre-wrap">${textToHtml(val)}</div>`;
     } else if (b.auto === 'etapes') {
       // Étapes auto depuis sous-projets
       const today = Date.now();
