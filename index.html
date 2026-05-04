@@ -1953,7 +1953,7 @@ function renderFeuilleDeroute() {
   const lvl1Filtered = fProjet
     ? lvl1.filter(p => String(p.id) === fProjet)
     : lvl1;
-  const lanes = lvl1.map((p1, li) => {
+  const lanes = lvl1Filtered.map((p1, li) => {
     const hex = projetHex(p1);
     // Construire un objet color compatible avec LANE_COLORS à partir de la couleur du projet
     const color = hex && hex !== '#1A1A1A' && hex !== '#1A7A4F'
