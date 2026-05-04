@@ -1693,7 +1693,10 @@ grist.onRecords(async (records, mappings) => {
   const activeDefSub = document.querySelector('#panel-definition .cadre-subtab.active');
   if (activeDefSub?.dataset.sub === 'def-kpi') renderKpi();
   // Re-rendre objectifs si visible
-  if (document.getElementById('panel-objectifs')?.classList.contains('active')) renderSousProjets();
+  if (document.getElementById('panel-objectifs')?.classList.contains('active')) {
+      renderSousProjets();
+      if (spMode === 'feuilleroute') { populateFeuillerouteFilters(); renderFeuilleDeroute(); }
+    }
 });
 
 // ══ FETCH REF DATA ══
