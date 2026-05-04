@@ -4184,6 +4184,15 @@ async function fetchProjets() {
   } catch(e) { console.error('fetchProjets error', e); }
 }
 
+function projetHex(p) {
+  if (!p) return null;
+  const co = couleurs[p.couleur];
+  if (co && co.hex) return co.hex;
+  // fallback selon profondeur
+  const isSub = p.ref && p.ref !== 0;
+  return isSub ? '#1A7A4F' : '#1A1A1A';
+}  
+
 // ══ RENDER DÉFINITION ══
 function renderDefinition() {
   const cont      = document.getElementById('defContainer');
