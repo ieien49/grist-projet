@@ -2061,30 +2061,73 @@ function renderFeuilleDeroute() {
     const rowH = 26; // px par item
     const laneH = Math.max(items.length * rowH + 12, 44);
 
-    const bars = items.map((item, ii) => {
-      const sMs = item.debut     > 0 ? item.debut     * 86400000 : null;
-      const eMs = item.finreelle > 0 ? item.finreelle * 86400000 : (item.fin > 0 ? item.fin * 86400000 : null);
-      const isParent = item.id === parent?.id;
-      if (!sMs || !eMs) return '';
+    // Séparer le parent (niveau 1) des enfants (niveau 2)
+const parentItem = items.find(item => item.id === parent?.id);
+const childItems = items.filter(item => item.id !== parent?.id);
 
-      const x1   = pct(sMs);
-      const x2   = pct(eMs);
-      const bw   = Math.max(x2 - x1, 0.5);
-      const top  = 8 + ii * rowH;
-      const termine = item.finreelle > 0;
-      const barColor = termine ? '#888' : color.bar;
-      const opacity  = termine ? 0.55 : (isParent ? 1 : 0.85);
-      const h        = isParent ? 14 : 12;
-      const topOff   = top + (rowH - h) / 2;
-      const label    = (item.code ? item.code + ' – ' : '') + item.nom;
-      const maxLabelLen = Math.max(0, Math.round(bw / 100 * (cont.clientWidth - LABEL_W) / 5.8) - 2);
-      const labelTxt = bw > 5 && label.length > 0 ? (label.length > maxLabelLen ? label.slice(0, maxLabelLen-1)+'…' : label) : '';
+// Calculer la hauteur : 1 ligne pour le parent + lignes pour les enfants
+const rowH   = 26;
+const parentH = parentItem ? 20 : 0; // hauteur de la ligne parent
+const laneH  = Math.max(parentH + childItems.length * rowH + 12, 44);
 
-      return `<div title="${esc(label)}" style="position:absolute;left:${x1}%;width:${bw}%;top:${topOff}px;height:${h}px;background:${barColor};opacity:${opacity};border-radius:3px;box-sizing:border-box;display:flex;align-items:center;overflow:hidden;cursor:default">
-        ${labelTxt ? `<span style="padding:0 5px;font-size:9.5px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:${isParent?600:400}">${esc(labelTxt)}</span>` : ''}
-      </div>`;
-    }).join('');
+// Barre parent : fine ligne en pointillés (couloir temporel)
+let parentBarHtml = '';
+if (parentItem) {
+  const sMs = parentItem.debut     > 0 ? parentItem.debut     * 86400000 : null;
+  const eMs = parentItem.finreelle > 0 ? parentItem.finreelle * 86400000
+            : (parentItem.fin      > 0 ? parentItem.fin       * 86400000 : null);
+  if (sMs && eMs) {
+    const x1  = pct(sMs);
+    const x2  = pct(eMs);
+    const bw  = Math.max(x2 - x1, 0.5);
+    const termine = parentItem.finreelle > 0;
+    const barColor = termine ? '#888' : color.bar;
+    // Fond très clair (couloir)
+    parentBarHtml += `<div title="${esc((parentItem.code ? parentItem.code + ' – ' : '') + parentItem.nom)}"
+      style="position:absolute;left:${x1}%;width:${bw}%;top:4px;height:6px;
+             background:${barColor};opacity:0.18;border-radius:3px;box-sizing:border-box"></div>`;
+    // Ligne fine sur le dessus (bord supérieur du couloir)
+    parentBarHtml += `<div style="position:absolute;left:${x1}%;width:${bw}%;top:4px;height:1.5px;
+             background:${barColor};opacity:${termine?0.35:0.55};border-radius:1px;box-sizing:border-box"></div>`;
+    // Ligne fine sur le dessous (bord inférieur du couloir)
+    parentBarHtml += `<div style="position:absolute;left:${x1}%;width:${bw}%;top:9.5px;height:1.5px;
+             background:${barColor};opacity:${termine?0.35:0.55};border-radius:1px;box-sizing:border-box"></div>`;
+    // Marqueur de fin (trait vertical)
+    parentBarHtml += `<div style="position:absolute;left:calc(${x1+bw}% - 1px);width:2px;top:2px;height:12px;
+             background:${barColor};opacity:${termine?0.45:0.7};border-radius:1px;box-sizing:border-box"></div>`;
+  }
+}
 
+// Barres enfants (sous-sous-projets)
+const bars = [parentBarHtml, ...childItems.map((item, ii) => {
+  const sMs = item.debut     > 0 ? item.debut     * 86400000 : null;
+  const eMs = item.finreelle > 0 ? item.finreelle * 86400000
+            : (item.fin      > 0 ? item.fin       * 86400000 : null);
+  if (!sMs || !eMs) return '';
+
+  const x1      = pct(sMs);
+  const x2      = pct(eMs);
+  const bw      = Math.max(x2 - x1, 0.5);
+  const top     = parentH + 4 + ii * rowH;
+  const termine = item.finreelle > 0;
+  const barColor = termine ? '#888' : color.bar;
+  const opacity  = termine ? 0.55 : 0.85;
+  const h        = 12;
+  const topOff   = top + (rowH - h) / 2;
+  const label    = (item.code ? item.code + ' – ' : '') + item.nom;
+  const maxLabelLen = Math.max(0, Math.round(bw / 100 * (cont.clientWidth - LABEL_W) / 5.8) - 2);
+  const labelTxt = bw > 5 && label.length > 0
+    ? (label.length > maxLabelLen ? label.slice(0, maxLabelLen - 1) + '…' : label)
+    : '';
+
+  return `<div title="${esc(label)}"
+    style="position:absolute;left:${x1}%;width:${bw}%;top:${topOff}px;height:${h}px;
+           background:${barColor};opacity:${opacity};border-radius:3px;
+           box-sizing:border-box;display:flex;align-items:center;overflow:hidden;cursor:default">
+    ${labelTxt ? `<span style="padding:0 5px;font-size:9.5px;color:#fff;white-space:nowrap;
+                               overflow:hidden;text-overflow:ellipsis;font-weight:400">${esc(labelTxt)}</span>` : ''}
+  </div>`;
+})].join('');
     // Grille colonnes pour cette lane
     const colGrid = periods.map(p => {
       const w = pct(p.end.getTime()) - pct(p.start.getTime());
