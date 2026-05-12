@@ -2058,8 +2058,8 @@ function renderFeuilleDeroute() {
     const laneLabel = parent ? ((parent.code ? parent.code + ' ' : '') + parent.nom) : 'Autres';
 
     // Empilage des barres : chaque item sur sa propre micro-ligne
-    const rowH = 26; // px par item
-
+const childRowH = 26; // px par item
+  
     // Séparer le parent (niveau 1) des enfants (niveau 2)
 const parentItem = items.find(item => item.id === parent?.id);
 const childItems = items.filter(item => item.id !== parent?.id);
