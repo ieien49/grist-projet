@@ -2065,10 +2065,10 @@ const parentItem = items.find(item => item.id === parent?.id);
 const childItems = items.filter(item => item.id !== parent?.id);
 
 // Calculer la hauteur : 1 ligne pour le parent + lignes pour les enfants
-const rowH   = 26;
-const parentH = parentItem ? 20 : 0; // hauteur de la ligne parent
-const laneH  = Math.max(parentH + childItems.length * rowH + 12, 44);
-
+const childRowH = 26;
+const parentH = parentItem ? 20 : 0;
+const laneH  = Math.max(parentH + childItems.length * childRowH + 12, 44);
+  
 // Barre parent : fine ligne en pointillés (couloir temporel)
 let parentBarHtml = '';
 if (parentItem) {
