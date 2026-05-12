@@ -4790,12 +4790,14 @@ async function saveSubCanvas() {
     if (field) {
       updates[field] = el.innerHTML
   .replace(/<br\s*\/?>/gi, '\n')
+  .replace(/<div><br\s*\/?><\/div>/gi, '\n')
   .replace(/<div>/gi, '\n')
   .replace(/<\/div>/gi, '')
   .replace(/&amp;/g, '&')
   .replace(/&lt;/g, '<')
   .replace(/&gt;/g, '>')
   .replace(/&nbsp;/g, ' ')
+  .replace(/\n{3,}/g, '\n\n')
   .trim();
     }
   });
