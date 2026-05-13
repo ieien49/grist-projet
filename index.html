@@ -5512,14 +5512,14 @@ function buildNoteCadrageHtml(forPrint) {
 
   // ── Vue écran ──
   return `<div style="max-width:720px;margin:0 auto;padding:32px 40px 48px">
-    <!-- Bandeau titre -->
-    <div style="background:var(--text-primary);color:#fff;padding:22px 28px 18px;border-radius:8px;margin-bottom:28px">
-      <div style="font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.45);margin-bottom:7px">Note de cadrage${p.code ? ' · ' + esc(p.code) : ''}</div>
-      <div style="font-size:24px;font-weight:700;letter-spacing:-.02em;line-height:1.2;margin-bottom:14px">${esc(p.nom || '—')}</div>
-      <div style="display:flex;gap:24px;flex-wrap:wrap">
-        ${d1 ? `<div><div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:rgba(255,255,255,.45);margin-bottom:2px">Début</div><div style="font-size:13px;font-weight:600">${d1}</div></div>` : ''}
-        ${d2 ? `<div><div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:rgba(255,255,255,.45);margin-bottom:2px">Fin prévue</div><div style="font-size:13px;font-weight:600">${d2}</div></div>` : ''}
-        ${d3 ? `<div><div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:rgba(255,255,255,.45);margin-bottom:2px;color:#fca5a5">Clôturé le</div><div style="font-size:13px;font-weight:600;color:#fca5a5">${d3}</div></div>` : ''}
+   <!-- En-tête classique -->
+    <div style="margin-bottom:28px;padding-bottom:20px;border-bottom:2px solid var(--text-primary)">
+      <div style="font-size:9.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px">Note de cadrage${p.code ? ' · ' + esc(p.code) : ''}</div>
+      <div style="font-size:20px;font-weight:700;letter-spacing:-.02em;line-height:1.2;color:var(--text-primary);margin-bottom:14px">${esc(p.nom || '—')}</div>
+      <div style="display:flex;gap:28px;flex-wrap:wrap">
+        ${d1 ? `<div><div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-bottom:2px">Début</div><div style="font-size:12.5px;font-weight:600;color:var(--text-primary)">${d1}</div></div>` : ''}
+        ${d2 ? `<div><div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-bottom:2px">Fin prévue</div><div style="font-size:12.5px;font-weight:600;color:var(--text-primary)">${d2}</div></div>` : ''}
+        ${d3 ? `<div><div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--danger);margin-bottom:2px">Clôturé le</div><div style="font-size:12.5px;font-weight:600;color:var(--danger)">${d3}</div></div>` : ''}
       </div>
     </div>
 
