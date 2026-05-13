@@ -5418,10 +5418,10 @@ function buildNoteCadrageHtml(forPrint) {
         <div><span class="nc-actor-name">${esc(a.nom)}</span><span class="nc-actor-role">${esc(roleShort)}</span></div>
       </div>`;
     }
-    return `<div style="display:inline-flex;align-items:center;gap:7px;padding:5px 10px 5px 5px;border:1px solid var(--border);border-radius:20px;background:var(--bg)">
-      <div style="width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;color:#fff;background:${rc.avatar};flex-shrink:0">${ini}</div>
-      <span style="font-size:11.5px;color:var(--text-secondary)">${esc(a.nom)}</span>
-      ${roleShort ? `<span style="font-size:10px;color:var(--text-muted)">${esc(roleShort)}</span>` : ''}
+   return `<div style="display:inline-flex;align-items:center;gap:6px;padding:3px 9px 3px 4px;border:1px solid var(--border);border-radius:20px;background:var(--bg)">
+      <div style="width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:6.5px;font-weight:700;color:#fff;background:${rc.avatar};flex-shrink:0">${ini}</div>
+      <span style="font-size:11px;color:var(--text-secondary)">${esc(a.nom)}</span>
+      ${roleShort ? `<span style="font-size:9.5px;color:var(--text-muted)">${esc(roleShort)}</span>` : ''}
     </div>`;
   };
 
