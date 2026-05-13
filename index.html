@@ -5469,14 +5469,16 @@ function buildNoteCadrageHtml(forPrint) {
       ${members.length ? `<div class="nc-inst-members">${membersHtml}</div>` : ''}
     </div>`;
 
-    return `<div style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
-      <div style="display:flex;align-items:center;gap:8px;padding:7px 11px;background:var(--surface2)">
-        <span style="width:7px;height:7px;border-radius:50%;background:${hex};flex-shrink:0;display:inline-block"></span>
-        <span style="font-size:12px;font-weight:600;color:var(--text-primary)">${esc(inst.sigle||inst.nom)}</span>
-        ${inst.nom && inst.sigle ? `<span style="font-size:11.5px;color:var(--text-muted)">— ${esc(inst.nom)}</span>` : ''}
-        ${inst.role ? `<span style="font-size:11px;color:var(--text-muted);font-style:italic;margin-left:auto">${esc(inst.role)}</span>` : ''}
+    return `<div style="display:flex;align-items:flex-start;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)">
+      <span style="width:7px;height:7px;border-radius:50%;background:${hex};flex-shrink:0;margin-top:4px;display:inline-block"></span>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:${members.length?'5px':'0'}">
+          <span style="font-size:11.5px;font-weight:600;color:var(--text-primary)">${esc(inst.sigle||inst.nom)}</span>
+          ${inst.nom && inst.sigle ? `<span style="font-size:11px;color:var(--text-muted)">${esc(inst.nom)}</span>` : ''}
+          ${inst.role ? `<span style="font-size:10.5px;color:var(--text-muted);font-style:italic">${esc(inst.role)}</span>` : ''}
+        </div>
+        ${members.length ? `<div style="display:flex;flex-wrap:wrap;gap:4px">${membersHtml}</div>` : ''}
       </div>
-      ${members.length ? `<div style="display:flex;flex-wrap:wrap;gap:5px;padding:7px 11px;background:var(--bg)">${membersHtml}</div>` : ''}
     </div>`;
   }).join(forPrint ? '' : '<div style="height:6px"></div>');
 
