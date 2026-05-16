@@ -3637,6 +3637,9 @@ function renderGanttProjet() {
       const bw = Math.max(x2 - x1, 4);
       const by = y + (ROW_H - BAR_H) / 2;
       // Fond barre (progression visuelle si pas réalisé)
+      const barLabel = (p.code ? p.code + ' – ' : '') + (p.nom || '');
+      const maxChars = Math.max(0, Math.floor(bw / 5.8) - 2);
+      const barLabelTrunc = maxChars > 3 ? (barLabel.length > maxChars ? barLabel.slice(0, maxChars - 1) + '\u2026' : barLabel) : '';
       if (!termine && sMs <= Date.now() && eMs > sMs) {
         const progPct = Math.min(1, (Date.now() - sMs) / (eMs - sMs));
         const progW   = bw * progPct;
@@ -3646,10 +3649,7 @@ function renderGanttProjet() {
   ${barLabelTrunc ? `<text x="${(x1 + 4).toFixed(1)}" y="${(by + BAR_H / 2).toFixed(1)}" dominant-baseline="central" font-size="8.5" fill="white" font-family="system-ui,sans-serif" opacity="0.92" pointer-events="none">${esc(barLabelTrunc)}</text>` : ''}
 </g>`;
       } else {
-        const barLabel = (p.code ? p.code + ' – ' : '') + (p.nom || '');
-const maxChars = Math.max(0, Math.floor(bw / 5.8) - 2);
-const barLabelTrunc = maxChars > 3 ? (barLabel.length > maxChars ? barLabel.slice(0, maxChars - 1) + '…' : barLabel) : '';
-svgBody += `<g><title>${esc(barLabel)}</title>
+        svgBody += `<g><title>${esc(barLabel)}</title>
   <rect x="${x1.toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(1)}" height="${BAR_H}" rx="${BAR_R}" fill="${barColor}" opacity="${termine ? 0.65 : 0.9}"/>
   ${barLabelTrunc ? `<text x="${(x1 + 4).toFixed(1)}" y="${(by + BAR_H / 2).toFixed(1)}" dominant-baseline="central" font-size="8.5" fill="white" font-family="system-ui,sans-serif" opacity="0.92" pointer-events="none" clip-path="url(#clip_${p.id})">${esc(barLabelTrunc)}</text>` : ''}
 </g>`;
