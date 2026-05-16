@@ -3642,7 +3642,13 @@ function renderGanttProjet() {
         const progW   = bw * progPct;
         svgBody += `<rect x="${x1.toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(1)}" height="${BAR_H}" rx="${BAR_R}" fill="${barColor}" opacity="0.18"/>`;
         if (progW > 0) {
-          svgBody += `<rect x="${x1.toFixed(1)}" y="${by.toFixed(1)}" width="${progW.toFixed(1)}" height="${BAR_H}" rx="${BAR_R}" fill="${barColor}" opacity="0.9"/>`;
+          const barLabel = (p.code ? p.code + ' – ' : '') + (p.nom || '');
+const maxChars = Math.max(0, Math.floor(bw / 5.8) - 2);
+const barLabelTrunc = maxChars > 3 ? (barLabel.length > maxChars ? barLabel.slice(0, maxChars - 1) + '…' : barLabel) : '';
+svgBody += `<g><title>${esc(barLabel)}</title>
+  <rect x="${x1.toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(1)}" height="${BAR_H}" rx="${BAR_R}" fill="${barColor}" opacity="${termine ? 0.65 : 0.9}"/>
+  ${barLabelTrunc ? `<text x="${(x1 + 4).toFixed(1)}" y="${(by + BAR_H / 2).toFixed(1)}" dominant-baseline="central" font-size="8.5" fill="white" font-family="system-ui,sans-serif" opacity="0.92" pointer-events="none" clip-path="url(#clip_${p.id})">${esc(barLabelTrunc)}</text>` : ''}
+</g>`;
         }
       } else {
         svgBody += `<rect x="${x1.toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(1)}" height="${BAR_H}" rx="${BAR_R}" fill="${barColor}" opacity="${termine?0.65:0.9}"/>`;
