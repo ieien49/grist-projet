@@ -1921,7 +1921,7 @@ function renderFeuilleDeroute() {
   // Sous-projets seulement
   let subs = allProjets.filter(p => p.ref && p.ref !== 0);
   if (fEtat === 'encours') subs = subs.filter(p => !p.finreelle || p.finreelle === 0);
-  if (fEtat === 'termine') subs = subs.filter(p =>  p.finreelle && p.finreelle > 0);
+  if (fEtat === 'realise') subs = subs.filter(p =>  p.finreelle && p.finreelle > 0);
 
   if (!subs.length) {
     cont.innerHTML = `<div style="padding:48px;text-align:center;color:var(--text-muted);font-size:13px">Aucun sous-projet à afficher.</div>`;
@@ -3536,7 +3536,7 @@ function renderGanttProjet() {
   // Filtres
   if (fNiveau !== '') rows = rows.filter(r => r.depth === parseInt(fNiveau));
   if (fEtat === 'encours')  rows = rows.filter(r => !r.finreelle || r.finreelle === 0);
-  if (fEtat === 'termine')  rows = rows.filter(r =>  r.finreelle && r.finreelle !== 0);
+  if (fEtat === 'realise')  rows = rows.filter(r =>  r.finreelle && r.finreelle !== 0);
   if (fPilote) rows = rows.filter(r => r.pilote === parseInt(fPilote));
 
   if (!rows.length) {
