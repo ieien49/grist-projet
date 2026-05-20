@@ -2714,6 +2714,7 @@ function updateCoulDot(selId, dotId) {
   dot.style.border = hex?'none':'1.5px dashed #C8C3BA';
 }
 function esc(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function escNl(str) { return esc(str).replace(/\r\n|\r|\n/g,'<br>'); }
 function textToHtml(s) { return esc(s||'').replace(/\r\n/g,'<br>').replace(/\r/g,'<br>').replace(/\n/g,'<br>'); }
 function fromDateInput(v) {
   if (!v || v === '') return null;
@@ -4143,11 +4144,11 @@ function renderPdfView() {
       <div class="cr-pdf-item-body">
         <div class="cr-pdf-item-context">
           ${code ? `<span class="cr-pdf-code">${esc(code)}</span>` : ''}
-          ${d.probleme ? `<span class="cr-pdf-context">${esc(d.probleme)}</span>` : ''}
+          ${d.probleme ? `<span class="cr-pdf-context">${escNl(d.probleme)}</span>` : ''}
         </div>
         <div class="cr-pdf-item-decision">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;color:#333;position:relative;top:1px"><polyline points="20 6 9 17 4 12"/></svg>
-          <span>${esc(d.decision || '')}</span>
+          <span>${escNl(d.decision || '')}</span>
         </div>
         <div class="cr-pdf-item-meta">
           ${metaParts.join('')}
@@ -4209,8 +4210,8 @@ function printSeance(instanceId, dateVal) {
     return `<div class="cr-pdf-item">
       <div class="cr-pdf-item-bullet"><span class="cr-pdf-bullet-dot"></span></div>
       <div class="cr-pdf-item-body">
-        <div class="cr-pdf-item-context">${code?`<span class="cr-pdf-code">${esc(code)}</span>`:''} ${d.probleme?`<span class="cr-pdf-context">${esc(d.probleme)}</span>`:''}</div>
-        <div class="cr-pdf-item-decision"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;color:#333;position:relative;top:1px"><polyline points="20 6 9 17 4 12"/></svg><span>${esc(d.decision||'')}</span></div>
+        <div class="cr-pdf-item-context">${code?`<span class="cr-pdf-code">${esc(code)}</span>`:''} ${d.probleme?`<span class="cr-pdf-context">${)}</span>`:''}</div>
+        <div class="cr-pdf-item-decision"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;color:#333;position:relative;top:1px"><polyline points="20 6 9 17 4 12"/></svg><span>${escNl(d.decision || '')}</span></div>
         <div class="cr-pdf-item-meta">${meta.join('')}</div>
         ${d.commentaire?`<div class="cr-pdf-item-comment">${esc(d.commentaire)}</div>`:''}
       </div>
@@ -6718,8 +6719,8 @@ function suiviRowHtml(d) {
     + '</button>';
   return '<tr>'
     + '<td>' + (projLabel ? '<span class="suivi-projet-tag">'+esc(projLabel)+'</span>' : '<span style="color:var(--text-muted)">—</span>') + '</td>'
-    + '<td style="max-width:200px">' + esc(d.probleme||'—') + '</td>'
-    + '<td style="max-width:200px">' + esc(d.decision||'—') + '</td>'
+    + '<td style="max-width:200px">' + ||'—') + '</td>'
+    + '<td style="max-width:200px">' + escNl(d.decision||'—') + '</td>'
     + '<td style="font-size:12px;color:var(--text-secondary)">' + esc(d.qui||'—') + '</td>'
     + '<td class="suivi-date">' + fmtDs(d.echeance) + '</td>'
     + '<td><select class="etat-select ' + etatClass(d.etat) + '" onchange="updateEtat('+d.id+',this.value,this)">'
