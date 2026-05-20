@@ -4146,10 +4146,10 @@ function renderPdfView() {
           ${code ? `<span class="cr-pdf-code">${esc(code)}</span>` : ''}
           ${d.probleme ? `<span class="cr-pdf-context">${escNl(d.probleme)}</span>` : ''}
         </div>
-        <div class="cr-pdf-item-decision">
+        ${d.decision ? `<div class="cr-pdf-item-decision">
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;color:#333;position:relative;top:1px"><polyline points="20 6 9 17 4 12"/></svg>
-          <span>${escNl(d.decision || '')}</span>
-        </div>
+          <span>${escNl(d.decision)}</span>
+        </div>` : ''}
         <div class="cr-pdf-item-meta">
           ${metaParts.join('')}
         </div>
@@ -4211,7 +4211,7 @@ function printSeance(instanceId, dateVal) {
       <div class="cr-pdf-item-bullet"><span class="cr-pdf-bullet-dot"></span></div>
       <div class="cr-pdf-item-body">
         <div class="cr-pdf-item-context">${code?`<span class="cr-pdf-code">${esc(code)}</span>`:''} ${d.probleme?`<span class="cr-pdf-context">${escNl(d.probleme)}</span>`:''}</div>
-        <div class="cr-pdf-item-decision"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;color:#333;position:relative;top:1px"><polyline points="20 6 9 17 4 12"/></svg><span>${escNl(d.decision || '')}</span></div>
+       ${d.decision ? `<div class="cr-pdf-item-decision"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;color:#333;position:relative;top:1px"><polyline points="20 6 9 17 4 12"/></svg><span>${escNl(d.decision)}</span></div>` : ''}
         <div class="cr-pdf-item-meta">${meta.join('')}</div>
         ${d.commentaire?`<div class="cr-pdf-item-comment">${esc(d.commentaire)}</div>`:''}
       </div>
