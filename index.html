@@ -221,6 +221,21 @@ textarea.form-control { resize: vertical; min-height: 64px; line-height: 1.5; }
 .kb-col-body { flex:1; overflow-y:auto; padding:7px; display:flex; flex-direction:column; gap:6px; }
 .kb-card { background:var(--bg); border:1px solid var(--border); border-radius:var(--radius-sm); padding:9px 10px; cursor:pointer; transition:box-shadow 0.15s, transform 0.15s; position:relative; user-select:none; }
 .kb-card:hover { box-shadow:var(--shadow-md); transform:translateY(-1px); border-color:var(--border-strong); }
+.kb-card-compact {
+  padding: 5px 8px;
+  opacity: 0.65;
+}
+.kb-card-compact .kb-card-title {
+  font-size: 11px;
+  font-weight: 400;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kb-card-compact .kb-card-meta {
+  display: none;
+}  
 .kb-card.dragging { opacity:0.45; box-shadow:none; transform:none; }
 .kb-card-title { font-size:12px; font-weight:500; color:var(--text-primary); margin-bottom:6px; line-height:1.35; }
 .kb-card-meta { display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
@@ -3133,6 +3148,12 @@ function kanbanPrioStyle(prio) {
 
 let kbDragId  = null;
 let kbDragCol = null;
+  let kanbanRealiseOpen = false;
+
+  function toggleKanbanRealise() {
+  kanbanRealiseOpen = !kanbanRealiseOpen;
+  renderKanban();
+}
 
 function renderKanban() {
   const board = document.getElementById('kanbanBoard');
@@ -3181,17 +3202,26 @@ function renderKanban() {
       return (a.echeance||999999) - (b.echeance||999999);
     });
 
-    const cardsHtml = cards.length === 0
-      ? `<div class="kb-empty">Aucune tâche</div>`
-      : cards.map(a => kanbanCard(a)).join('');
+    const isRealise = col.id === 'Réalisé';
+const isCollapsed = isRealise && !kanbanRealiseOpen;
+const cardsHtml = cards.length === 0
+  ? `<div class="kb-empty">Aucune tâche</div>`
+  : isCollapsed
+    ? ''
+    : cards.map(a => kanbanCard(a, isRealise)).join('');
 
-    return `<div class="kb-col" data-col-id="${esc(col.id)}">
-      <div class="kb-col-header">
-        <span class="kb-col-dot" style="background:${col.dot}"></span>
-        <span class="kb-col-title">${esc(col.title)}</span>
-        <span class="kb-col-count">${cards.length}</span>
-        <button onclick="openActionModal(null, '${esc(col.id)}')" title="Ajouter une tâche" style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--text-muted);padding:0 2px;line-height:1;font-size:16px" onmouseover="this.style.color='var(--text-primary)'" onmouseout="this.style.color='var(--text-muted)'">+</button>
-      </div>
+    const headerClick = isRealise ? `onclick="toggleKanbanRealise()"` : '';
+const chevron = isRealise
+  ? `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color:var(--text-muted);transition:transform 0.15s;transform:rotate(${kanbanRealiseOpen?'0':'180'}deg)"><path d="M6 9l6 6 6-6"/></svg>`
+  : '';
+return `<div class="kb-col" data-col-id="${esc(col.id)}">
+  <div class="kb-col-header" ${headerClick} style="${isRealise?'cursor:pointer;user-select:none':''}">
+    <span class="kb-col-dot" style="background:${col.dot}"></span>
+    <span class="kb-col-title">${esc(col.title)}</span>
+    <span class="kb-col-count">${cards.length}</span>
+    ${chevron}
+    <button onclick="openActionModal(null, '${esc(col.id)}')" title="Ajouter une tâche" style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--text-muted);padding:0 2px;line-height:1;font-size:16px" onmouseover="this.style.color='var(--text-primary)'" onmouseout="this.style.color='var(--text-muted)'">+</button>
+  </div>
       <div class="kb-col-body" id="kb_body_${esc(col.id)}"
           ondragover="kbDragOver(event, '${esc(col.id)}')"
           ondragleave="kbDragLeave(event, '${esc(col.id)}')"
@@ -3201,8 +3231,7 @@ function renderKanban() {
     </div>`;
   }).join('');
 }
-
-function kanbanCard(a) {
+function kanbanCard(a, compact = false) {
   const projet   = allProjets.find(p => p.id === a.projet);
   const pilote   = a.qui ? allActors.find(x => x.id === a.qui) : null;
   const etatConf = ETAT_KANBAN.find(e => e.key === a.etat) || ETAT_KANBAN[0];
@@ -3237,7 +3266,7 @@ function kanbanCard(a) {
     ? `<span class="kb-card-prio" style="background:${prioStyle.bg};color:${prioStyle.text}">${esc(prioStyle.label)}</span>`
     : '';
 
-    return `<div class="kb-card" draggable="true"
+    return `<div class="kb-card${compact ? ' kb-card-compact' : ''}" draggable="true"
       data-id="${a.id}"
       data-etat="${esc(a.etat||'A faire')}"
       ondragstart="kbDragStart(event, ${a.id}, '${esc(a.etat||'A faire')}')"
