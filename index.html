@@ -1916,7 +1916,9 @@ function populateFeuillerouteFilters() {
 
 function collectDescendants(parentId, allSubs, depth, maxDepth) {
   if (depth > maxDepth) return [];
-  const children = allSubs.filter(p => p.ref === parentId);
+  const children = allSubs
+    .filter(p => p.ref === parentId)
+    .sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999));
   let result = [];
   children.forEach(c => {
     result.push({ ...c, _depth: depth });
@@ -2009,7 +2011,7 @@ function renderFeuilleDeroute() {
     return {
       parent: p1,
       color,
-      items: collectDescendants(p1.id, subs, 1, maxDepth - 1).sort((a,b) => (a.ordre??9999)-(b.ordre??9999)),
+      items: collectDescendants(p1.id, subs, 1, maxDepth - 1),
     };
   }).filter(l => l.items.length);
 
