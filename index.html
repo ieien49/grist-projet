@@ -5585,7 +5585,7 @@ function buildNoteCadrageHtml(forPrint) {
 }
   
 // ══ RENDER SOUS-PROJETS ══
-// ══ RENDER SOUS-PROJETS ══
+
 function renderSousProjets() {
   const search = document.getElementById('spSearch').value.toLowerCase();
   const addBtn = document.getElementById('spAddBtn');
@@ -5654,7 +5654,7 @@ function renderSousProjets() {
              onmouseenter="this.querySelector('.tl-hbtns').style.opacity='1'"
              onmouseleave="this.querySelector('.tl-hbtns').style.opacity='0'">
           <!-- Zone nom (flex:1) -->
-          <div style="display:flex;align-items:center;gap:7px;flex:15;min-width:0;cursor:pointer;padding-right:12px" onclick="toggleSpChildren('${cid}')">
+          <div style="display:flex;align-items:center;gap:7px;flex:12;min-width:0;cursor:pointer;padding-right:12px" onclick="toggleSpChildren('${cid}')">
             ${hasChildren
               ? `<svg class="sp-acc-toggle${isOpen?' open':''}" id="${cid}_t" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;color:var(--text-muted)"><path d="M9 18l6-6-6-6"/></svg>`
               : `<span style="width:9px;flex-shrink:0;display:inline-block"></span>`}
@@ -5663,11 +5663,11 @@ function renderSousProjets() {
             ${childCount > 0 ? `<span class="tl-count">${childCount}</span>` : ''}
           </div>
           <!-- Zone pilote (colonne centrale fixe 160px) -->
-          <div style="flex:0 0 200px;display:flex;align-items:center;justify-content:flex-start;padding:0 8px;border-left:1px solid var(--border);">
+          <div style="flex:0 0 160px;display:flex;align-items:center;justify-content:flex-start;padding:0 8px;border-left:1px solid var(--border);">
             ${piloteBadge(p)}
           </div>
           <!-- Zone méta droite -->
-          <div style="display:flex;align-items:center;gap:7px;flex-shrink:0;padding-left:8px;border-left:1px solid var(--border);">
+          <div style="display:flex;align-items:center;gap:7px;flex-shrink:0;padding-left:8px;border-left:1px solid var(--border);min-width:0;max-width:220px;">
             ${dates ? `<span class="tl-dates-meta">${dates}</span>` : ''}
             <span class="sp-status-tag ${termine?'sp-status-te':'sp-status-ec'}">
               <span style="width:4px;height:4px;border-radius:50%;background:${markerColor};display:inline-block"></span>
