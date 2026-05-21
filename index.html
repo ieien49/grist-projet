@@ -451,7 +451,7 @@ tr:hover .cr-del-btn { opacity: 1; }
 }
 
 /* ══ Plan d'action — timeline ══ */
-.tl-wrap  { max-width: var(--content-max); margin: 0 auto; padding: var(--content-pad); }
+.tl-wrap  { max-width: 100%; margin: 0; padding: var(--content-pad); }
 .tl-list  { display: flex; flex-direction: column; }
 .tl-node  { display: flex; gap: 0; }
 .tl-node-top { margin-top: 18px; }
@@ -5579,7 +5579,7 @@ function renderSousProjets() {
             ${childCount > 0 ? `<span class="tl-count">${childCount}</span>` : ''}
           </div>
           <!-- Zone pilote (colonne centrale fixe 160px) -->
-          <div style="flex:0 0 160px;display:flex;align-items:center;justify-content:flex-start;padding:0 8px;border-left:1px solid var(--border);">
+          <div style="flex:0 0 220px;display:flex;align-items:center;justify-content:flex-start;padding:0 8px;border-left:1px solid var(--border);">
             ${piloteBadge(p)}
           </div>
           <!-- Zone méta droite -->
