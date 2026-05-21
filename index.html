@@ -2118,8 +2118,10 @@ const bars = [parentBarHtml, ...childItems.map((item, ii) => {
   const top    = parentH + 4 + ii * childRowH;
   const termine = item.finreelle > 0;
   const barColor = termine ? '#888' : color.bar;
-  const opacity  = termine ? 0.55 : 0.85;
-  const h        = 12;
+  const depthOpacity = item._depth === 1 ? 0.85 : item._depth === 2 ? 0.65 : 0.5;
+  const depthH       = item._depth === 1 ? 12   : item._depth === 2 ? 9    : 7;
+  const opacity  = termine ? 0.45 : depthOpacity;
+  const h        = termine ? depthH * 0.8 : depthH;
   const topOff = top + (childRowH - h) / 2;
   const label    = (item.code ? item.code + ' – ' : '') + item.nom;
   const maxLabelLen = Math.max(0, Math.round(bw / 100 * (cont.clientWidth - LABEL_W) / 5.8) - 2);
