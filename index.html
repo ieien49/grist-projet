@@ -1908,6 +1908,15 @@ function populateFeuillerouteFilters() {
   if (cur && [...sel.options].some(o => o.value === cur)) sel.value = cur;
 }
 
+function collectDescendants(parentId, allSubs, depth) {
+  const children = allSubs.filter(p => p.ref === parentId);
+  let result = [];
+  children.forEach(c => {
+    result.push({ ...c, _depth: depth });
+    result = result.concat(collectDescendants(c.id, allSubs, depth + 1));
+  });
+  return result;
+}
   
 function renderFeuilleDeroute() {
   const cont = document.getElementById('feuillerouteContainer');
@@ -1992,7 +2001,7 @@ function renderFeuilleDeroute() {
     return {
       parent: p1,
       color,
-      items: subs.filter(c => c.ref === p1.id || c.id === p1.id).sort((a,b) => (a.ordre??9999)-(b.ordre??9999)),
+      items: collectDescendants(p1.id, subs, 1).sort((a,b) => (a.ordre??9999)-(b.ordre??9999)),
     };
   }).filter(l => l.items.length);
 
@@ -2066,7 +2075,7 @@ const childItems = items.filter(item => item.id !== parent?.id);
 // Calculer la hauteur : 1 ligne pour le parent + lignes pour les enfants
 const childRowH = 26;
 const parentH = parentItem ? 20 : 0;
-const laneH = Math.max(items.length * childRowH + 12, 44);
+const laneH = Math.max(childItems.length * childRowH + parentH + 12, 44);
   
 // Barre parent : fine ligne en pointillés (couloir temporel)
 let parentBarHtml = '';
