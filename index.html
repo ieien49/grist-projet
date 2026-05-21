@@ -961,6 +961,12 @@ tr:hover .cr-del-btn { opacity: 1; }
             <select class="filter-select" id="gpFilterPilote" onchange="renderGanttProjet()">
               <option value="">Tous les pilotes</option>
             </select>
+            <select class="filter-select" id="gpFilterNiveau2" onchange="renderGanttProjet()">
+  <option value="2">Jusqu'au niveau 2</option>
+  <option value="3">Jusqu'au niveau 3</option>
+  <option value="4">Jusqu'au niveau 4</option>
+  <option value="99">Tous les niveaux</option>
+</select>
             <button class="gantt-toggle-actions on" id="gpShowDepBtn" onclick="toggleGanttDep()" title="Masquer les dépendances">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 0 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
               Dépendances
@@ -3536,6 +3542,7 @@ function renderGanttProjet() {
   const fEtat    = document.getElementById('gpFilterEtat')?.value    || '';
   const fPilote  = document.getElementById('gpFilterPilote')?.value  || '';
   const showDep  = document.getElementById('gpShowDepBtn')?.classList.contains('on') ?? true;
+  const maxDepth = parseInt(document.getElementById('gpFilterNiveau2')?.value || '2');
 
   // Tous les sous-projets (hors maître)
   let subs = allProjets.filter(p => p.ref && p.ref !== 0);
@@ -3549,10 +3556,18 @@ function renderGanttProjet() {
   const lvl1 = subs.filter(p => p.ref === masterId || (!masterId && !subs.find(x => x.id === p.ref)))
     .sort((a,b) => (a.ordre??9999)-(b.ordre??9999));
   let rows = [];
+  function collectGanttRows(parentId, depth) {
+    if (depth >= maxDepth) return;
+    subs.filter(c => c.ref === parentId)
+      .sort((a,b) => (a.ordre??9999)-(b.ordre??9999))
+      .forEach(c => {
+        rows.push({ ...c, depth });
+        collectGanttRows(c.id, depth + 1);
+      });
+  }
   lvl1.forEach(p1 => {
     rows.push({ ...p1, depth: 0 });
-    subs.filter(c => c.ref === p1.id).sort((a,b) => (a.ordre??9999)-(b.ordre??9999))
-      .forEach(c => rows.push({ ...c, depth: 1 }));
+    collectGanttRows(p1.id, 1);
   });
 
   // Filtres
