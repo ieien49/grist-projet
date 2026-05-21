@@ -986,6 +986,12 @@ tr:hover .cr-del-btn { opacity: 1; }
               <option value="encours">En cours</option>
               <option value="realise">Réalisé</option>
             </select>
+            <select class="filter-select" id="frFilterNiveau" onchange="renderFeuilleDeroute()">
+  <option value="2">Jusqu'au niveau 2</option>
+  <option value="3">Jusqu'au niveau 3</option>
+  <option value="4">Jusqu'au niveau 4</option>
+  <option value="99">Tous les niveaux</option>
+</select>
             <label style="display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--text-secondary);cursor:pointer;user-select:none;padding:3px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2)">
               <input type="checkbox" id="frShowMilestones" onchange="renderFeuilleDeroute()" checked style="accent-color:var(--text-primary)">
               Jalons
@@ -1908,12 +1914,13 @@ function populateFeuillerouteFilters() {
   if (cur && [...sel.options].some(o => o.value === cur)) sel.value = cur;
 }
 
-function collectDescendants(parentId, allSubs, depth) {
+function collectDescendants(parentId, allSubs, depth, maxDepth) {
+  if (depth > maxDepth) return [];
   const children = allSubs.filter(p => p.ref === parentId);
   let result = [];
   children.forEach(c => {
     result.push({ ...c, _depth: depth });
-    result = result.concat(collectDescendants(c.id, allSubs, depth + 1));
+    result = result.concat(collectDescendants(c.id, allSubs, depth + 1, maxDepth));
   });
   return result;
 }
@@ -1926,6 +1933,7 @@ function renderFeuilleDeroute() {
   const fEtat       = document.getElementById('frFilterEtat')?.value || '';
   const fProjet     = document.getElementById('frFilterProjet')?.value || '';
   const showMilest  = document.getElementById('frShowMilestones')?.checked ?? true;
+  const maxDepth = parseInt(document.getElementById('frFilterNiveau')?.value || '2');
 
   // Sous-projets seulement
   let subs = allProjets.filter(p => p.ref && p.ref !== 0);
@@ -2001,7 +2009,7 @@ function renderFeuilleDeroute() {
     return {
       parent: p1,
       color,
-      items: collectDescendants(p1.id, subs, 1).sort((a,b) => (a.ordre??9999)-(b.ordre??9999)),
+      items: collectDescendants(p1.id, subs, 1, maxDepth - 1).sort((a,b) => (a.ordre??9999)-(b.ordre??9999)),
     };
   }).filter(l => l.items.length);
 
