@@ -1021,6 +1021,7 @@ tr:hover .cr-del-btn { opacity: 1; }
               <option value="realise">Réalisé</option>
             </select>
             <select class="filter-select" id="frFilterNiveau" onchange="renderFeuilleDeroute()">
+              <option value="1">Jusqu'au niveau 1</option>
   <option value="2">Jusqu'au niveau 2</option>
   <option value="3">Jusqu'au niveau 3</option>
   <option value="4">Jusqu'au niveau 4</option>
@@ -1968,6 +1969,8 @@ function renderFeuilleDeroute() {
   const masterId = masterProjet ? masterProjet.id : null;
 
   // Collecter niveau 1 et niveau 2
+  const maxDepth = parseInt(document.getElementById('frFilterNiveau')?.value || '2');
+
   let lvl1 = allProjets
     .filter(p => p.ref === masterId && masterId !== null)
     .sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999));
@@ -1975,17 +1978,30 @@ function renderFeuilleDeroute() {
   if (fProjet) lvl1 = lvl1.filter(p => String(p.id) === fProjet);
 
   let milestones = [];
+
+  function collectMilestones(parentId, depth, inheritedColor) {
+    if (depth > maxDepth) return;
+    allProjets
+      .filter(p => p.ref === parentId)
+      .sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999))
+      .forEach(p => {
+        const hex = depth === 1 ? (projetHex(p) || '#374151') : inheritedColor;
+        const opacity = depth === 1 ? 'ff' : depth === 2 ? 'cc' : depth === 3 ? 'aa' : '88';
+        milestones.push({ ...p, depth, color: hex + (depth === 1 ? '' : opacity.slice(0,0)) });
+        // Ajuster l'opacité visuellement via une couleur plus claire selon la profondeur
+        milestones[milestones.length - 1].color = hex;
+        milestones[milestones.length - 1].alpha = depth === 1 ? 1 : depth === 2 ? 0.85 : depth === 3 ? 0.65 : 0.5;
+        collectMilestones(p.id, depth + 1, hex);
+      });
+  }
+
   lvl1.forEach(p1 => {
     const hex1 = projetHex(p1) || '#374151';
-    milestones.push({ ...p1, depth: 1, color: hex1 });
-    allProjets
-      .filter(c => c.ref === p1.id)
-      .sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999))
-      .forEach(p2 => {
-        milestones.push({ ...p2, depth: 2, color: hex1 + 'bb' });
-      });
+    if (maxDepth >= 1) {
+      milestones.push({ ...p1, depth: 1, color: hex1, alpha: 1 });
+    }
+    collectMilestones(p1.id, 2, hex1);
   });
-
   if (fEtat === 'encours')  milestones = milestones.filter(p => !p.finreelle || p.finreelle === 0);
   if (fEtat === 'realise')  milestones = milestones.filter(p =>  p.finreelle && p.finreelle > 0);
 
@@ -2033,7 +2049,10 @@ function renderFeuilleDeroute() {
   const labelPositions = milestones.map((p, i) => {
     const x = getX(i);
     const y = getY(i);
-    const r = p.depth === 1 ? PIN_R : PIN_R * 0.75;
+    const r = p.depth === 1 ? PIN_R
+            : p.depth === 2 ? PIN_R * 0.78
+            : p.depth === 3 ? PIN_R * 0.60
+            : PIN_R * 0.48;
     const above = i % 2 === 0;
     return {
       i, x, y, r,
@@ -2080,7 +2099,8 @@ function renderFeuilleDeroute() {
     const termine = p.finreelle > 0;
     const enCours = !termine && p.debut > 0 && p.debut * 86400000 <= today;
     const isLvl1  = p.depth === 1;
-    const color   = termine ? '#888888' : p.color;
+   const color  = termine ? '#888888' : p.color;
+    const alphaV = termine ? 0.55 : (p.alpha ?? 1);
 
     const dateMs  = p.finreelle > 0 ? p.finreelle : p.fin > 0 ? p.fin : p.debut;
     const dateStr = dateMs > 0
@@ -2111,9 +2131,9 @@ function renderFeuilleDeroute() {
     const pinEl = `<g transform="translate(${x}, ${y})" style="cursor:default">
       <title>${esc(label)}${dateStr ? ' · ' + dateStr : ''}</title>
       <ellipse cx="0" cy="${r + 4}" rx="${r * 0.6}" ry="${r * 0.2}" fill="rgba(0,0,0,0.15)"/>
-      <circle cx="0" cy="${-r * 0.3}" r="${r}" fill="${color}" opacity="${termine ? 0.65 : 1}"/>
+      <circle cx="0" cy="${-r * 0.3}" r="${r}" fill="${color}" opacity="${alphaV}"/>
       <polygon points="0,${r * 0.9} ${-r * 0.45},${r * 0.2} ${r * 0.45},${r * 0.2}"
-        fill="${color}" opacity="${termine ? 0.65 : 1}"/>
+        fill="${color}" opacity="${alphaV}"/>
       <circle cx="0" cy="${-r * 0.3}" r="${r * 0.45}" fill="white" opacity="0.9"/>
       ${termine
         ? `<text x="0" y="${-r * 0.3 + 3}" text-anchor="middle" dominant-baseline="central"
@@ -2142,20 +2162,23 @@ function renderFeuilleDeroute() {
   }).join('');
   // Légende
   const legendeSvg = `
-    <rect x="20" y="${H - 52}" width="230" height="42" rx="6" fill="white" stroke="#e5e5e5"/>
-    <circle cx="40" cy="${H - 38}" r="7" fill="#374151"/>
-    <polygon points="40,${H-24} 36,${H-30} 44,${H-30}" fill="#374151"/>
-    <text x="52" y="${H - 30}" font-size="9" fill="#555" font-family="system-ui,sans-serif">Niveau 1</text>
-    <circle cx="40" cy="${H - 18}" r="5" fill="#1A7A4F" opacity="0.75"/>
-    <polygon points="40,${H-8} 37,${H-13} 43,${H-13}" fill="#1A7A4F" opacity="0.75"/>
-    <text x="52" y="${H - 11}" font-size="9" fill="#555" font-family="system-ui,sans-serif">Niveau 2</text>
-    <circle cx="130" cy="${H - 38}" r="7" fill="#888"/>
-    <polygon points="130,${H-24} 126,${H-30} 134,${H-30}" fill="#888"/>
-    <text x="142" y="${H - 30}" font-size="9" fill="#555" font-family="system-ui,sans-serif">Réalisé</text>
-    <circle cx="130" cy="${H-22}" r="5" fill="#374151"/>
-    <text x="142" y="${H - 17}" font-size="9" fill="#555" font-family="system-ui,sans-serif">En cours</text>
-    <circle cx="130" cy="${H-8}" r="4" fill="none" stroke="#374151" stroke-width="1.5"/>
-    <text x="142" y="${H - 4}" font-size="9" fill="#555" font-family="system-ui,sans-serif">À venir</text>`;
+    <rect x="20" y="${H - 62}" width="260" height="52" rx="6" fill="white" stroke="#e5e5e5" opacity="0.9"/>
+    <circle cx="40" cy="${H - 48}" r="7" fill="#374151"/>
+    <polygon points="40,${H-34} 36,${H-40} 44,${H-40}" fill="#374151"/>
+    <text x="52" y="${H-40}" font-size="9" fill="#555" font-family="system-ui,sans-serif">Niveau 1</text>
+    <circle cx="40" cy="${H-26}" r="5.5" fill="#374151" opacity="0.85"/>
+    <polygon points="40,${H-15} 37,${H-20} 43,${H-20}" fill="#374151" opacity="0.85"/>
+    <text x="52" y="${H-18}" font-size="9" fill="#555" font-family="system-ui,sans-serif">Niveau 2</text>
+    <circle cx="130" cy="${H-48}" r="4" fill="#374151" opacity="0.65"/>
+    <polygon points="130,${H-37} 127,${H-42} 133,${H-42}" fill="#374151" opacity="0.65"/>
+    <text x="142" y="${H-40}" font-size="9" fill="#555" font-family="system-ui,sans-serif">Niveau 3</text>
+    <circle cx="130" cy="${H-26}" r="3" fill="#374151" opacity="0.5"/>
+    <polygon points="130,${H-16} 128,${H-21} 132,${H-21}" fill="#374151" opacity="0.5"/>
+    <text x="142" y="${H-18}" font-size="9" fill="#555" font-family="system-ui,sans-serif">Niveau 4</text>
+    <circle cx="220" cy="${H-48}" r="6" fill="#888"/>
+    <text x="232" y="${H-44}" font-size="9" fill="#555" font-family="system-ui,sans-serif">Réalisé</text>
+    <circle cx="220" cy="${H-28}" r="5" fill="#374151"/>
+    <text x="232" y="${H-24}" font-size="9" fill="#555" font-family="system-ui,sans-serif">En cours</text>`;
 
   // Ligne aujourd'hui
   const sortedDates = milestones.map(p => p._sortDate).filter(v => v < 99999999);
