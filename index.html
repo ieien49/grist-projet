@@ -5719,7 +5719,7 @@ function renderSousProjets() {
               ? `<svg class="sp-acc-toggle${isOpen?' open':''}" id="${cid}_t" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;color:var(--text-muted)"><path d="M9 18l6-6-6-6"/></svg>`
               : `<span style="width:9px;flex-shrink:0;display:inline-block"></span>`}
            ${p.code ? `<span class="tl-code" style="font-size:9px">${esc(p.code)}</span>` : ''}
-<span class="tl-name" style="font-weight:${isTop?'600':'500'};font-size:12px">${esc(p.nom||'Sans nom')}</span>
+<span class="tl-name" style="font-weight:${isTop?'600':'500'};font-size:10px">${esc(p.nom||'Sans nom')}</span>
             ${childCount > 0 ? `<span class="tl-count">${childCount}</span>` : ''}
           </div>
           <!-- Zone pilote (colonne centrale fixe 160px) -->
