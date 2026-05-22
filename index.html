@@ -1962,262 +1962,206 @@ function renderFeuilleDeroute() {
   const cont = document.getElementById('feuillerouteContainer');
   if (!cont) return;
 
-  const zoom        = document.getElementById('frFilterZoom')?.value || 'quarter';
-  const fEtat       = document.getElementById('frFilterEtat')?.value || '';
-  const fProjet     = document.getElementById('frFilterProjet')?.value || '';
-  const showMilest = false;
-  const maxDepth = parseInt(document.getElementById('frFilterNiveau')?.value || '2');
+  const fEtat   = document.getElementById('frFilterEtat')?.value   || '';
+  const fProjet = document.getElementById('frFilterProjet')?.value || '';
 
-  // Sous-projets seulement
-  let subs = allProjets.filter(p => p.ref && p.ref !== 0);
-  if (fEtat === 'encours') subs = subs.filter(p => !p.finreelle || p.finreelle === 0);
-  if (fEtat === 'realise') subs = subs.filter(p =>  p.finreelle && p.finreelle > 0);
+  const masterId = masterProjet ? masterProjet.id : null;
 
-  if (!subs.length) {
+  // Collecter niveau 1 et niveau 2
+  let lvl1 = allProjets
+    .filter(p => p.ref === masterId && masterId !== null)
+    .sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999));
+
+  if (fProjet) lvl1 = lvl1.filter(p => String(p.id) === fProjet);
+
+  let milestones = [];
+  lvl1.forEach(p1 => {
+    const hex1 = projetHex(p1) || '#374151';
+    milestones.push({ ...p1, depth: 1, color: hex1 });
+    allProjets
+      .filter(c => c.ref === p1.id)
+      .sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999))
+      .forEach(p2 => {
+        milestones.push({ ...p2, depth: 2, color: hex1 + 'bb' });
+      });
+  });
+
+  if (fEtat === 'encours')  milestones = milestones.filter(p => !p.finreelle || p.finreelle === 0);
+  if (fEtat === 'realise')  milestones = milestones.filter(p =>  p.finreelle && p.finreelle > 0);
+
+  if (!milestones.length) {
     cont.innerHTML = `<div style="padding:48px;text-align:center;color:var(--text-muted);font-size:13px">Aucun sous-projet à afficher.</div>`;
     return;
   }
 
-  // ── Bornes temporelles ──
-  const datesMs = [];
-  subs.forEach(p => {
-    if (p.debut     > 0) datesMs.push(p.debut     * 86400000);
-    if (p.fin       > 0) datesMs.push(p.fin       * 86400000);
-    if (p.finreelle > 0) datesMs.push(p.finreelle * 86400000);
+  // Trier par date de fin (ou début si pas de fin)
+  milestones.forEach(p => {
+    p._sortDate = (p.finreelle > 0 ? p.finreelle : p.fin > 0 ? p.fin : p.debut > 0 ? p.debut : 99999999);
   });
-  datesMs.push(Date.now());
-  if (!datesMs.filter(isFinite).length) {
-    cont.innerHTML = `<div style="padding:48px;text-align:center;color:var(--text-muted);font-size:13px">Aucune date renseignée.</div>`;
-    return;
+  milestones.sort((a, b) => a._sortDate - b._sortDate);
+
+  // Dimensions SVG
+  const W = 1100, H = 480;
+  const ROAD_Y = H / 2;
+  const MARGIN_X = 80;
+  const usableW = W - MARGIN_X * 2;
+  const n = milestones.length;
+
+  // Points de la route sinueuse
+  const getX = i => MARGIN_X + (i / Math.max(n - 1, 1)) * usableW;
+  const getY = i => {
+    // Sinusoïde douce
+    const wave = Math.sin((i / Math.max(n - 1, 1)) * Math.PI * 1.8) * 90;
+    return ROAD_Y + wave;
+  };
+
+  // Construire le path de la route (courbe de Bézier)
+  let roadPath = `M ${getX(0)} ${getY(0)}`;
+  for (let i = 0; i < n - 1; i++) {
+    const x1 = getX(i),     y1 = getY(i);
+    const x2 = getX(i + 1), y2 = getY(i + 1);
+    const cx = (x1 + x2) / 2;
+    roadPath += ` C ${cx} ${y1}, ${cx} ${y2}, ${x2} ${y2}`;
   }
 
-  const raw0 = new Date(Math.min(...datesMs));
-  const rawN = new Date(Math.max(...datesMs));
+  // Générer les jalons SVG
+  const PIN_R = 14;
+  const today = Date.now();
 
-  // Aligner les bornes sur début de période
-  function startOfPeriod(d, z) {
-    const r = new Date(d); r.setHours(0,0,0,0);
-    if (z === 'quarter')  { r.setMonth(Math.floor(r.getMonth()/3)*3, 1); }
-    else if (z === 'semester') { r.setMonth(Math.floor(r.getMonth()/6)*6, 1); }
-    else { r.setMonth(0,1); }
-    return r;
-  }
-  function nextPeriod(d, z) {
-    const r = new Date(d);
-    if (z === 'quarter')  r.setMonth(r.getMonth()+3);
-    else if (z === 'semester') r.setMonth(r.getMonth()+6);
-    else r.setFullYear(r.getFullYear()+1);
-    return r;
-  }
+  const jalonsSvg = milestones.map((p, i) => {
+    const x = getX(i);
+    const y = getY(i);
+    const termine = p.finreelle > 0;
+    const enCours = !termine && p.debut > 0 && p.debut * 86400000 <= today;
+    const isLvl1  = p.depth === 1;
 
-  const dStart = startOfPeriod(raw0, zoom); dStart.setMonth(dStart.getMonth() - (zoom==='quarter'?3:zoom==='semester'?6:12));
-  const dEnd   = nextPeriod(startOfPeriod(rawN, zoom), zoom);
-  const spanMs = dEnd.getTime() - dStart.getTime();
-  const pct = ms => Math.max(0, Math.min(100, (ms - dStart.getTime()) / spanMs * 100));
-  const todayPct = pct(Date.now());
+    const color   = termine ? '#888888' : p.color;
+    const r       = isLvl1 ? PIN_R : PIN_R * 0.75;
+    const above   = i % 2 === 0; // alterner haut/bas
+    const labelY  = above ? y - r - 10 : y + r + 10;
+    const lineY1  = above ? y - r      : y + r;
+    const lineY2  = above ? y - r - 6  : y + r + 6;
 
-  // ── Périodes (colonnes) ──
-  const periods = [];
-  let cur = new Date(dStart);
-  while (cur < dEnd) {
-    const nxt = nextPeriod(cur, zoom);
-    periods.push({ start: new Date(cur), end: new Date(nxt) });
-    cur = nxt;
-  }
+    // Date label
+    const dateMs = p.finreelle > 0 ? p.finreelle : p.fin > 0 ? p.fin : p.debut;
+    const dateStr = dateMs > 0
+      ? new Date(dateMs * 86400000).toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' })
+      : '';
 
-  // ── Grouper par projet parent (niveau 1) ──
-  const masterId = masterProjet ? masterProjet.id : null;
-  const lvl1 = allProjets.filter(p => p.ref === masterId || (!masterId && !allProjets.find(x => x.id === p.ref) && p.ref))
-    .sort((a,b) => (a.ordre??9999)-(b.ordre??9999));
+    // Nom tronqué
+    const label = (p.code ? p.code + ' ' : '') + (p.nom || '—');
+    const maxChars = 22;
+    const labelTrunc = label.length > maxChars ? label.slice(0, maxChars - 1) + '…' : label;
 
-  const lvl1Filtered = fProjet
-    ? lvl1.filter(p => String(p.id) === fProjet)
-    : lvl1;
-  const lanes = lvl1Filtered.map((p1, li) => {
-    const hex = projetHex(p1);
-    // Construire un objet color compatible avec LANE_COLORS à partir de la couleur du projet
-    const color = hex && hex !== '#1A1A1A' && hex !== '#1A7A4F'
-      ? { bar: hex, bg: hex + '18', text: hex }
-      : LANE_COLORS[li % LANE_COLORS.length];
-    return {
-      parent: p1,
-      color,
-      items: collectDescendants(p1.id, subs, 1, maxDepth - 1),
-    };
-  }).filter(l => l.items.length);
+    // Ligne verticale jalon → route
+    const lineEl = `<line x1="${x}" y1="${lineY1}" x2="${x}" y2="${lineY2 + (above ? -4 : 4)}"
+      stroke="${color}" stroke-width="${isLvl1 ? 1.5 : 1}" stroke-dasharray="${isLvl1 ? 'none' : '3 2'}" opacity="0.6"/>`;
 
-  // Sous-projets orphelins — uniquement si aucun filtre projet actif
-  if (!fProjet) {
-    const knownIds = new Set(lanes.flatMap(l => l.items.map(i => i.id)));
-    const orphans  = subs.filter(p => !knownIds.has(p.id));
-    if (orphans.length) lanes.push({ parent: null, color: LANE_COLORS[lanes.length % LANE_COLORS.length], items: orphans });
-  }
-
-  if (!lanes.length) {
-    cont.innerHTML = `<div style="padding:48px;text-align:center;color:var(--text-muted);font-size:13px">Aucune donnée.</div>`;
-    return;
-  }
-
-  // ── Calcul des jalons : date de fin du parent (niveau 1) ──
-  const milestones = [];
-  if (showMilest) {
-    lvl1Filtered.forEach((p1, li) => {
-      const ms = p1.finreelle > 0 ? p1.finreelle : p1.fin;
-      if (ms > 0) {
-        milestones.push({ label: p1.code || p1.nom, ms: ms*86400000, color: LANE_COLORS[li % LANE_COLORS.length].bar });
+    // Épingle (cercle + triangle)
+    const pinEl = `<g transform="translate(${x}, ${y})" style="cursor:default">
+      <title>${esc(label)}${dateStr ? ' · ' + dateStr : ''}</title>
+      <!-- Ombre -->
+      <ellipse cx="0" cy="${r + 4}" rx="${r * 0.6}" ry="${r * 0.2}" fill="rgba(0,0,0,0.15)"/>
+      <!-- Corps de l'épingle -->
+      <circle cx="0" cy="${-r * 0.3}" r="${r}" fill="${color}" opacity="${termine ? 0.65 : 1}"/>
+      <!-- Triangle bas -->
+      <polygon points="0,${r * 0.9} ${-r * 0.45},${r * 0.2} ${r * 0.45},${r * 0.2}"
+        fill="${color}" opacity="${termine ? 0.65 : 1}"/>
+      <!-- Cercle intérieur blanc -->
+      <circle cx="0" cy="${-r * 0.3}" r="${r * 0.45}" fill="white" opacity="0.9"/>
+      <!-- Icône : check si réalisé, point si en cours, anneau si à venir -->
+      ${termine
+        ? `<text x="0" y="${-r * 0.3 + 3}" text-anchor="middle" dominant-baseline="central"
+            font-size="${r * 0.7}" fill="${color}" font-weight="700">✓</text>`
+        : enCours
+          ? `<circle cx="0" cy="${-r * 0.3}" r="${r * 0.22}" fill="${color}"/>`
+          : `<circle cx="0" cy="${-r * 0.3}" r="${r * 0.22}" fill="none" stroke="${color}" stroke-width="1.5"/>`
       }
-    });
-  }
+    </g>`;
 
-  // ── Rendu HTML ──
-  const LABEL_W = 160; // px col gauche (fixe via CSS)
+    // Label texte
+    const textAnchor = x < W * 0.15 ? 'start' : x > W * 0.85 ? 'end' : 'middle';
+    const labelEl = `<g>
+      <!-- Fond label -->
+      <rect x="${x - 68}" y="${above ? labelY - 28 : labelY + 2}"
+        width="136" height="${dateStr ? 28 : 18}" rx="4"
+        fill="white" stroke="${color}" stroke-width="1" opacity="0.92"/>
+      <!-- Nom -->
+      <text x="${x}" y="${above ? labelY - 17 : labelY + 12}"
+        text-anchor="middle" font-size="${isLvl1 ? 9.5 : 8.5}"
+        font-weight="${isLvl1 ? '600' : '400'}"
+        fill="${termine ? '#888' : '#111'}"
+        font-family="system-ui, sans-serif">${esc(labelTrunc)}</text>
+      ${dateStr ? `<text x="${x}" y="${above ? labelY - 5 : labelY + 22}"
+        text-anchor="middle" font-size="8" fill="${color}"
+        font-family="system-ui, sans-serif" font-weight="500">${esc(dateStr)}</text>` : ''}
+    </g>`;
 
-  // Header des périodes
-  function periodLabel(p) {
-    const d = p.start;
-    if (zoom === 'quarter') {
-      const q = Math.floor(d.getMonth()/3)+1;
-      return `T${q} ${d.getFullYear()}`;
-    } else if (zoom === 'semester') {
-      const s = d.getMonth() < 6 ? 'S1' : 'S2';
-      return `${s} ${d.getFullYear()}`;
-    } else {
-      return `${d.getFullYear()}`;
-    }
-  }
-
-  let headerCols = periods.map(p => {
-    const w = pct(p.end.getTime()) - pct(p.start.getTime());
-    const isNow = p.start <= new Date() && p.end > new Date();
-    return `<div style="width:${w}%;min-width:0;text-align:center;font-size:10px;font-weight:600;letter-spacing:.05em;color:${isNow?'var(--text-primary)':'#999'};padding:5px 0;border-right:1px solid var(--border);box-sizing:border-box;${isNow?'background:rgba(59,91,219,0.04)':''}">${periodLabel(p)}</div>`;
+    return lineEl + pinEl + labelEl;
   }).join('');
 
-  // Ligne "aujourd'hui" (overlay)
-  const todayLine = `<div style="position:absolute;left:${todayPct}%;top:0;bottom:0;width:1.5px;background:#DC2626;opacity:0.4;z-index:2;pointer-events:none"></div>`;
+  // Légende
+  const legendeSvg = `
+    <rect x="20" y="${H - 52}" width="230" height="42" rx="6" fill="white" stroke="#e5e5e5"/>
+    <circle cx="40" cy="${H - 38}" r="7" fill="#374151"/>
+    <polygon points="40,${H-24} 36,${H-30} 44,${H-30}" fill="#374151"/>
+    <text x="52" y="${H - 30}" font-size="9" fill="#555" font-family="system-ui,sans-serif">Niveau 1</text>
+    <circle cx="40" cy="${H - 18}" r="5" fill="#1A7A4F" opacity="0.75"/>
+    <polygon points="40,${H-8} 37,${H-13} 43,${H-13}" fill="#1A7A4F" opacity="0.75"/>
+    <text x="52" y="${H - 11}" font-size="9" fill="#555" font-family="system-ui,sans-serif">Niveau 2</text>
+    <circle cx="130" cy="${H - 38}" r="7" fill="#888"/>
+    <polygon points="130,${H-24} 126,${H-30} 134,${H-30}" fill="#888"/>
+    <text x="142" y="${H - 30}" font-size="9" fill="#555" font-family="system-ui,sans-serif">Réalisé</text>
+    <circle cx="130" cy="${H-22}" r="5" fill="#374151"/>
+    <text x="142" y="${H - 17}" font-size="9" fill="#555" font-family="system-ui,sans-serif">En cours</text>
+    <circle cx="130" cy="${H-8}" r="4" fill="none" stroke="#374151" stroke-width="1.5"/>
+    <text x="142" y="${H - 4}" font-size="9" fill="#555" font-family="system-ui,sans-serif">À venir</text>`;
 
-  // Jalons (triangles inversés sur la ligne de header)
-  const milestoneMarkers = milestones.map(m => {
-    const x = pct(m.ms);
-    if (x < 0 || x > 100) return '';
-    return `<div title="${esc(m.label)}" style="position:absolute;left:calc(${x}% - 6px);top:3px;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:10px solid ${m.color};opacity:0.85;z-index:3;cursor:default"></div>`;
-  }).join('');
-
-  // Lanes
-  let lanesHtml = lanes.map(lane => {
-    const { parent, color, items } = lane;
-    const laneLabel = parent ? ((parent.code ? parent.code + ' ' : '') + parent.nom) : 'Autres';
-
-    // Empilage des barres : chaque item sur sa propre micro-ligne
-  
-    // Séparer le parent (niveau 1) des enfants (niveau 2)
-const parentItem = items.find(item => item.id === parent?.id);
-const childItems = items.filter(item => item.id !== parent?.id);
-
-// Calculer la hauteur : 1 ligne pour le parent + lignes pour les enfants
-const childRowH = 26;
-const parentH = parentItem ? 20 : 0;
-const laneH = Math.max(childItems.length * childRowH + parentH + 12, 44);
-  
-// Barre parent : fine ligne en pointillés (couloir temporel)
-let parentBarHtml = '';
-if (parentItem) {
-  const sMs = parentItem.debut     > 0 ? parentItem.debut     * 86400000 : null;
-  const eMs = parentItem.finreelle > 0 ? parentItem.finreelle * 86400000
-            : (parentItem.fin      > 0 ? parentItem.fin       * 86400000 : null);
-  if (sMs && eMs) {
-    const x1  = pct(sMs);
-    const x2  = pct(eMs);
-    const bw  = Math.max(x2 - x1, 0.5);
-    const termine = parentItem.finreelle > 0;
-    const barColor = termine ? '#888' : color.bar;
-    // Fond très clair (couloir)
-    parentBarHtml += `<div title="${esc((parentItem.code ? parentItem.code + ' – ' : '') + parentItem.nom)}"
-      style="position:absolute;left:${x1}%;width:${bw}%;top:4px;height:6px;
-             background:${barColor};opacity:0.18;border-radius:3px;box-sizing:border-box"></div>`;
-    // Ligne fine sur le dessus (bord supérieur du couloir)
-    parentBarHtml += `<div style="position:absolute;left:${x1}%;width:${bw}%;top:4px;height:1.5px;
-             background:${barColor};opacity:${termine?0.35:0.55};border-radius:1px;box-sizing:border-box"></div>`;
-    // Ligne fine sur le dessous (bord inférieur du couloir)
-    parentBarHtml += `<div style="position:absolute;left:${x1}%;width:${bw}%;top:9.5px;height:1.5px;
-             background:${barColor};opacity:${termine?0.35:0.55};border-radius:1px;box-sizing:border-box"></div>`;
-    // Marqueur de fin (trait vertical)
-    parentBarHtml += `<div style="position:absolute;left:calc(${x1+bw}% - 1px);width:2px;top:2px;height:12px;
-             background:${barColor};opacity:${termine?0.45:0.7};border-radius:1px;box-sizing:border-box"></div>`;
+  // Ligne aujourd'hui
+  const sortedDates = milestones.map(p => p._sortDate).filter(v => v < 99999999);
+  const minD = Math.min(...sortedDates), maxD = Math.max(...sortedDates);
+  const todayDays = today / 86400000;
+  let todayLineSvg = '';
+  if (todayDays >= minD && todayDays <= maxD && n > 1) {
+    const tPct = (todayDays - minD) / (maxD - minD);
+    const tIdx = tPct * (n - 1);
+    const ti   = Math.floor(tIdx);
+    const tf   = tIdx - ti;
+    const tx   = getX(ti) + tf * (getX(Math.min(ti + 1, n - 1)) - getX(ti));
+    const ty   = getY(ti) + tf * (getY(Math.min(ti + 1, n - 1)) - getY(ti));
+    todayLineSvg = `
+      <line x1="${tx}" y1="${ty - 30}" x2="${tx}" y2="${ty + 30}"
+        stroke="#DC2626" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.6"/>
+      <rect x="${tx - 18}" y="${ty - 44}" width="36" height="14" rx="3" fill="#DC2626" opacity="0.9"/>
+      <text x="${tx}" y="${ty - 34}" text-anchor="middle" font-size="8" fill="white"
+        font-family="system-ui,sans-serif" font-weight="600">Auj.</text>`;
   }
-}
 
-// Barres enfants (sous-sous-projets)
-const bars = [parentBarHtml, ...childItems.map((item, ii) => {
-  const sMs = item.debut     > 0 ? item.debut     * 86400000 : null;
-  const eMs = item.finreelle > 0 ? item.finreelle * 86400000
-            : (item.fin      > 0 ? item.fin       * 86400000 : null);
-  if (!sMs || !eMs) return '';
+  cont.innerHTML = `
+    <div style="padding:16px 14px">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}"
+           style="width:100%;height:auto;display:block;background:linear-gradient(160deg,#f8f8f6 0%,#f0f0ee 100%);border-radius:8px;border:1px solid var(--border)">
 
-  const x1      = pct(sMs);
-  const x2      = pct(eMs);
-  const bw      = Math.max(x2 - x1, 0.5);
-  const top    = parentH + 4 + ii * childRowH;
-  const termine = item.finreelle > 0;
-  const barColor = termine ? '#888' : color.bar;
-  const depthOpacity = item._depth === 1 ? 0.85 : item._depth === 2 ? 0.65 : 0.5;
-  const depthH       = item._depth === 1 ? 12   : item._depth === 2 ? 9    : 7;
-  const opacity  = termine ? 0.45 : depthOpacity;
-  const h        = termine ? depthH * 0.8 : depthH;
-  const topOff = top + (childRowH - h) / 2;
-  const label    = (item.code ? item.code + ' – ' : '') + item.nom;
-  const maxLabelLen = Math.max(0, Math.round(bw / 100 * (cont.clientWidth - LABEL_W) / 5.8) - 2);
-  const labelTxt = bw > 5 && label.length > 0
-    ? (label.length > maxLabelLen ? label.slice(0, maxLabelLen - 1) + '…' : label)
-    : '';
+        <!-- Route : ombre -->
+        <path d="${roadPath}" fill="none" stroke="rgba(0,0,0,0.08)"
+          stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Route : corps gris foncé -->
+        <path d="${roadPath}" fill="none" stroke="#3d4451"
+          stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Route : ligne centrale blanche pointillée -->
+        <path d="${roadPath}" fill="none" stroke="white"
+          stroke-width="1.5" stroke-dasharray="14 10"
+          stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
+        <!-- Route : bords clairs -->
+        <path d="${roadPath}" fill="none" stroke="rgba(255,255,255,0.12)"
+          stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
 
-  return `<div title="${esc(label)}"
-    style="position:absolute;left:${x1}%;width:${bw}%;top:${topOff}px;height:${h}px;
-           background:${barColor};opacity:${opacity};border-radius:3px;
-           box-sizing:border-box;display:flex;align-items:center;overflow:hidden;cursor:default">
-    ${labelTxt ? `<span style="padding:0 5px;font-size:9.5px;color:#fff;white-space:nowrap;
-                               overflow:hidden;text-overflow:ellipsis;font-weight:400">${esc(labelTxt)}</span>` : ''}
-  </div>`;
-})].join('');
-    // Grille colonnes pour cette lane
-    const colGrid = periods.map(p => {
-      const w = pct(p.end.getTime()) - pct(p.start.getTime());
-      const isNow = p.start <= new Date() && p.end > new Date();
-      return `<div style="width:${w}%;box-sizing:border-box;border-right:1px solid ${isNow?'rgba(59,91,219,0.1)':'var(--border)'};height:100%;${isNow?'background:rgba(59,91,219,0.02)':''}"></div>`;
-    }).join('');
-
-    return `<div style="display:flex;border-bottom:1px solid var(--border)">
-      <!-- Label colonne gauche -->
-      <div style="flex-shrink:0;width:${LABEL_W}px;padding:8px 10px;border-right:1px solid var(--border);display:flex;align-items:flex-start;gap:6px;box-sizing:border-box">
-        <div style="width:3px;flex-shrink:0;margin-top:3px;height:calc(100% - 6px);min-height:14px;border-radius:2px;background:${color.bar}"></div>
-        <span style="font-size:11px;font-weight:600;color:var(--text-primary);line-height:1.35;word-break:break-word">${esc(laneLabel)}</span>
-      </div>
-      <!-- Zone barres -->
-      <div style="flex:1;position:relative;height:${laneH}px;overflow:hidden">
-        <div style="display:flex;height:100%;position:absolute;left:0;right:0;top:0">${colGrid}</div>
-        ${todayLine}
-        ${bars}
-      </div>
+        ${todayLineSvg}
+        ${jalonsSvg}
+        ${legendeSvg}
+      </svg>
     </div>`;
-  }).join('');
-
-  cont.innerHTML = `<div style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--bg)">
-    <!-- Header périodes -->
-    <div style="display:flex;border-bottom:1px solid var(--border);background:var(--surface2)">
-      <div style="flex-shrink:0;width:${LABEL_W}px;border-right:1px solid var(--border);padding:5px 10px;font-size:10px;font-weight:600;color:#999;letter-spacing:.05em;box-sizing:border-box">SOUS-PROJET</div>
-      <div style="flex:1;position:relative;display:flex">${headerCols}${milestoneMarkers}</div>
-    </div>
-    <!-- Lanes -->
-    ${lanesHtml}
-  </div>
-  <!-- Légende -->
-  <div style="margin-top:12px;display:flex;gap:16px;flex-wrap:wrap;align-items:center">
-    <span style="font-size:10.5px;color:var(--text-muted);display:inline-flex;align-items:center;gap:5px"><span style="width:20px;height:8px;border-radius:2px;background:#3B5BDB;display:inline-block"></span>En cours</span>
-    <span style="font-size:10.5px;color:var(--text-muted);display:inline-flex;align-items:center;gap:5px"><span style="width:20px;height:8px;border-radius:2px;background:#888;opacity:0.6;display:inline-block"></span>Réalisé</span>
-    ${showMilest ? '<span style="font-size:10.5px;color:var(--text-muted);display:inline-flex;align-items:center;gap:5px"><span style="display:inline-block;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:10px solid #374151;opacity:0.7"></span>Jalon (fin de projet)</span>' : ''}
-    <span style="font-size:10.5px;color:#DC2626;display:inline-flex;align-items:center;gap:5px"><span style="width:1.5px;height:12px;background:#DC2626;opacity:0.5;display:inline-block"></span>Aujourd'hui</span>
-  </div>`;
 }
-
 function renderGraph() {
   const svgEl   = document.getElementById('graphSvg');
   const rootEl  = document.getElementById('graphRoot');
