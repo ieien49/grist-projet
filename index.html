@@ -5784,6 +5784,14 @@ function buildNoteCadrageHtml(forPrint) {
   
 // ══ RENDER SOUS-PROJETS ══
 
+function countMatching(node, matchingIds) {
+  let count = matchingIds.has(node.id) ? 1 : 0;
+  node.children?.forEach(c => {
+    count += countMatching(c, matchingIds);
+  });
+  return count;
+}
+  
 function renderSousProjets() {
   const search = document.getElementById('spSearch').value.toLowerCase();
   const addBtn = document.getElementById('spAddBtn');
@@ -5811,9 +5819,13 @@ function renderSousProjets() {
 
   const allNodes = (node) => [node, ...node.children.flatMap(allNodes)];
   const allSubs  = level1.flatMap(allNodes);
-  const matchingIds = search
-    ? new Set(allSubs.filter(p => (p.nom + (p.code||'')).toLowerCase().includes(search)).map(p => p.id))
-    : null;
+  // Chercher dans TOUS les champs, pas juste nom + code
+const matchingIds = search
+  ? new Set(allSubs.filter(p => {
+      const searchText = (p.nom + (p.code||'') + (p.cadrage||'') + (p.contexte||'') + (p.objectifs||'') + (p.livrables||'') + (p.risques||'') + (p.moyens||'')).toLowerCase();
+      return searchText.includes(search);
+    }).map(p => p.id))
+  : null;
 
   document.getElementById('spCount').textContent = `${totalSubs} sous-projet${totalSubs!==1?'s':''}`;
 
@@ -5831,7 +5843,12 @@ function renderSousProjets() {
   };
 
   const renderNode = (p, depth, autoOpen) => {
-    if (matchingIds && !matchingIds.has(p.id)) return '';
+  // Vérifier si ce nœud ou un enfant correspond à la recherche
+  const nodeMatches = !matchingIds || matchingIds.has(p.id);
+  const hasMatchingChild = matchingIds && p.children.some(c => matchingIds.has(c.id) || countMatching(c, matchingIds) > 0);
+  
+  if (!nodeMatches && !hasMatchingChild) return '';
+  
     const termine     = !!p.finreelle;
     const hasChildren = p.children.length > 0;
     const childCount  = countAll(p);
