@@ -1010,11 +1010,7 @@ tr:hover .cr-del-btn { opacity: 1; }
             <select class="filter-select" id="frFilterProjet" onchange="renderFeuilleDeroute()">
               <option value="">Tous les projets</option>
             </select>
-            <select class="filter-select" id="frFilterZoom" onchange="renderFeuilleDeroute()">
-              <option value="quarter">Vue trimestrielle</option>
-              <option value="semester">Vue semestrielle</option>
-              <option value="year">Vue annuelle</option>
-            </select>
+           
             <select class="filter-select" id="frFilterEtat" onchange="renderFeuilleDeroute()">
               <option value="">Tous les états</option>
               <option value="encours">En cours</option>
@@ -1027,6 +1023,14 @@ tr:hover .cr-del-btn { opacity: 1; }
   <option value="4">Jusqu'au niveau 4</option>
   <option value="99">Tous les niveaux</option>
 </select>
+            <button class="btn-add-ghost" onclick="exportRoadmapPng()" style="margin-left:auto">
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+  PNG
+</button>
+<button class="btn-add-ghost" onclick="exportRoadmapPdf()">
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+  PDF
+</button>
             
           </div>
           <div style="flex:1;overflow:auto;background:var(--bg)">
@@ -2224,6 +2228,77 @@ function renderFeuilleDeroute() {
         ${legendeSvg}
       </svg>
     </div>`;
+}
+
+function exportRoadmapPng() {
+  const svg = document.querySelector('#feuillerouteContainer svg');
+  if (!svg) { showToast('Aucune roadmap à exporter', 'error'); return; }
+  const serializer = new XMLSerializer();
+  // Intégrer les polices en base64 n'est pas possible ici,
+  // on force une police système fiable
+  const svgStr = serializer.serializeToString(svg)
+    .replace(/font-family="[^"]*"/g, 'font-family="Arial, sans-serif"');
+  const vb = svg.viewBox.baseVal;
+  const W = vb.width  || 1100;
+  const H = vb.height || 480;
+  const SCALE = 2;
+  const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const img  = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width  = W * SCALE;
+    canvas.height = H * SCALE;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#f8f8f6';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.scale(SCALE, SCALE);
+    ctx.drawImage(img, 0, 0);
+    URL.revokeObjectURL(url);
+    const link = document.createElement('a');
+    link.download = (masterProjet?.nom || 'roadmap') + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    showToast('Export PNG généré');
+  };
+  img.onerror = () => {
+    URL.revokeObjectURL(url);
+    showToast('Erreur lors de la génération du PNG', 'error');
+  };
+  img.src = url;
+}
+
+function exportRoadmapPdf() {
+  const svg = document.querySelector('#feuillerouteContainer svg');
+  if (!svg) { showToast('Aucune roadmap à exporter', 'error'); return; }
+  const serializer = new XMLSerializer();
+  const svgStr = serializer.serializeToString(svg)
+    .replace(/font-family="[^"]*"/g, 'font-family="Arial, sans-serif"');
+  const title = masterProjet?.nom || 'Roadmap';
+  const today = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <style>
+      @page { size: A3 landscape; margin: 12mm 10mm; }
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: Arial, sans-serif; background: white;
+             -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .header { display: flex; align-items: baseline; justify-content: space-between;
+                border-bottom: 1.5px solid #111; padding-bottom: 6px; margin-bottom: 12px; }
+      .header h2 { font-size: 13px; font-weight: 700; margin: 0; color: #111; }
+      .header span { font-size: 10px; color: #999; }
+      svg { width: 100%; height: auto; display: block; }
+    </style>
+  </head><body>
+    <div class="header">
+      <h2>${esc(title)} — Feuille de route</h2>
+      <span>Édité le ${today}</span>
+    </div>
+    ${svgStr}
+  </body></html>`;
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+  win.onload = () => { win.focus(); win.print(); };
 }
   
   function renderGraph() {
