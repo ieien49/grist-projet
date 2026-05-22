@@ -990,15 +990,7 @@ tr:hover .cr-del-btn { opacity: 1; }
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 0 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
               Dépendances
             </button>
-            <div style="display:flex;gap:2px;margin-left:6px;border-left:1px solid var(--border);padding-left:6px">
-  <button class="btn-add-ghost" onclick="ganttZoomIn()" title="Agrandir" style="padding:3px 8px">
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-  </button>
-  <button class="btn-add-ghost" onclick="ganttZoomOut()" title="Réduire" style="padding:3px 8px">
-    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-  </button>
-  <button class="btn-add-ghost" onclick="ganttZoomReset()" title="Réinitialiser" style="padding:3px 8px;font-size:11px;font-weight:600">100%</button>
-</div>
+           
           </div>
           <div style="flex:1;overflow:auto;background:var(--bg)">
             <div id="ganttProjetContainer" style="padding:8px 14px;min-width:700px"></div>
@@ -3588,22 +3580,7 @@ function populateGanttProjetFilters() {
 }
 
 // ── Zoom du Gantt ──
-let ganttScale = 1;
-
-function ganttZoomIn() {
-  ganttScale = Math.min(ganttScale + 0.2, 2);
-  renderGanttProjet();
-}
-
-function ganttZoomOut() {
-  ganttScale = Math.max(ganttScale - 0.2, 0.6);
-  renderGanttProjet();
-}
-
-function ganttZoomReset() {
-  ganttScale = 1;
-  renderGanttProjet();
-}
+const ganttScale = 1;
   
 function renderGanttProjet() {
   const cont = document.getElementById('ganttProjetContainer');
@@ -3746,7 +3723,7 @@ const BAR_H    = Math.round(14 * ganttScale);
     const maxLen = Math.floor((LABEL_W - indent - 14) / 5.8);
     const label  = labelRaw.length > maxLen ? labelRaw.slice(0, maxLen-1) + '…' : labelRaw;
     const fw = p.depth === 0 ? '600' : '400';
-    const fs = p.depth === 0 ? 11.5 : 11;
+    const fs = p.depth === 0 ? 9.5 : 9;
     // Barre colorée latérale gauche pour niveau 0
     if (p.depth === 0) {
       svgBody += `<rect x="0" y="${y+4}" width="2" height="${ROW_H-8}" rx="1" fill="${barColor}"/>`;
