@@ -2112,7 +2112,7 @@ function renderFeuilleDeroute() {
       : '';
 
     const label = (p.code ? p.code + ' ' : '') + (p.nom || '—');
-    const maxChars = 22;
+    const maxChars = 44;
     const labelTrunc = label.length > maxChars ? label.slice(0, maxChars - 1) + '…' : label;
 
     // Centre du label
@@ -2154,7 +2154,7 @@ function renderFeuilleDeroute() {
     const datesLine = [dateDebut, dateFinStr].filter(Boolean).join(' → ');
 
     const nomOnly = p.nom || '—';
-    const maxNom  = 20;
+    const maxNom  = 40;
     const nomTrunc = nomOnly.length > maxNom ? nomOnly.slice(0, maxNom - 1) + '…' : nomOnly;
 
     const labelEl = `<g>
