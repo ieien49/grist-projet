@@ -3886,7 +3886,7 @@ const BAR_H    = Math.round(14 * ganttScale);
     }
   });
 
-  const totalH = Math.max(600, HEADER_H + rows.length * ROW_H + 8);
+  const totalH = Math.min(600, HEADER_H + rows.length * ROW_H + 8);
 
   // Header double ligne
   const ROW1_H = Math.round(18 * ganttScale), ROW2_H = Math.round(26 * ganttScale);
