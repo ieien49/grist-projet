@@ -990,6 +990,14 @@ tr:hover .cr-del-btn { opacity: 1; }
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 0 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
               Dépendances
             </button>
+            <button class="btn-add-ghost" onclick="exportGanttPng()" style="margin-left:auto">
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+  PNG
+</button>
+<button class="btn-add-ghost" onclick="exportGanttPdf()">
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+  PDF
+</button>
            
           </div>
           <div style="flex:1;overflow:auto;background:var(--bg)">
@@ -3883,6 +3891,60 @@ const BAR_H    = Math.round(14 * ganttScale);
   }
 }
 
+function exportGanttPng() {
+  const svg = document.getElementById('ganttProjetSvg');
+  if (!svg) return;
+  const serializer = new XMLSerializer();
+  const svgStr = serializer.serializeToString(svg);
+  const svgBlob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(svgBlob);
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width  = svg.viewBox.baseVal.width  * 2;  // x2 pour la résolution
+    canvas.height = svg.viewBox.baseVal.height * 2;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.scale(2, 2);
+    ctx.drawImage(img, 0, 0);
+    URL.revokeObjectURL(url);
+    const link = document.createElement('a');
+    link.download = (masterProjet?.nom || 'gantt') + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    showToast('Export PNG généré');
+  };
+  img.src = url;
+}
+
+function exportGanttPdf() {
+  const svg = document.getElementById('ganttProjetSvg');
+  if (!svg) return;
+  const serializer = new XMLSerializer();
+  const svgStr = serializer.serializeToString(svg);
+  const title = masterProjet?.nom || 'Gantt';
+  const today = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <style>
+      @page { size: A3 landscape; margin: 10mm; }
+      body { margin: 0; font-family: system-ui, sans-serif; background: white; }
+      h2 { font-size: 14px; font-weight: 600; margin: 0 0 10px; color: #111; }
+      .footer { font-size: 10px; color: #bbb; text-align: right; margin-top: 8px; }
+      svg { width: 100%; height: auto; display: block; }
+    </style>
+  </head><body>
+    <h2>${title} — Plan d'actions</h2>
+    ${svgStr}
+    <div class="footer">Édité le ${today}</div>
+  </body></html>`;
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+  win.onload = () => { win.focus(); win.print(); };
+}
+
+  
 function toggleAcNode(gId) {
   const body = document.getElementById(gId);
   const head = document.getElementById(gId + '_toggle');
