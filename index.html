@@ -2049,7 +2049,7 @@ function renderFeuilleDeroute() {
   const today = Date.now();
 
   // Calculer les positions initiales des labels
-  const LABEL_W = 140, LABEL_H = 30, LABEL_PAD = 6;
+  const LABEL_W = 144, LABEL_H = 44, LABEL_PAD = 6;
   const labelPositions = milestones.map((p, i) => {
     const x = getX(i);
     const y = getY(i);
@@ -2061,7 +2061,7 @@ function renderFeuilleDeroute() {
     return {
       i, x, y, r,
       lx: x - LABEL_W / 2,
-      ly: above ? y - r - LABEL_H - 14 : y + r + 8,
+      ly: above ? y - r - LABEL_H - 16 : y + r + 8,
       above,
       p
     };
@@ -2148,18 +2148,29 @@ function renderFeuilleDeroute() {
       }
     </g>`;
 
+    const dateDebut = p.debut    > 0 ? new Date(p.debut    * 86400000).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' }) : null;
+    const dateFin   = (p.finreelle > 0 ? p.finreelle : p.fin > 0 ? p.fin : null);
+    const dateFinStr = dateFin ? new Date(dateFin * 86400000).toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'2-digit' }) : null;
+    const datesLine = [dateDebut, dateFinStr].filter(Boolean).join(' → ');
+
+    const nomOnly = p.nom || '—';
+    const maxNom  = 20;
+    const nomTrunc = nomOnly.length > maxNom ? nomOnly.slice(0, maxNom - 1) + '…' : nomOnly;
+
     const labelEl = `<g>
       <rect x="${lx.toFixed(1)}" y="${ly.toFixed(1)}"
         width="${LABEL_W}" height="${LABEL_H}" rx="4"
         fill="white" stroke="${color}" stroke-width="${isLvl1 ? 1.5 : 1}" opacity="0.95"/>
-      <text x="${lcx.toFixed(1)}" y="${(ly + 11).toFixed(1)}"
-        text-anchor="middle" font-size="${isLvl1 ? 9.5 : 8.5}"
-        font-weight="${isLvl1 ? '600' : '400'}"
+      ${p.code ? `<text x="${(lx + 8).toFixed(1)}" y="${(ly + 11).toFixed(1)}"
+        font-size="8" font-weight="700" fill="${termine ? '#aaa' : color}"
+        font-family="system-ui, sans-serif" letter-spacing="0.04em">${esc(p.code)}</text>` : ''}
+      <text x="${(lx + 8).toFixed(1)}" y="${(ly + (p.code ? 23 : 16)).toFixed(1)}"
+        font-size="${isLvl1 ? 9 : 8}" font-weight="${isLvl1 ? '600' : '400'}"
         fill="${termine ? '#888' : '#111'}"
-        font-family="system-ui, sans-serif">${esc(labelTrunc)}</text>
-      ${dateStr ? `<text x="${lcx.toFixed(1)}" y="${(ly + 22).toFixed(1)}"
-        text-anchor="middle" font-size="8" fill="${color}"
-        font-family="system-ui, sans-serif" font-weight="500">${esc(dateStr)}</text>` : ''}
+        font-family="system-ui, sans-serif">${esc(nomTrunc)}</text>
+      ${datesLine ? `<text x="${(lx + 8).toFixed(1)}" y="${(ly + LABEL_H - 6).toFixed(1)}"
+        font-size="7.5" fill="${termine ? '#aaa' : color}" opacity="0.85"
+        font-family="system-ui, sans-serif">${esc(datesLine)}</text>` : ''}
     </g>`;
 
     return lineEl + pinEl + labelEl;
