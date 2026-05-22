@@ -3927,16 +3927,20 @@ function exportGanttPdf() {
   const today = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
     <style>
-      @page { size: A3 landscape; margin: 10mm; }
-      body { margin: 0; font-family: system-ui, sans-serif; background: white; }
-      h2 { font-size: 14px; font-weight: 600; margin: 0 0 10px; color: #111; }
-      .footer { font-size: 10px; color: #bbb; text-align: right; margin-top: 8px; }
+      @page { size: A3 landscape; margin: 12mm 10mm; }
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: system-ui, sans-serif; background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .page-header { display: flex; align-items: baseline; justify-content: space-between; border-bottom: 1.5px solid #111; padding-bottom: 6px; margin-bottom: 12px; }
+      .page-header h2 { font-size: 13px; font-weight: 700; margin: 0; color: #111; }
+      .page-header span { font-size: 10px; color: #999; }
       svg { width: 100%; height: auto; display: block; }
     </style>
   </head><body>
-    <h2>${title} — Plan d'actions</h2>
+    <div class="page-header">
+      <h2>${title} — Plan d'actions</h2>
+      <span>Édité le ${today}</span>
+    </div>
     ${svgStr}
-    <div class="footer">Édité le ${today}</div>
   </body></html>`;
   const win = window.open('', '_blank');
   win.document.write(html);
