@@ -978,7 +978,7 @@ tr:hover .cr-del-btn { opacity: 1; }
   <option value="2">Jusqu'au niveau 2</option>
   <option value="3">Jusqu'au niveau 3</option>
   <option value="4">Jusqu'au niveau 4</option>
-  <option value="99">Tous les niveaux</option>
+  <option value="99" selected>Tous les niveaux</option>
 </select>
             <select class="filter-select" id="gpFilterZoom" onchange="renderGanttProjet()">
   <option value="month">Vue mensuelle</option>
@@ -4037,8 +4037,8 @@ function renderActionsByProjet(data) {
              onmouseenter="this.querySelector('.acp-add-btn').style.opacity='1';this.querySelector('.tl-hbtns').style.opacity='1'"
              onmouseleave="this.querySelector('.acp-add-btn').style.opacity='0';this.querySelector('.tl-hbtns').style.opacity='0'"
              style="padding-left:6px;border-left:2.5px solid ${markerColor};">
-          ${node.code ? `<span class="tl-code">${esc(node.code)}</span>` : ''}
-          <span class="tl-name" style="font-weight:${isTop?'600':'500'}">${esc(node.nom)}</span>
+          ${p.code ? `<span class="tl-code" style="font-size:11px">${esc(p.code)}</span>` : ''}
+<span class="tl-name" style="font-weight:${isTop?'600':'500'};font-size:12.5px">${esc(p.nom||'Sans nom')}</span>
           ${statusTag}
           <span class="tl-count">${total}</span>
           <span class="tl-spacer"></span>
