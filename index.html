@@ -2028,48 +2028,93 @@ function renderFeuilleDeroute() {
   const PIN_R = 14;
   const today = Date.now();
 
-  const jalonsSvg = milestones.map((p, i) => {
+  // Calculer les positions initiales des labels
+  const LABEL_W = 140, LABEL_H = 30, LABEL_PAD = 6;
+  const labelPositions = milestones.map((p, i) => {
     const x = getX(i);
     const y = getY(i);
+    const r = p.depth === 1 ? PIN_R : PIN_R * 0.75;
+    const above = i % 2 === 0;
+    return {
+      i, x, y, r,
+      lx: x - LABEL_W / 2,
+      ly: above ? y - r - LABEL_H - 14 : y + r + 8,
+      above,
+      p
+    };
+  });
+
+  // Résolution des collisions : repousser verticalement les labels qui se chevauchent
+  const MAX_ITER = 40;
+  for (let iter = 0; iter < MAX_ITER; iter++) {
+    let anyOverlap = false;
+    for (let a = 0; a < labelPositions.length; a++) {
+      for (let b = a + 1; b < labelPositions.length; b++) {
+        const la = labelPositions[a];
+        const lb = labelPositions[b];
+        const overlapX = la.lx < lb.lx + LABEL_W + LABEL_PAD && la.lx + LABEL_W + LABEL_PAD > lb.lx;
+        const overlapY = la.ly < lb.ly + LABEL_H + LABEL_PAD && la.ly + LABEL_H + LABEL_PAD > lb.ly;
+        if (overlapX && overlapY) {
+          anyOverlap = true;
+          const dy = (LABEL_H + LABEL_PAD - Math.abs(la.ly - lb.ly)) / 2 + 1;
+          if (la.above && lb.above) {
+            // Les deux au-dessus : pousser le plus haut encore plus haut
+            if (la.ly < lb.ly) la.ly -= dy; else lb.ly -= dy;
+          } else if (!la.above && !lb.above) {
+            // Les deux en dessous : pousser le plus bas encore plus bas
+            if (la.ly > lb.ly) la.ly += dy; else lb.ly += dy;
+          } else {
+            // Un au-dessus, un en dessous : pas de conflit vertical normalement
+            // mais on sépare quand même si chevauchement
+            if (la.above) la.ly -= dy; else la.ly += dy;
+            if (lb.above) lb.ly -= dy; else lb.ly += dy;
+          }
+        }
+      }
+    }
+    if (!anyOverlap) break;
+  }
+
+  // Générer le SVG des jalons avec positions corrigées
+  const jalonsSvg = labelPositions.map(({ i, x, y, r, lx, ly, above, p }) => {
     const termine = p.finreelle > 0;
     const enCours = !termine && p.debut > 0 && p.debut * 86400000 <= today;
     const isLvl1  = p.depth === 1;
-
     const color   = termine ? '#888888' : p.color;
-    const r       = isLvl1 ? PIN_R : PIN_R * 0.75;
-    const above   = i % 2 === 0; // alterner haut/bas
-    const labelY  = above ? y - r - 10 : y + r + 10;
-    const lineY1  = above ? y - r      : y + r;
-    const lineY2  = above ? y - r - 6  : y + r + 6;
 
-    // Date label
-    const dateMs = p.finreelle > 0 ? p.finreelle : p.fin > 0 ? p.fin : p.debut;
+    const dateMs  = p.finreelle > 0 ? p.finreelle : p.fin > 0 ? p.fin : p.debut;
     const dateStr = dateMs > 0
       ? new Date(dateMs * 86400000).toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' })
       : '';
 
-    // Nom tronqué
     const label = (p.code ? p.code + ' ' : '') + (p.nom || '—');
     const maxChars = 22;
     const labelTrunc = label.length > maxChars ? label.slice(0, maxChars - 1) + '…' : label;
 
-    // Ligne verticale jalon → route
-    const lineEl = `<line x1="${x}" y1="${lineY1}" x2="${x}" y2="${lineY2 + (above ? -4 : 4)}"
-      stroke="${color}" stroke-width="${isLvl1 ? 1.5 : 1}" stroke-dasharray="${isLvl1 ? 'none' : '3 2'}" opacity="0.6"/>`;
+    // Centre du label
+    const lcx = lx + LABEL_W / 2;
+    const lcy = ly + LABEL_H / 2;
 
-    // Épingle (cercle + triangle)
+    // Ligne entre l'épingle et le label (connecteur dynamique)
+    const pinBottomY = y + r * 0.9 + 4;  // bas de l'épingle
+    const pinTopY    = y - r * 0.3 - r;  // haut de l'épingle
+    const connStartX = x;
+    const connStartY = above ? pinTopY : pinBottomY;
+    const connEndX   = lcx;
+    const connEndY   = above ? ly + LABEL_H : ly;
+
+    const lineEl = `<line x1="${connStartX.toFixed(1)}" y1="${connStartY.toFixed(1)}"
+      x2="${connEndX.toFixed(1)}" y2="${connEndY.toFixed(1)}"
+      stroke="${color}" stroke-width="${isLvl1 ? 1.5 : 1}"
+      stroke-dasharray="${isLvl1 ? 'none' : '3 2'}" opacity="0.5"/>`;
+
     const pinEl = `<g transform="translate(${x}, ${y})" style="cursor:default">
       <title>${esc(label)}${dateStr ? ' · ' + dateStr : ''}</title>
-      <!-- Ombre -->
       <ellipse cx="0" cy="${r + 4}" rx="${r * 0.6}" ry="${r * 0.2}" fill="rgba(0,0,0,0.15)"/>
-      <!-- Corps de l'épingle -->
       <circle cx="0" cy="${-r * 0.3}" r="${r}" fill="${color}" opacity="${termine ? 0.65 : 1}"/>
-      <!-- Triangle bas -->
       <polygon points="0,${r * 0.9} ${-r * 0.45},${r * 0.2} ${r * 0.45},${r * 0.2}"
         fill="${color}" opacity="${termine ? 0.65 : 1}"/>
-      <!-- Cercle intérieur blanc -->
       <circle cx="0" cy="${-r * 0.3}" r="${r * 0.45}" fill="white" opacity="0.9"/>
-      <!-- Icône : check si réalisé, point si en cours, anneau si à venir -->
       ${termine
         ? `<text x="0" y="${-r * 0.3 + 3}" text-anchor="middle" dominant-baseline="central"
             font-size="${r * 0.7}" fill="${color}" font-weight="700">✓</text>`
@@ -2079,27 +2124,22 @@ function renderFeuilleDeroute() {
       }
     </g>`;
 
-    // Label texte
-    const textAnchor = x < W * 0.15 ? 'start' : x > W * 0.85 ? 'end' : 'middle';
     const labelEl = `<g>
-      <!-- Fond label -->
-      <rect x="${x - 68}" y="${above ? labelY - 28 : labelY + 2}"
-        width="136" height="${dateStr ? 28 : 18}" rx="4"
-        fill="white" stroke="${color}" stroke-width="1" opacity="0.92"/>
-      <!-- Nom -->
-      <text x="${x}" y="${above ? labelY - 17 : labelY + 12}"
+      <rect x="${lx.toFixed(1)}" y="${ly.toFixed(1)}"
+        width="${LABEL_W}" height="${LABEL_H}" rx="4"
+        fill="white" stroke="${color}" stroke-width="${isLvl1 ? 1.5 : 1}" opacity="0.95"/>
+      <text x="${lcx.toFixed(1)}" y="${(ly + 11).toFixed(1)}"
         text-anchor="middle" font-size="${isLvl1 ? 9.5 : 8.5}"
         font-weight="${isLvl1 ? '600' : '400'}"
         fill="${termine ? '#888' : '#111'}"
         font-family="system-ui, sans-serif">${esc(labelTrunc)}</text>
-      ${dateStr ? `<text x="${x}" y="${above ? labelY - 5 : labelY + 22}"
+      ${dateStr ? `<text x="${lcx.toFixed(1)}" y="${(ly + 22).toFixed(1)}"
         text-anchor="middle" font-size="8" fill="${color}"
         font-family="system-ui, sans-serif" font-weight="500">${esc(dateStr)}</text>` : ''}
     </g>`;
 
     return lineEl + pinEl + labelEl;
   }).join('');
-
   // Légende
   const legendeSvg = `
     <rect x="20" y="${H - 52}" width="230" height="42" rx="6" fill="white" stroke="#e5e5e5"/>
