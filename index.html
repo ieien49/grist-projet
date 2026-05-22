@@ -980,6 +980,12 @@ tr:hover .cr-del-btn { opacity: 1; }
   <option value="4">Jusqu'au niveau 4</option>
   <option value="99">Tous les niveaux</option>
 </select>
+            <select class="filter-select" id="gpFilterZoom" onchange="renderGanttProjet()">
+  <option value="month">Vue mensuelle</option>
+  <option value="quarter">Vue trimestrielle</option>
+  <option value="semester">Vue semestrielle</option>
+  <option value="year">Vue annuelle</option>
+</select>
             <button class="gantt-toggle-actions on" id="gpShowDepBtn" onclick="toggleGanttDep()" title="Masquer les dépendances">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 0 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
               Dépendances
@@ -3578,6 +3584,7 @@ function renderGanttProjet() {
 
   
   const fEtat    = document.getElementById('gpFilterEtat')?.value    || '';
+  const zoom = document.getElementById('gpFilterZoom')?.value || 'month';
   const fPilote  = document.getElementById('gpFilterPilote')?.value  || '';
   const showDep  = document.getElementById('gpShowDepBtn')?.classList.contains('on') ?? true;
   const maxDepth = parseInt(document.getElementById('gpFilterNiveau2')?.value || '2');
@@ -3651,10 +3658,16 @@ function renderGanttProjet() {
 
   const pct  = ms => Math.max(0, Math.min(100, (ms - dStart.getTime()) / spanMs * 100));
 
-  // Mois
-  const months = [];
-  const cur2 = new Date(dStart);
-  while (cur2.getTime() < dEnd.getTime()) { months.push(new Date(cur2)); cur2.setMonth(cur2.getMonth()+1); }
+  // Périodes (mois / trimestres / semestres / années)
+const months = [];
+const cur2 = new Date(dStart);
+while (cur2.getTime() < dEnd.getTime()) {
+  months.push(new Date(cur2));
+  if (zoom === 'quarter') cur2.setMonth(cur2.getMonth() + 3);
+  else if (zoom === 'semester') cur2.setMonth(cur2.getMonth() + 6);
+  else if (zoom === 'year') cur2.setFullYear(cur2.getFullYear() + 1);
+  else cur2.setMonth(cur2.getMonth() + 1); // month (défaut)
+}
 
   // Dimensions
   const LABEL_W  = 220;
@@ -3778,18 +3791,38 @@ function renderGanttProjet() {
 
   months.forEach((m, i) => {
     const x1 = msX(m.getTime());
-    const nextM = new Date(m); nextM.setMonth(nextM.getMonth()+1);
-    const x2 = Math.min(msX(nextM.getTime()), TOTAL_W);
+    let nextPeriod = new Date(m);
+    if (zoom === 'quarter') nextPeriod.setMonth(nextPeriod.getMonth() + 3);
+    else if (zoom === 'semester') nextPeriod.setMonth(nextPeriod.getMonth() + 6);
+    else if (zoom === 'year') nextPeriod.setFullYear(nextPeriod.getFullYear() + 1);
+    else nextPeriod.setMonth(nextPeriod.getMonth() + 1);
+    
+    const x2 = Math.min(msX(nextPeriod.getTime()), TOTAL_W);
     const cellW = x2 - x1;
     const cx2 = x1 + cellW/2;
+    
     svgHeader += `<line x1="${x1.toFixed(1)}" y1="${ROW1_H}" x2="${x1.toFixed(1)}" y2="${HEADER_H}" stroke="#e0e0de" stroke-width="0.5"/>`;
-    if (i===0 || m.getMonth()===0) {
+    
+    // Afficher l'année
+    if (i===0 || m.getFullYear() !== months[i-1]?.getFullYear()) {
       svgHeader += `<text x="${x1+4}" y="${ROW1_H/2}" dominant-baseline="central" font-size="9" font-weight="600" fill="#aaa" font-family="system-ui,sans-serif">${m.getFullYear()}</text>`;
       if (i>0) svgHeader += `<line x1="${x1.toFixed(1)}" y1="0" x2="${x1.toFixed(1)}" y2="${ROW1_H}" stroke="#c0c0be" stroke-width="1"/>`;
     }
+    
+    // Afficher le label de la période
     if (cellW > 18) {
-      const mLabel = m.toLocaleDateString('fr-FR',{month:'short'}).replace('.','');
-      svgHeader += `<text x="${cx2.toFixed(1)}" y="${ROW1_H+ROW2_H/2}" dominant-baseline="central" text-anchor="middle" font-size="9.5" fill="#666" font-family="system-ui,sans-serif">${mLabel}</text>`;
+      let label = '';
+      if (zoom === 'quarter') {
+        const q = Math.floor(m.getMonth()/3) + 1;
+        label = `T${q}`;
+      } else if (zoom === 'semester') {
+        label = m.getMonth() < 6 ? 'S1' : 'S2';
+      } else if (zoom === 'year') {
+        label = ''; // Pas de label supplémentaire, l'année suffit
+      } else {
+        label = m.toLocaleDateString('fr-FR',{month:'short'}).replace('.','');
+      }
+      if (label) svgHeader += `<text x="${cx2.toFixed(1)}" y="${ROW1_H+ROW2_H/2}" dominant-baseline="central" text-anchor="middle" font-size="9.5" fill="#666" font-family="system-ui,sans-serif">${label}</text>`;
     }
   });
   if (todayX > LABEL_W && todayX < TOTAL_W) {
