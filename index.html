@@ -2273,7 +2273,8 @@ function exportRoadmapPdf() {
   if (!svg) { showToast('Aucune roadmap à exporter', 'error'); return; }
   const serializer = new XMLSerializer();
   const svgStr = serializer.serializeToString(svg)
-    .replace(/font-family="[^"]*"/g, 'font-family="Arial, sans-serif"');
+    .replace(/font-family="[^"]*"/g, 'font-family="Arial, sans-serif"')
+    .replace(/background:[^;"]*(;|")/g, 'background:white$1');
   const title = masterProjet?.nom || 'Roadmap';
   const today = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
