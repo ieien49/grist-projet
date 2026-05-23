@@ -2062,7 +2062,7 @@ for (let i = 0; i < n - 1; i++) {
     minLy = Math.min(minLy, lp.ly);
     maxLy = Math.max(maxLy, lp.ly + LABEL_H);
   });
-  const OFFSET_Y = Math.max(60, -minLy + 40); // Décaler tout vers le bas
+  OFFSET_Y = Math.max(60, -minLy + 40);
   const totalH = maxLy - minLy + OFFSET_Y + 40;
   
   // Appliquer l'offset à tous les labelPositions
