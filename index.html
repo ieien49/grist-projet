@@ -3638,8 +3638,7 @@ function renderGantt() {
 
   cont.innerHTML = `<div style="padding:12px 10px;width:100%;box-sizing:border-box;overflow-y:auto;max-height:calc(100vh - 300px)">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${totalH}"
-         width="100%"
-         style="display:block;width:100%;height:auto;">
+           style="display:block;width:100%;height:auto;">
       ${svgBody}
       ${svgHeader}
     </svg>
@@ -3885,7 +3884,7 @@ const BAR_H    = Math.round(14 * ganttScale);
     }
   });
 
-  const totalH = Math.max(800, HEADER_H + rows.length * ROW_H + 100);
+  const totalH = HEADER_H + rows.length * ROW_H + 200;
 
   // Header double ligne
   const ROW1_H = Math.round(18 * ganttScale), ROW2_H = Math.round(26 * ganttScale);
