@@ -2219,13 +2219,20 @@ function renderFeuilleDeroute() {
       <text x="${tx}" y="${ty - 34}" text-anchor="middle" font-size="8" fill="white"
         font-family="system-ui,sans-serif" font-weight="600">Auj.</text>`;
   }
-// Calculer totalH en fonction des labels
+// Calculer totalH et offset vertical
   let minLy = Infinity, maxLy = -Infinity;
   labelPositions.forEach(lp => {
     minLy = Math.min(minLy, lp.ly);
     maxLy = Math.max(maxLy, lp.ly + LABEL_H);
   });
-  const totalH = Math.max(600, (maxLy - minLy) + 100);
+  const OFFSET_Y = Math.max(60, -minLy + 40); // Décaler tout vers le bas
+  const totalH = maxLy - minLy + OFFSET_Y + 40;
+  
+  // Appliquer l'offset à tous les labelPositions
+  labelPositions.forEach(lp => {
+    lp.ly += OFFSET_Y;
+    lp.y += OFFSET_Y;
+  });
   
   cont.innerHTML = `<div style="padding:16px 14px;overflow-y:auto;max-height:none">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${totalH}"
