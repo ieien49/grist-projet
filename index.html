@@ -2013,8 +2013,6 @@ function renderFeuilleDeroute() {
   if (fEtat === 'realise')  milestones = milestones.filter(p =>  p.finreelle && p.finreelle > 0);
 
   if (!milestones.length) {
-  // Calculer la hauteur totale nécessaire
-  const totalH = H;
     cont.innerHTML = `<div style="padding:48px;text-align:center;color:var(--text-muted);font-size:13px">Aucun sous-projet à afficher.</div>`;
     return;
   }
@@ -3888,7 +3886,7 @@ const BAR_H    = Math.round(14 * ganttScale);
     }
   });
 
-  const totalH = HEADER_H + rows.length * ROW_H + 200;
+  const totalH = Math.max(400, H + (milestones.length * 40));
 
   // Header double ligne
   const ROW1_H = Math.round(18 * ganttScale), ROW2_H = Math.round(26 * ganttScale);
