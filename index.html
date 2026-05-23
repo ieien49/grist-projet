@@ -2027,7 +2027,7 @@ function renderFeuilleDeroute() {
   const W = 1100, H = 480;
   const ROAD_Y = H / 2;
   
-  const totalH = H + (milestones.length * 80);
+  
   const MARGIN_X = 80;
   const usableW = W - MARGIN_X * 2;
   const n = milestones.length;
@@ -2219,7 +2219,14 @@ function renderFeuilleDeroute() {
       <text x="${tx}" y="${ty - 34}" text-anchor="middle" font-size="8" fill="white"
         font-family="system-ui,sans-serif" font-weight="600">Auj.</text>`;
   }
-
+// Calculer totalH en fonction des labels
+  let minLy = Infinity, maxLy = -Infinity;
+  labelPositions.forEach(lp => {
+    minLy = Math.min(minLy, lp.ly);
+    maxLy = Math.max(maxLy, lp.ly + LABEL_H);
+  });
+  const totalH = Math.max(600, (maxLy - minLy) + 100);
+  
   cont.innerHTML = `<div style="padding:16px 14px;overflow-y:auto;max-height:none">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${totalH}"
            style="width:100%;height:auto;display:block;background:linear-gradient(160deg,#f8f8f6 0%,#f0f0ee 100%);border-radius:8px;border:1px solid var(--border)">
