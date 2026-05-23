@@ -2104,7 +2104,9 @@ function renderFeuilleDeroute() {
   }
 
   // Générer le SVG des jalons avec positions corrigées
-  const jalonsSvg = labelPositions.map(({ i, x, y, r, lx, ly, above, p }) => {
+  const jalonsSvg = labelPositions.map(({ i, x, y, r, lx, ly, above, p, offsetY = OFFSET_Y }) => {
+    ly += offsetY;
+    y += offsetY;
     const termine = p.finreelle > 0;
     const enCours = !termine && p.debut > 0 && p.debut * 86400000 <= today;
     const isLvl1  = p.depth === 1;
