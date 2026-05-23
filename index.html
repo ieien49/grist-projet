@@ -3889,7 +3889,7 @@ const BAR_H    = Math.round(14 * ganttScale);
     }
   });
 
-  const totalH = Math.max(400, H + (milestones.length * 40));
+  const totalH = HEADER_H + rows.length * ROW_H + (ganttShowActions ? rows.reduce((s, p) => s + allActions.filter(a => a.projet === p.id).length * ACT_H, 0) : 0) + 100;
 
   // Header double ligne
   const ROW1_H = Math.round(18 * ganttScale), ROW2_H = Math.round(26 * ganttScale);
