@@ -1967,6 +1967,9 @@ function renderFeuilleDeroute() {
   const cont = document.getElementById('feuillerouteContainer');
   if (!cont) return;
 
+  cont.style.minHeight = 'auto';
+  cont.style.overflow = 'visible';
+
   const fEtat   = document.getElementById('frFilterEtat')?.value   || '';
   const fProjet = document.getElementById('frFilterProjet')?.value || '';
 
@@ -2215,9 +2218,8 @@ function renderFeuilleDeroute() {
         font-family="system-ui,sans-serif" font-weight="600">Auj.</text>`;
   }
 
-  cont.innerHTML = `
-    <div style="padding:16px 14px">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}"
+  cont.innerHTML = `<div style="padding:16px 14px;overflow-y:auto;max-height:none">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${totalH}"
            style="width:100%;height:auto;display:block;background:linear-gradient(160deg,#f8f8f6 0%,#f0f0ee 100%);border-radius:8px;border:1px solid var(--border)">
 
         <!-- Route : ombre -->
