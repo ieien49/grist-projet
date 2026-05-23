@@ -2104,9 +2104,7 @@ function renderFeuilleDeroute() {
   }
 
   // Générer le SVG des jalons avec positions corrigées
-  const jalonsSvg = labelPositions.map(({ i, x, y, r, lx, ly, above, p, offsetY = OFFSET_Y }) => {
-    ly += offsetY;
-    y += offsetY;
+  const jalonsSvg = labelPositions.map(({ i, x, y, r, lx, ly, above, p }) => {
     const termine = p.finreelle > 0;
     const enCours = !termine && p.debut > 0 && p.debut * 86400000 <= today;
     const isLvl1  = p.depth === 1;
@@ -2221,7 +2219,8 @@ function renderFeuilleDeroute() {
       <text x="${tx}" y="${ty - 34}" text-anchor="middle" font-size="8" fill="white"
         font-family="system-ui,sans-serif" font-weight="600">Auj.</text>`;
   }
-// Calculer totalH et offset vertical
+
+  // Calculer totalH et offset vertical
   let minLy = Infinity, maxLy = -Infinity;
   labelPositions.forEach(lp => {
     minLy = Math.min(minLy, lp.ly);
