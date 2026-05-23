@@ -2013,6 +2013,8 @@ function renderFeuilleDeroute() {
   if (fEtat === 'realise')  milestones = milestones.filter(p =>  p.finreelle && p.finreelle > 0);
 
   if (!milestones.length) {
+  // Calculer la hauteur totale nécessaire
+  const totalH = H;
     cont.innerHTML = `<div style="padding:48px;text-align:center;color:var(--text-muted);font-size:13px">Aucun sous-projet à afficher.</div>`;
     return;
   }
