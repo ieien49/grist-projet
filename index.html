@@ -2040,6 +2040,9 @@ function renderFeuilleDeroute() {
     return ROAD_Y + wave;
   };
 
+// Pré-calcul d'OFFSET_Y (sera recalculé après labelPositions)
+let OFFSET_Y = 60;
+  
   // Construire le path de la route (courbe de Bézier)
   let roadPath = `M ${getX(0)} ${getY(0) + OFFSET_Y}`;
 for (let i = 0; i < n - 1; i++) {
