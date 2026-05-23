@@ -1974,8 +1974,6 @@ function renderFeuilleDeroute() {
   const fProjet = document.getElementById('frFilterProjet')?.value || '';
 
   const masterId = masterProjet ? masterProjet.id : null;
-
-  // Collecter niveau 1 et niveau 2
   const maxDepth = parseInt(document.getElementById('frFilterNiveau')?.value || '2');
 
   let lvl1 = allProjets
@@ -1995,7 +1993,6 @@ function renderFeuilleDeroute() {
         const hex = depth === 1 ? (projetHex(p) || '#374151') : inheritedColor;
         const opacity = depth === 1 ? 'ff' : depth === 2 ? 'cc' : depth === 3 ? 'aa' : '88';
         milestones.push({ ...p, depth, color: hex + (depth === 1 ? '' : opacity.slice(0,0)) });
-        // Ajuster l'opacité visuellement via une couleur plus claire selon la profondeur
         milestones[milestones.length - 1].color = hex;
         milestones[milestones.length - 1].alpha = depth === 1 ? 1 : depth === 2 ? 0.85 : depth === 3 ? 0.65 : 0.5;
         collectMilestones(p.id, depth + 1, hex);
@@ -2009,6 +2006,7 @@ function renderFeuilleDeroute() {
     }
     collectMilestones(p1.id, 2, hex1);
   });
+
   if (fEtat === 'encours')  milestones = milestones.filter(p => !p.finreelle || p.finreelle === 0);
   if (fEtat === 'realise')  milestones = milestones.filter(p =>  p.finreelle && p.finreelle > 0);
 
@@ -2017,48 +2015,33 @@ function renderFeuilleDeroute() {
     return;
   }
 
-  // Trier par date de fin (ou début si pas de fin)
   milestones.forEach(p => {
     p._sortDate = (p.finreelle > 0 ? p.finreelle : p.fin > 0 ? p.fin : p.debut > 0 ? p.debut : 99999999);
   });
   milestones.sort((a, b) => a._sortDate - b._sortDate);
 
-  // Dimensions SVG
+  // ═══════════════════════════════════════════════════════════════
+  // BLOC 1 : Dimensions et fonctions de base
+  // ═══════════════════════════════════════════════════════════════
   const W = 1100, H = 480;
   const ROAD_Y = H / 2;
-  
-  
   const MARGIN_X = 80;
   const usableW = W - MARGIN_X * 2;
   const n = milestones.length;
 
-  // Points de la route sinueuse
   const getX = i => MARGIN_X + (i / Math.max(n - 1, 1)) * usableW;
   const getY = i => {
-    // Sinusoïde douce
     const wave = Math.sin((i / Math.max(n - 1, 1)) * Math.PI * 1.8) * 90;
     return ROAD_Y + wave;
   };
 
-// Pré-calcul d'OFFSET_Y (sera recalculé après labelPositions)
-
-  
-  // Construire le path de la route (courbe de Bézier)
-  let roadPath = `M ${getX(0)} ${getY(0) + OFFSET_Y}`;
-for (let i = 0; i < n - 1; i++) {
-  const x1 = getX(i),     y1 = getY(i) + OFFSET_Y;
-  const x2 = getX(i + 1), y2 = getY(i + 1) + OFFSET_Y;
-  const cx = (x1 + x2) / 2;
-  roadPath += ` C ${cx} ${y1}, ${cx} ${y2}, ${x2} ${y2}`;
-}
-
-  // Générer les jalons SVG
+  // ═══════════════════════════════════════════════════════════════
+  // BLOC 2 : Créer et corriger positions des labels
+  // ═══════════════════════════════════════════════════════════════
   const PIN_R = 14;
   const today = Date.now();
-
-  
-  // Calculer les positions initiales des labels
   const LABEL_W = 144, LABEL_H = 44, LABEL_PAD = 6;
+
   const labelPositions = milestones.map((p, i) => {
     const x = getX(i);
     const y = getY(i);
@@ -2076,7 +2059,7 @@ for (let i = 0; i < n - 1; i++) {
     };
   });
 
-  // Résolution des collisions : repousser verticalement les labels qui se chevauchent
+  // Résolution des collisions
   const MAX_ITER = 40;
   for (let iter = 0; iter < MAX_ITER; iter++) {
     let anyOverlap = false;
@@ -2086,36 +2069,14 @@ for (let i = 0; i < n - 1; i++) {
         const lb = labelPositions[b];
         const overlapX = la.lx < lb.lx + LABEL_W + LABEL_PAD && la.lx + LABEL_W + LABEL_PAD > lb.lx;
         const overlapY = la.ly < lb.ly + LABEL_H + LABEL_PAD && la.ly + LABEL_H + LABEL_PAD > lb.ly;
-
-// Calculer totalH et offset vertical
-  let minLy = Infinity, maxLy = -Infinity;
-  labelPositions.forEach(lp => {
-    minLy = Math.min(minLy, lp.ly);
-    maxLy = Math.max(maxLy, lp.ly + LABEL_H);
-  });
-  OFFSET_Y = Math.max(60, -minLy + 40);
-  const totalH = maxLy - minLy + OFFSET_Y + 40;
-  
-  // Appliquer l'offset à tous les labelPositions
-  labelPositions.forEach(lp => {
-    lp.ly += OFFSET_Y;
-    lp.y += OFFSET_Y;
-  });
-
-
-  
         if (overlapX && overlapY) {
           anyOverlap = true;
           const dy = (LABEL_H + LABEL_PAD - Math.abs(la.ly - lb.ly)) / 2 + 1;
           if (la.above && lb.above) {
-            // Les deux au-dessus : pousser le plus haut encore plus haut
             if (la.ly < lb.ly) la.ly -= dy; else lb.ly -= dy;
           } else if (!la.above && !lb.above) {
-            // Les deux en dessous : pousser le plus bas encore plus bas
             if (la.ly > lb.ly) la.ly += dy; else lb.ly += dy;
           } else {
-            // Un au-dessus, un en dessous : pas de conflit vertical normalement
-            // mais on sépare quand même si chevauchement
             if (la.above) la.ly -= dy; else la.ly += dy;
             if (lb.above) lb.ly -= dy; else lb.ly += dy;
           }
@@ -2125,13 +2086,42 @@ for (let i = 0; i < n - 1; i++) {
     if (!anyOverlap) break;
   }
 
-  
-  // Générer le SVG des jalons avec positions corrigées
+  // ═══════════════════════════════════════════════════════════════
+  // BLOC 3 : Calculer OFFSET_Y (après labelPositions complètes)
+  // ═══════════════════════════════════════════════════════════════
+  let minLy = Infinity, maxLy = -Infinity;
+  labelPositions.forEach(lp => {
+    minLy = Math.min(minLy, lp.ly);
+    maxLy = Math.max(maxLy, lp.ly + LABEL_H);
+  });
+  const OFFSET_Y = Math.max(60, -minLy + 40);
+  const totalH = maxLy - minLy + OFFSET_Y + 40;
+
+  // Appliquer l'offset aux positions
+  labelPositions.forEach(lp => {
+    lp.ly += OFFSET_Y;
+    lp.y += OFFSET_Y;
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // BLOC 4 : Route avec offset
+  // ═══════════════════════════════════════════════════════════════
+  let roadPath = `M ${getX(0)} ${getY(0) + OFFSET_Y}`;
+  for (let i = 0; i < n - 1; i++) {
+    const x1 = getX(i),     y1 = getY(i) + OFFSET_Y;
+    const x2 = getX(i + 1), y2 = getY(i + 1) + OFFSET_Y;
+    const cx = (x1 + x2) / 2;
+    roadPath += ` C ${cx} ${y1}, ${cx} ${y2}, ${x2} ${y2}`;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // BLOC 5 : Générer jalons SVG
+  // ═══════════════════════════════════════════════════════════════
   const jalonsSvg = labelPositions.map(({ i, x, y, r, lx, ly, above, p }) => {
     const termine = p.finreelle > 0;
     const enCours = !termine && p.debut > 0 && p.debut * 86400000 <= today;
     const isLvl1  = p.depth === 1;
-   const color  = termine ? '#888888' : p.color;
+    const color  = termine ? '#888888' : p.color;
     const alphaV = termine ? 0.55 : (p.alpha ?? 1);
 
     const dateMs  = p.finreelle > 0 ? p.finreelle : p.fin > 0 ? p.fin : p.debut;
@@ -2143,13 +2133,11 @@ for (let i = 0; i < n - 1; i++) {
     const maxChars = 38;
     const labelTrunc = label.length > maxChars ? label.slice(0, maxChars - 1) + '…' : label;
 
-    // Centre du label
     const lcx = lx + LABEL_W / 2;
     const lcy = ly + LABEL_H / 2;
 
-    // Ligne entre l'épingle et le label (connecteur dynamique)
-    const pinBottomY = y + r * 0.9 + 4;  // bas de l'épingle
-    const pinTopY    = y - r * 0.3 - r;  // haut de l'épingle
+    const pinBottomY = y + r * 0.9 + 4;
+    const pinTopY    = y - r * 0.3 - r;
     const connStartX = x;
     const connStartY = above ? pinTopY : pinBottomY;
     const connEndX   = lcx;
@@ -2203,7 +2191,10 @@ for (let i = 0; i < n - 1; i++) {
 
     return lineEl + pinEl + labelEl;
   }).join('');
-  // Légende
+
+  // ═══════════════════════════════════════════════════════════════
+  // BLOC 6 : Légende
+  // ═══════════════════════════════════════════════════════════════
   const legendeSvg = `
     <rect x="20" y="${H - 62}" width="260" height="52" rx="6" fill="white" stroke="#e5e5e5" opacity="0.9"/>
     <circle cx="40" cy="${H - 48}" r="7" fill="#374151"/>
@@ -2223,7 +2214,9 @@ for (let i = 0; i < n - 1; i++) {
     <circle cx="220" cy="${H-28}" r="5" fill="#374151"/>
     <text x="232" y="${H-24}" font-size="9" fill="#555" font-family="system-ui,sans-serif">En cours</text>`;
 
-  // Ligne aujourd'hui
+  // ═══════════════════════════════════════════════════════════════
+  // BLOC 7 : Ligne "aujourd'hui"
+  // ═══════════════════════════════════════════════════════════════
   const sortedDates = milestones.map(p => p._sortDate).filter(v => v < 99999999);
   const minD = Math.min(...sortedDates), maxD = Math.max(...sortedDates);
   const todayDays = today / 86400000;
@@ -2236,15 +2229,16 @@ for (let i = 0; i < n - 1; i++) {
     const tx   = getX(ti) + tf * (getX(Math.min(ti + 1, n - 1)) - getX(ti));
     const ty   = getY(ti) + tf * (getY(Math.min(ti + 1, n - 1)) - getY(ti));
     todayLineSvg = `
-      <line x1="${tx}" y1="${ty - 30}" x2="${tx}" y2="${ty + 30}"
+      <line x1="${tx}" y1="${ty - 30 + OFFSET_Y}" x2="${tx}" y2="${ty + 30 + OFFSET_Y}"
         stroke="#DC2626" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.6"/>
-      <rect x="${tx - 18}" y="${ty - 44}" width="36" height="14" rx="3" fill="#DC2626" opacity="0.9"/>
-      <text x="${tx}" y="${ty - 34}" text-anchor="middle" font-size="8" fill="white"
+      <rect x="${tx - 18}" y="${ty - 44 + OFFSET_Y}" width="36" height="14" rx="3" fill="#DC2626" opacity="0.9"/>
+      <text x="${tx}" y="${ty - 34 + OFFSET_Y}" text-anchor="middle" font-size="8" fill="white"
         font-family="system-ui,sans-serif" font-weight="600">Auj.</text>`;
   }
 
-  
-  
+  // ═══════════════════════════════════════════════════════════════
+  // BLOC 8 : Rendu final
+  // ═══════════════════════════════════════════════════════════════
   cont.innerHTML = `<div style="padding:16px 14px;overflow-y:auto;max-height:none">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${totalH}"
            style="width:100%;height:auto;display:block;background:linear-gradient(160deg,#f8f8f6 0%,#f0f0ee 100%);border-radius:8px;border:1px solid var(--border)">
@@ -2269,7 +2263,6 @@ for (let i = 0; i < n - 1; i++) {
       </svg>
     </div>`;
 }
-
 function exportRoadmapPng() {
   const svg = document.querySelector('#feuillerouteContainer svg');
   if (!svg) { showToast('Aucune roadmap à exporter', 'error'); return; }
