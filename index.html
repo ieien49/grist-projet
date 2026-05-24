@@ -6063,17 +6063,10 @@ function openProjetModal(projet = null, mode = null) {
       pilSel.appendChild(new Option(a.nom + (a.role ? ' — ' + a.role : ''), a.id));
     });
 
+  
   // Fill fields
-  document.getElementById('p_code').value        = projet?.code        || '';
-  document.getElementById('p_nom').value         = projet?.nom         || '';
-  document.getElementById('p_cadrage').value     = projet?.cadrage     || '';
-  document.getElementById('p_contexte').value    = projet?.contexte    || '';
-  document.getElementById('p_objectifs').value   = projet?.objectifs   || '';
-  document.getElementById('p_livrables').value   = projet?.livrables   || '';
-  document.getElementById('p_risques').value     = projet?.risques     || '';
-  document.getElementById('p_moyens').value      = projet?.moyens      || '';
-  document.getElementById('p_qualitatif').value  = projet?.qualitatif  || '';
-  document.getElementById('p_quantitatif').value = projet?.quantitatif || '';
+  document.getElementById('p_code').value = projet?.code || '';
+  document.getElementById('p_nom').value  = projet?.nom  || '';
 
   // Peupler le select couleur
   const picker = document.getElementById('p_couleurPicker');
