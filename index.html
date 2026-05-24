@@ -2032,7 +2032,7 @@ function renderFeuilleDeroute() {
   const getX = i => MARGIN_X + (i / Math.max(n - 1, 1)) * usableW;
   const getY = i => {
     const wave = Math.sin((i / Math.max(n - 1, 1)) * Math.PI * 1.8) * 90;
-    return ROAD_Y + wave - 18;
+    return ROAD_Y + wave - 25;
   };
   // ═══════════════════════════════════════════════════════════════
   // BLOC 2 : Créer et corriger positions des labels
