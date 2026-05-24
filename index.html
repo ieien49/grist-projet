@@ -5084,7 +5084,7 @@ function openSubCanvas(projetId) {
   // Sous-projets enfants (pour étapes)
   const children = allProjets.filter(c => c.ref === projetId).sort((a,b)=>(a.ordre??9999)-(b.ordre??9999));
 
-  grid.style.cssText = 'display:grid;grid-template-columns:repeat(5,1fr);gap:8px';
+  grid.style.cssText = 'display:grid;grid-template-columns:repeat(5,1fr);grid-auto-rows:max-content;gap:8px';
   grid.innerHTML = '';
 
   // Bandeau titre
