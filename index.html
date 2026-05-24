@@ -1511,14 +1511,10 @@ tr:hover .cr-del-btn { opacity: 1; }
           <select class="form-control" id="p_antecedent"><option value="">— Aucun antécédent —</option></select>
         </div>
         <div class="form-group full">
-          <label class="field-label">Couleur</label>
-          <div class="color-sel-wrap">
-            <span class="color-sel-dot" id="p_coulDot"></span>
-            <select class="form-control" id="p_couleur" onchange="updateCoulDot('p_couleur','p_coulDot')">
-              <option value="">— Aucune —</option>
-            </select>
-          </div>
-        </div>
+  <label class="field-label">Couleur</label>
+  <div id="p_couleurPicker" style="display:flex;flex-wrap:wrap;gap:7px;padding:6px 0"></div>
+  <input type="hidden" id="p_couleur">
+</div>
         <div class="form-group">
           <label class="field-label">Date de début</label>
           <input type="date" class="form-control" id="p_debut">
@@ -6113,19 +6109,42 @@ function openProjetModal(projet = null, mode = null) {
   document.getElementById('p_quantitatif').value = projet?.quantitatif || '';
 
   // Peupler le select couleur
-  const pCoulSel = document.getElementById('p_couleur');
-  if (pCoulSel) {
-    while (pCoulSel.options.length > 1) pCoulSel.remove(1);
+  const picker = document.getElementById('p_couleurPicker');
+  const hiddenCoul = document.getElementById('p_couleur');
+  if (picker) {
+    picker.innerHTML = '';
+    const selectedVal = String(projet?.couleur || '');
+    // Option "aucune"
+    const noneEl = document.createElement('div');
+    noneEl.title = 'Aucune';
+    noneEl.style.cssText = `width:22px;height:22px;border-radius:50%;border:2px solid var(--border-strong);background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-muted);flex-shrink:0;transition:box-shadow 0.1s;`;
+    noneEl.textContent = '∅';
+    if (!selectedVal) noneEl.style.boxShadow = '0 0 0 3px var(--text-primary)';
+    noneEl.onclick = () => {
+      hiddenCoul.value = '';
+      picker.querySelectorAll('[data-coul-item]').forEach(el => el.style.boxShadow = 'none');
+      noneEl.style.boxShadow = '0 0 0 3px var(--text-primary)';
+    };
+    noneEl.dataset.coulItem = '';
+    picker.appendChild(noneEl);
+
     const seenC = new Set();
     Object.values(couleurs)
-      .filter(c => { if (seenC.has(c.id)) return false; seenC.add(c.id); return true; })
+      .filter(c => { if (seenC.has(c.id) || typeof c.id !== 'number') return false; seenC.add(c.id); return true; })
       .forEach(c => {
-        const o = new Option(c.nom + (c.hex ? '  ' + c.hex : ''), c.id);
-        o.setAttribute('data-hex', c.hex);
-        pCoulSel.appendChild(o);
+        const el = document.createElement('div');
+        el.title = c.nom + (c.hex ? '  ' + c.hex : '');
+        el.dataset.coulItem = c.id;
+        const isSelected = String(c.id) === selectedVal;
+        el.style.cssText = `width:22px;height:22px;border-radius:50%;background:${c.hex||'#ccc'};cursor:pointer;flex-shrink:0;transition:box-shadow 0.1s;box-shadow:${isSelected ? '0 0 0 3px '+c.hex+', 0 0 0 5px white, 0 0 0 7px '+c.hex : 'none'};`;
+        el.onclick = () => {
+          hiddenCoul.value = c.id;
+          picker.querySelectorAll('[data-coul-item]').forEach(e => e.style.boxShadow = 'none');
+          el.style.boxShadow = `0 0 0 3px ${c.hex}, 0 0 0 5px white, 0 0 0 7px ${c.hex}`;
+        };
+        picker.appendChild(el);
       });
-    pCoulSel.value = projet?.couleur || '';
-    updateCoulDot('p_couleur', 'p_coulDot');
+    hiddenCoul.value = projet?.couleur || '';
   }
   document.getElementById('p_debut').value      = toDateInput(projet?.debut);
   document.getElementById('p_fin').value        = toDateInput(projet?.fin);
