@@ -2032,8 +2032,9 @@ function renderFeuilleDeroute() {
   const getX = i => MARGIN_X + (i / Math.max(n - 1, 1)) * usableW;
   const getY = i => {
     const wave = Math.sin((i / Math.max(n - 1, 1)) * Math.PI * 1.8) * 90;
-    return ROAD_Y + wave - 25;
+    return ROAD_Y + wave;
   };
+  const getPinY = i => getY(i) - 22;
   // ═══════════════════════════════════════════════════════════════
   // BLOC 2 : Créer et corriger positions des labels
   // ═══════════════════════════════════════════════════════════════
@@ -2043,7 +2044,7 @@ function renderFeuilleDeroute() {
 
   const labelPositions = milestones.map((p, i) => {
     const x = getX(i);
-    const y = getY(i);
+    const y = getPinY(i);
     const r = p.depth === 1 ? PIN_R
             : p.depth === 2 ? PIN_R * 0.78
             : p.depth === 3 ? PIN_R * 0.60
@@ -2209,7 +2210,7 @@ function renderFeuilleDeroute() {
     const ti   = Math.floor(tIdx);
     const tf   = tIdx - ti;
     const tx   = getX(ti) + tf * (getX(Math.min(ti + 1, n - 1)) - getX(ti));
-    const ty   = getY(ti) + tf * (getY(Math.min(ti + 1, n - 1)) - getY(ti));
+    const ty   = getPinY(ti) + tf * (getPinY(Math.min(ti + 1, n - 1)) - getPinY(ti));
     todayLineSvg = `
       <line x1="${tx}" y1="${ty - 30 + OFFSET_Y}" x2="${tx}" y2="${ty + 30 + OFFSET_Y}"
         stroke="#DC2626" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.6"/>
