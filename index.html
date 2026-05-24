@@ -2223,9 +2223,9 @@ function renderFeuilleDeroute() {
   // ═══════════════════════════════════════════════════════════════
   // BLOC 8 : Rendu final
   // ═══════════════════════════════════════════════════════════════
-  cont.innerHTML = `<div style="padding:16px 14px;overflow-y:auto;max-height:none">
+  cont.innerHTML = `<div style="padding:16px 14px;overflow-y:auto;max-height:none;display:flex;flex-direction:column">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${totalH}"
-           style="width:100%;height:auto;display:block;background:linear-gradient(160deg,#f8f8f6 0%,#f0f0ee 100%);border-radius:8px;border:1px solid var(--border)">
+           style="width:100%;height:auto;display:block;background:linear-gradient(160deg,#f8f8f6 0%,#f0f0ee 100%);border-radius:8px;border:1px solid var(--border);margin-bottom:12px">
 
         <!-- Route : ombre -->
         <path d="${roadPath}" fill="none" stroke="rgba(0,0,0,0.08)"
@@ -3642,13 +3642,13 @@ function renderGantt() {
     svgHeader += `<text x="${todayX + 2}" y="${ROW1_H + ROW2_H / 2}" dominant-baseline="central" font-size="8.5" fill="#DC2626" font-family="system-ui,sans-serif">auj.</text>`;
   }
 
-  cont.innerHTML = `<div style="padding:12px 10px;width:100%;box-sizing:border-box;overflow-y:auto;max-height:calc(100vh - 300px)">
+  cont.innerHTML = `<div style="padding:12px 10px;width:100%;box-sizing:border-box;display:flex;flex-direction:column;overflow-y:auto;max-height:none">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${totalH}"
-           style="display:block;width:100%;height:auto;">
+           style="display:block;width:100%;height:auto;background:linear-gradient(160deg,#f8f8f6 0%,#f0f0ee 100%);border-radius:8px;border:1px solid var(--border);flex-shrink:0;margin-bottom:10px">
       ${svgBody}
       ${svgHeader}
     </svg>
-    <div style="margin-top:10px;display:flex;gap:14px;flex-wrap:wrap">
+    <div style="display:flex;gap:14px;flex-wrap:wrap;flex-shrink:0">
       <span style="font-size:10.5px;color:var(--text-muted);display:inline-flex;align-items:center;gap:4px"><span style="width:12px;height:7px;border-radius:2px;background:#374151;display:inline-block"></span>Niveau 1</span>
       <span style="font-size:10.5px;color:var(--text-muted);display:inline-flex;align-items:center;gap:4px"><span style="width:12px;height:7px;border-radius:2px;background:#1A7A4F;display:inline-block"></span>Niveau 2</span>
       <span style="font-size:10.5px;color:var(--text-muted);display:inline-flex;align-items:center;gap:4px"><span style="width:12px;height:7px;border-radius:2px;background:#888888;opacity:0.75;display:inline-block"></span>Réalisé</span>
