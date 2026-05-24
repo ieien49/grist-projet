@@ -1000,12 +1000,12 @@ tr:hover .cr-del-btn { opacity: 1; }
 </button>
            
           </div>
-          <div style="flex:1;overflow:auto;background:var(--bg)">
-            <div id="ganttProjetContainer" style="padding:8px 14px;min-width:700px"></div>
-          </div>
+          <div style="flex:1;overflow:visible;background:var(--bg);display:block">
+  <div id="feuillerouteContainer" style="padding:12px 14px;min-width:700px"></div>
+</div>
         </div>
         <!-- Vue Feuille de route -->
-        <div id="sp-feuilleroute" style="flex:1;flex-direction:column;overflow:auto;display:none">
+        <div id="sp-feuilleroute" style="flex:1;flex-direction:column;overflow-y:auto;overflow-x:auto;display:none">
           <div id="feuillerouteFilters" style="padding:8px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;background:var(--bg)">
             <select class="filter-select" id="frFilterProjet" onchange="renderFeuilleDeroute()">
               <option value="">Tous les projets</option>
@@ -2225,7 +2225,7 @@ function renderFeuilleDeroute() {
   // ═══════════════════════════════════════════════════════════════
   cont.innerHTML = `<div style="padding:16px 14px;overflow-y:visible;max-height:none;display:flex;flex-direction:column">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${totalH}"
-           style="width:100%;height:auto;display:block;background:linear-gradient(160deg,#f8f8f6 0%,#f0f0ee 100%);border-radius:8px;border:1px solid var(--border);margin-bottom:12px">
+           style="width:100%;height:${totalH}px;display:block;background:linear-gradient(160deg,#f8f8f6 0%,#f0f0ee 100%);border-radius:8px;border:1px solid var(--border);margin-bottom:12px">
 
         <!-- Route : ombre -->
         <path d="${roadPath}" fill="none" stroke="rgba(0,0,0,0.08)"
