@@ -1496,79 +1496,46 @@ tr:hover .cr-del-btn { opacity: 1; }
       </button>
     </div>
     <div class="modal-body">
-      <div class="form-grid">
-        <div class="form-group">
-          <label class="field-label">Code</label>
-          <input type="text" class="form-control" id="p_code" placeholder="Ex: PRJ-2024">
-        </div>
-        <div class="form-group">
-          <label class="field-label">Nom</label>
-          <input type="text" class="form-control" id="p_nom" placeholder="Intitulé du projet">
-        </div>
-        <div class="form-group full" id="p_refGroup" style="display:none">
-          <label class="field-label">Projet parent</label>
-          <select class="form-control" id="p_ref"><option value="">— Aucun (projet maître) —</option></select>
-        </div>
-        <div class="form-group full" id="p_piloteGroup" style="display:none">
-          <label class="field-label">Pilote</label>
-          <select class="form-control" id="p_pilote"><option value="">— Sélectionner un acteur —</option></select>
-        </div>
-        <div class="form-group full" id="p_antecedentGroup" style="display:none">
-          <label class="field-label">Antécédent (dépendance)</label>
-          <select class="form-control" id="p_antecedent"><option value="">— Aucun antécédent —</option></select>
-        </div>
-        <div class="form-group full">
-  <label class="field-label">Couleur</label>
-  <div id="p_couleurPicker" style="display:flex;flex-wrap:wrap;gap:7px;padding:6px 0"></div>
-  <input type="hidden" id="p_couleur">
-</div>
-        <div class="form-group">
-          <label class="field-label">Date de début</label>
-          <input type="date" class="form-control" id="p_debut">
-        </div>
-        <div class="form-group">
-          <label class="field-label">Date de fin prévue</label>
-          <input type="date" class="form-control" id="p_fin">
-        </div>
-        <div class="form-group">
-          <label class="field-label">Date de fin réelle</label>
-          <input type="date" class="form-control" id="p_finreelle">
-        </div>
-        <div class="form-group full">
-          <label class="field-label">Cadrage</label>
-          <textarea class="form-control" id="p_cadrage" placeholder="Cadrage du projet…"></textarea>
-        </div>
-        <div class="form-group full">
-          <label class="field-label">Contexte</label>
-          <textarea class="form-control" id="p_contexte" placeholder="Contexte…"></textarea>
-        </div>
-        <div class="form-group full">
-          <label class="field-label">Objectifs</label>
-          <textarea class="form-control" id="p_objectifs" placeholder="Objectifs…"></textarea>
-        </div>
-        <div class="form-group full">
-          <label class="field-label">Livrables</label>
-          <textarea class="form-control" id="p_livrables" placeholder="Livrables attendus…"></textarea>
-        </div>
-        <div class="form-group full">
-          <label class="field-label">Risques et opportunités</label>
-          <textarea class="form-control" id="p_risques" placeholder="Risques identifiés…"></textarea>
-        </div>
-        <div class="form-group full">
-          <label class="field-label">Moyens</label>
-          <textarea class="form-control" id="p_moyens" placeholder="Moyens mobilisés…"></textarea>
-        </div>
-        <div class="form-group full">
-          <label class="field-label">Résultats qualitatifs</label>
-          <textarea class="form-control" id="p_qualitatif" placeholder="Résultats qualitatifs attendus…"></textarea>
-        </div>
-        <div class="form-group full">
-          <label class="field-label">Résultats quantitatifs</label>
-          <textarea class="form-control" id="p_quantitatif" placeholder="Résultats quantitatifs attendus…"></textarea>
-        </div>
-      </div>
+  <div class="form-grid">
+    <div class="form-group">
+      <label class="field-label">Code</label>
+      <input type="text" class="form-control" id="p_code" placeholder="Ex: PRJ-2024">
     </div>
-    <div class="modal-foot">
+    <div class="form-group">
+      <label class="field-label">Nom</label>
+      <input type="text" class="form-control" id="p_nom" placeholder="Intitulé du projet">
+    </div>
+    <div class="form-group full" id="p_refGroup" style="display:none">
+      <label class="field-label">Projet parent</label>
+      <select class="form-control" id="p_ref"><option value="">— Aucun (projet maître) —</option></select>
+    </div>
+    <div class="form-group full" id="p_antecedentGroup" style="display:none">
+      <label class="field-label">Antécédent (dépendance)</label>
+      <select class="form-control" id="p_antecedent"><option value="">— Aucun antécédent —</option></select>
+    </div>
+    <div class="form-group full" id="p_piloteGroup" style="display:none">
+      <label class="field-label">Pilote</label>
+      <select class="form-control" id="p_pilote"><option value="">— Sélectionner un acteur —</option></select>
+    </div>
+    <div class="form-group">
+      <label class="field-label">Date de début</label>
+      <input type="date" class="form-control" id="p_debut">
+    </div>
+    <div class="form-group">
+      <label class="field-label">Date de fin prévue</label>
+      <input type="date" class="form-control" id="p_fin">
+    </div>
+    <div class="form-group full">
+      <label class="field-label">Couleur</label>
+      <div id="p_couleurPicker" style="display:flex;flex-wrap:wrap;gap:7px;padding:6px 0"></div>
+      <input type="hidden" id="p_couleur">
+    </div>
+    <div class="form-group full">
+      <label class="field-label">Date de fin réelle</label>
+      <input type="date" class="form-control" id="p_finreelle">
+    </div>
+  </div>
+</div>    <div class="modal-foot">
       <button class="btn-ghost" onclick="closeProjetModal()">Annuler</button>
       <button class="btn-primary" onclick="saveProjet()"><span id="p_saveLabel">Enregistrer</span></button>
     </div>
