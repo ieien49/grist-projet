@@ -717,10 +717,10 @@ tr:hover .cr-del-btn { opacity: 1; }
 <body>
 <div class="app">
 
-  <!-- ══ TITRE GÉNÉRAL ══ -->
+  <!-- ══ TITRE GÉNÉRAL WIDGET ══ -->
   <div class="widget-title-bar">
     <div class="widget-title-label">Suivi de projet</div>
-    <div class="widget-title-name" id="widgetProjectName">&nbsp;</div>
+    <div class="widget-title-name" id="widgetProjectName" style="color:var(--project-color,var(--text-primary))">&nbsp;</div>
   </div>
 
   <!-- ══ TAB BAR ══ -->
@@ -4593,10 +4593,15 @@ async function fetchProjets() {
       });
     }
     // Master = row with no ref (ref === 0 or falsy)
-    masterProjet = allProjets.find(p => !p.ref || p.ref === 0) || null;
-    // Mettre à jour le titre du widget
-    const titleEl = document.getElementById('widgetProjectName');
-    if (titleEl) titleEl.textContent = masterProjet ? (masterProjet.nom || '—') : '—';
+  masterProjet = allProjets.find(p => !p.ref || p.ref === 0) || null;
+  // Mettre à jour le titre du widget
+  const titleEl = document.getElementById('widgetProjectName');
+  if (titleEl) {
+    titleEl.textContent = masterProjet ? (masterProjet.nom || '—') : '—';
+    // Appliquer la couleur du projet au titre
+    const hex = masterProjet ? projetHex(masterProjet) : '#111111';
+    document.documentElement.style.setProperty('--project-color', hex);
+  }
   } catch(e) { console.error('fetchProjets error', e); }
 }
 
