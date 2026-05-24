@@ -2095,7 +2095,7 @@ function renderFeuilleDeroute() {
     maxLy = Math.max(maxLy, lp.ly + LABEL_H);
   });
   const OFFSET_Y = Math.max(60, -minLy + 40);
-  const totalH = maxLy - minLy + OFFSET_Y + 100;
+  const totalH = maxLy + OFFSET_Y + 120;
 
   // Appliquer l'offset aux positions
   labelPositions.forEach(lp => {
