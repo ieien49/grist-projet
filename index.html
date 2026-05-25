@@ -6115,7 +6115,7 @@ renderRefPicker(currentRefVal);
 }
 
 // Variable d'état en dehors des fonctions (portée globale)
-const _refPickerOpen = new Set();
+var _refPickerOpen = new Set();
 
 function renderRefPicker(selectedVal) {
   const picker = document.getElementById('p_ref_picker');
