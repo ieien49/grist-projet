@@ -5850,8 +5850,7 @@ const matchingIds = search
              onmouseenter="this.querySelector('.tl-hbtns').style.opacity='1'"
              onmouseleave="this.querySelector('.tl-hbtns').style.opacity='0'">
           <!-- Zone nom (flex:1) -->
-          <div style="display:flex;align-items:center;gap:7px;flex:1;min-width:0;cursor:pointer;padding-right:12px" 
-  onclick="toggleSpChildren('${cid}')" ondblclick="event.stopPropagation();openSubCanvas(${p.id})"
+          <div style="display:flex;align-items:center;gap:7px;flex:1;min-width:0;cursor:pointer;padding-right:12px" onclick="toggleSpChildren('${cid}')" ondblclick="event.stopPropagation();openSubCanvas(${p.id})"
             ${hasChildren
               ? `<svg class="sp-acc-toggle${isOpen?' open':''}" id="${cid}_t" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;color:var(--text-muted)"><path d="M9 18l6-6-6-6"/></svg>`
               : `<span style="width:9px;flex-shrink:0;display:inline-block"></span>`}
