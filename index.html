@@ -6114,13 +6114,12 @@ renderRefPicker(currentRefVal);
   setTimeout(() => document.getElementById('p_nom').focus(), 80);
 }
 
+// Variable d'état en dehors des fonctions (portée globale)
+const _refPickerOpen = new Set();
+
 function renderRefPicker(selectedVal) {
   const picker = document.getElementById('p_ref_picker');
-  const hidden = document.getElementById('p_ref');
   if (!picker) return;
-
-  if (!renderRefPicker._open) renderRefPicker._open = new Set();
-  const openNodes = renderRefPicker._open;
 
   const _byId = {};
   allProjets.forEach(p => { _byId[p.id] = { ...p, children: [] }; });
@@ -6131,7 +6130,7 @@ function renderRefPicker(selectedVal) {
   const buildHtml = (node, depth) => {
     if (node.id === editingProjetId) return '';
     const hasChildren = node.children.length > 0;
-    const isOpen = openNodes.has(node.id);
+    const isOpen = _refPickerOpen.has(node.id);
     const isSelected = String(node.id) === String(selectedVal);
     const indent = depth * 16 + 10;
     const label = (node.code ? node.code + ' – ' : '') + (node.nom || '—');
@@ -6140,26 +6139,35 @@ function renderRefPicker(selectedVal) {
     const borderLeft = isSelected ? `2px solid ${hex}` : '2px solid transparent';
     const fw = isSelected ? '600' : '400';
     const color = isSelected ? 'var(--text-primary)' : 'var(--text-secondary)';
+
     const chevron = hasChildren
-      ? `<span onclick="event.stopPropagation();refPickerToggle(${node.id})" style="cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;color:var(--text-muted);transform:rotate(${isOpen?'90':'0'}deg);transition:transform 0.15s">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
-        </span>`
+      ? `<span onclick="event.stopPropagation();refPickerToggle(${node.id})"
+           style="cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;color:var(--text-muted);
+                  transform:rotate(${isOpen ? '90' : '0'}deg);transition:transform 0.15s">
+           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+             <path d="M9 18l6-6-6-6"/>
+           </svg>
+         </span>`
       : `<span style="width:10px;flex-shrink:0;display:inline-block"></span>`;
 
     let html = `<div onclick="refPickerSelect(${node.id})"
-      style="display:flex;align-items:center;gap:6px;padding:6px 10px 6px ${indent}px;cursor:pointer;background:${bg};border-left:${borderLeft};user-select:none"
-      onmouseover="if(!${isSelected})this.style.background='var(--surface2)'"
+      style="display:flex;align-items:center;gap:6px;padding:6px 10px 6px ${indent}px;
+             cursor:pointer;background:${bg};border-left:${borderLeft};user-select:none"
+      onmouseover="if('${isSelected}'!=='true')this.style.background='var(--surface2)'"
       onmouseout="this.style.background='${bg}'">
       ${chevron}
-      <span style="width:8px;height:8px;border-radius:50%;background:${hex};flex-shrink:0;display:inline-block"></span>
+      <span style="width:8px;height:8px;border-radius:50%;background:${hex};
+                   flex-shrink:0;display:inline-block"></span>
       <span style="font-size:12.5px;color:${color};font-weight:${fw};flex:1">${esc(label)}</span>
-      ${isSelected ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+      ${isSelected
+        ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0"><polyline points="20 6 9 17 4 12"/></svg>'
+        : ''}
     </div>`;
 
     if (hasChildren && isOpen) {
       html += node.children
         .sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999))
-        .map(c => buildHtml(c, depth + 1))
+        .map(c => buildHtml(_byId[c.id], depth + 1))
         .join('');
     }
     return html;
@@ -6170,25 +6178,22 @@ function renderRefPicker(selectedVal) {
 }
 
 function refPickerToggle(nodeId) {
-  if (!renderRefPicker._open) renderRefPicker._open = new Set();
-  if (renderRefPicker._open.has(nodeId)) renderRefPicker._open.delete(nodeId);
-  else renderRefPicker._open.add(nodeId);
+  if (_refPickerOpen.has(nodeId)) _refPickerOpen.delete(nodeId);
+  else _refPickerOpen.add(nodeId);
   const hidden = document.getElementById('p_ref');
-  renderRefPicker(hidden?.value || '');
+  renderRefPicker(hidden ? hidden.value : '');
 }
 
 function refPickerSelect(nodeId) {
   const hidden = document.getElementById('p_ref');
   if (hidden) hidden.value = nodeId;
   renderRefPicker(nodeId);
-}function editMasterProjet() { if (masterProjet) openProjetModal(masterProjet, 'definition'); }
-function openSousProjetModal() { openProjetModal(null, 'sousprojet'); }
-function editSousProjet(id) { const p = allProjets.find(x=>x.id===id); if(p) openProjetModal(p, 'sousprojet'); }
-
-function closeProjetModal() {
+}
+  
+  function closeProjetModal() {
   document.getElementById('projetModalOverlay').classList.remove('open');
   editingProjetId = null;
-  if (renderRefPicker._open) renderRefPicker._open.clear(); // ajouter cette ligne
+  _refPickerOpen.clear();
 }
 function handleProjetOverlay(e) { if (e.target.id==='projetModalOverlay') closeProjetModal(); }
 
