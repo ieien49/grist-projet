@@ -6130,7 +6130,6 @@ function renderRefPicker(selectedVal) {
     if (p.ref && p.ref !== 0 && _byId[p.ref]) _byId[p.ref].children.push(_byId[p.id]);
   });
 
-  // État d'ouverture des nœuds (persisté entre re-rendus)
   if (!renderRefPicker._open) renderRefPicker._open = new Set();
   const openNodes = renderRefPicker._open;
 
@@ -6143,43 +6142,92 @@ function renderRefPicker(selectedVal) {
     const label = (node.code ? node.code + ' – ' : '') + (node.nom || '—');
     const hex = projetHex(node) || '#9B9B9B';
 
-    let html = `<div>
-      <div data-ref-id="${node.id}" style="display:flex;align-items:center;gap:6px;padding:5px 10px 5px ${indent + 10}px;cursor:pointer;background:${isSelected ? 'var(--surface3)' : 'transparent'};border-left:${isSelected ? '2px solid '+hex : '2px solid transparent'}"
-           onmouseover="this.style.background='var(--surface2)'"
-           onmouseout="this.style.background='${isSelected ? 'var(--surface3)' : 'transparent'}'">
-        ${hasChildren
-          ? `<svg onclick="event.stopPropagation();refPickerToggle(${node.id},'${selectedVal}')" 
-               style="flex-shrink:0;color:var(--text-muted);transition:transform 0.15s;transform:rotate(${isOpen?'90':'0'}deg)"
-               width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-               <path d="M9 18l6-6-6-6"/>
-             </svg>`
-          : `<span style="width:10px;flex-shrink:0"></span>`}
-        <span style="width:8px;height:8px;border-radius:50%;background:${hex};flex-shrink:0"></span>
-        <span onclick="refPickerSelect(${node.id},'${esc(label)}')" style="font-size:12.5px;color:${isSelected?'var(--text-primary)':'var(--text-secondary)'};font-weight:${isSelected?'600':'400'};flex:1">${esc(label)}</span>
-        ${isSelected ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color:var(--text-primary);flex-shrink:0"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
-      </div>
-      ${hasChildren && isOpen ? `<div>${node.children.sort((a,b)=>(a.ordre??9999)-(b.ordre??9999)).map(c => buildNode(c, depth+1)).join('')}</div>` : ''}
-    </div>`;
-    return html;
+    const row = document.createElement('div');
+    row.style.cssText = `display:flex;align-items:center;gap:6px;padding:5px 10px 5px ${indent + 10}px;cursor:pointer;background:${isSelected ? 'var(--surface3)' : 'transparent'};border-left:${isSelected ? '2px solid '+hex : '2px solid transparent'}`;
+
+    row.onmouseover = () => { if (!isSelected) row.style.background = 'var(--surface2)'; };
+    row.onmouseout  = () => { row.style.background = isSelected ? 'var(--surface3)' : 'transparent'; };
+
+    // Chevron
+    if (hasChildren) {
+      const chevron = document.createElement('svg');
+      chevron.setAttribute('viewBox', '0 0 24 24');
+      chevron.setAttribute('width', '10');
+      chevron.setAttribute('height', '10');
+      chevron.setAttribute('fill', 'none');
+      chevron.setAttribute('stroke', 'currentColor');
+      chevron.setAttribute('stroke-width', '2.5');
+      chevron.style.cssText = `flex-shrink:0;color:var(--text-muted);transition:transform 0.15s;transform:rotate(${isOpen ? '90' : '0'}deg);cursor:pointer`;
+      chevron.innerHTML = '<path d="M9 18l6-6-6-6"/>';
+      chevron.onclick = (e) => {
+        e.stopPropagation();
+        if (openNodes.has(node.id)) openNodes.delete(node.id);
+        else openNodes.add(node.id);
+        renderRefPicker(hidden?.value || selectedVal);
+      };
+      row.appendChild(chevron);
+    } else {
+      const spacer = document.createElement('span');
+      spacer.style.cssText = 'width:10px;flex-shrink:0';
+      row.appendChild(spacer);
+    }
+
+    // Dot couleur
+    const dot = document.createElement('span');
+    dot.style.cssText = `width:8px;height:8px;border-radius:50%;background:${hex};flex-shrink:0`;
+    row.appendChild(dot);
+
+    // Label
+    const labelEl = document.createElement('span');
+    labelEl.textContent = label;
+    labelEl.style.cssText = `font-size:12.5px;color:${isSelected ? 'var(--text-primary)' : 'var(--text-secondary)'};font-weight:${isSelected ? '600' : '400'};flex:1`;
+    labelEl.onclick = () => {
+      if (hidden) hidden.value = node.id;
+      renderRefPicker(node.id);
+    };
+    row.appendChild(labelEl);
+
+    // Checkmark si sélectionné
+    if (isSelected) {
+      const check = document.createElement('svg');
+      check.setAttribute('viewBox', '0 0 24 24');
+      check.setAttribute('width', '11');
+      check.setAttribute('height', '11');
+      check.setAttribute('fill', 'none');
+      check.setAttribute('stroke', 'currentColor');
+      check.setAttribute('stroke-width', '2.5');
+      check.style.cssText = 'color:var(--text-primary);flex-shrink:0';
+      check.innerHTML = '<polyline points="20 6 9 17 4 12"/>';
+      row.appendChild(check);
+    }
+
+    const wrapper = document.createElement('div');
+    wrapper.appendChild(row);
+
+    if (hasChildren && isOpen) {
+      const childrenDiv = document.createElement('div');
+      node.children
+        .sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999))
+        .forEach(c => {
+          const childEl = buildNode(c, depth + 1);
+          if (childEl) childrenDiv.appendChild(childEl);
+        });
+      wrapper.appendChild(childrenDiv);
+    }
+
+    return wrapper;
   };
 
-  const roots = allProjets.filter(p => !p.ref || p.ref === 0);
-  picker.innerHTML = roots.map(p => _byId[p.id] ? buildNode(_byId[p.id], 0) : '').join('');
+  picker.innerHTML = '';
+  allProjets
+    .filter(p => !p.ref || p.ref === 0)
+    .forEach(p => {
+      if (_byId[p.id]) {
+        const el = buildNode(_byId[p.id], 0);
+        if (el) picker.appendChild(el);
+      }
+    });
 }
-
-function refPickerToggle(nodeId, selectedVal) {
-  if (!renderRefPicker._open) renderRefPicker._open = new Set();
-  if (renderRefPicker._open.has(nodeId)) renderRefPicker._open.delete(nodeId);
-  else renderRefPicker._open.add(nodeId);
-  const hidden = document.getElementById('p_ref');
-  renderRefPicker(hidden?.value || selectedVal);
-}
-
-function refPickerSelect(nodeId, label) {
-  const hidden = document.getElementById('p_ref');
-  if (hidden) hidden.value = nodeId;
-  renderRefPicker(nodeId);
-}  
 
 function editMasterProjet() { if (masterProjet) openProjetModal(masterProjet, 'definition'); }
 function openSousProjetModal() { openProjetModal(null, 'sousprojet'); }
