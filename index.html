@@ -1502,9 +1502,10 @@ tr:hover .cr-del-btn { opacity: 1; }
       <input type="text" class="form-control" id="p_nom" placeholder="Intitulé du projet">
     </div>
     <div class="form-group full" id="p_refGroup" style="display:none">
-      <label class="field-label">Projet parent</label>
-      <select class="form-control" id="p_ref"><option value="">— Aucun (projet maître) —</option></select>
-    </div>
+  <label class="field-label">Projet parent</label>
+  <div id="p_ref_picker" style="border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);max-height:220px;overflow-y:auto"></div>
+  <input type="hidden" id="p_ref">
+</div>
     <div class="form-group full" id="p_antecedentGroup" style="display:none">
       <label class="field-label">Antécédent (dépendance)</label>
       <select class="form-control" id="p_antecedent"><option value="">— Aucun antécédent —</option></select>
@@ -6024,25 +6025,13 @@ function openProjetModal(projet = null, mode = null) {
   document.getElementById('p_refGroup').style.display = isSub ? '' : 'none';
 
   // Populate parent select with hierarchy
-  const refSel = document.getElementById('p_ref');
-  while (refSel.options.length > 1) refSel.remove(1);
   const _byId = {};
-  allProjets.forEach(p => { _byId[p.id] = { ...p, children: [] }; });
-  allProjets.forEach(p => {
-    if (p.ref && p.ref !== 0 && _byId[p.ref]) _byId[p.ref].children.push(_byId[p.id]);
-  });
-  const addRefOptions = (node, depth) => {
-    if (node.id === editingProjetId) return;
-    const spaces = '\u00a0\u00a0'.repeat(depth);
-    const arrow  = depth > 0 ? '\u21b3 ' : '';
-    const label  = spaces + arrow + (node.code ? node.code + ' \u2013 ' : '') + node.nom;
-    const opt    = new Option(label, node.id);
-    refSel.appendChild(opt);
-    node.children.forEach(c => addRefOptions(c, depth + 1));
-  };
-  allProjets
-    .filter(p => !p.ref || p.ref === 0)
-    .forEach(p => addRefOptions(_byId[p.id], 0));
+allProjets.forEach(p => { _byId[p.id] = { ...p, children: [] }; });
+allProjets.forEach(p => {
+  if (p.ref && p.ref !== 0 && _byId[p.ref]) _byId[p.ref].children.push(_byId[p.id]);
+});
+const currentRefVal = String(projet?.ref || (isSub && masterProjet ? masterProjet.id : ''));
+renderRefPicker(currentRefVal);
 
   // Show pilote field only for sous-projets
   document.getElementById('p_piloteGroup').style.display     = isSub ? '' : 'none';
@@ -6130,6 +6119,68 @@ function openProjetModal(projet = null, mode = null) {
   setTimeout(() => document.getElementById('p_nom').focus(), 80);
 }
 
+function renderRefPicker(selectedVal) {
+  const picker = document.getElementById('p_ref_picker');
+  const hidden = document.getElementById('p_ref');
+  if (!picker) return;
+
+  const _byId = {};
+  allProjets.forEach(p => { _byId[p.id] = { ...p, children: [] }; });
+  allProjets.forEach(p => {
+    if (p.ref && p.ref !== 0 && _byId[p.ref]) _byId[p.ref].children.push(_byId[p.id]);
+  });
+
+  // État d'ouverture des nœuds (persisté entre re-rendus)
+  if (!renderRefPicker._open) renderRefPicker._open = new Set();
+  const openNodes = renderRefPicker._open;
+
+  const buildNode = (node, depth) => {
+    if (node.id === editingProjetId) return '';
+    const hasChildren = node.children.length > 0;
+    const isOpen = openNodes.has(node.id);
+    const isSelected = String(node.id) === String(selectedVal);
+    const indent = depth * 16;
+    const label = (node.code ? node.code + ' – ' : '') + (node.nom || '—');
+    const hex = projetHex(node) || '#9B9B9B';
+
+    let html = `<div>
+      <div data-ref-id="${node.id}" style="display:flex;align-items:center;gap:6px;padding:5px 10px 5px ${indent + 10}px;cursor:pointer;background:${isSelected ? 'var(--surface3)' : 'transparent'};border-left:${isSelected ? '2px solid '+hex : '2px solid transparent'}"
+           onmouseover="this.style.background='var(--surface2)'"
+           onmouseout="this.style.background='${isSelected ? 'var(--surface3)' : 'transparent'}'">
+        ${hasChildren
+          ? `<svg onclick="event.stopPropagation();refPickerToggle(${node.id},'${selectedVal}')" 
+               style="flex-shrink:0;color:var(--text-muted);transition:transform 0.15s;transform:rotate(${isOpen?'90':'0'}deg)"
+               width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+               <path d="M9 18l6-6-6-6"/>
+             </svg>`
+          : `<span style="width:10px;flex-shrink:0"></span>`}
+        <span style="width:8px;height:8px;border-radius:50%;background:${hex};flex-shrink:0"></span>
+        <span onclick="refPickerSelect(${node.id},'${esc(label)}')" style="font-size:12.5px;color:${isSelected?'var(--text-primary)':'var(--text-secondary)'};font-weight:${isSelected?'600':'400'};flex:1">${esc(label)}</span>
+        ${isSelected ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color:var(--text-primary);flex-shrink:0"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+      </div>
+      ${hasChildren && isOpen ? `<div>${node.children.sort((a,b)=>(a.ordre??9999)-(b.ordre??9999)).map(c => buildNode(c, depth+1)).join('')}</div>` : ''}
+    </div>`;
+    return html;
+  };
+
+  const roots = allProjets.filter(p => !p.ref || p.ref === 0);
+  picker.innerHTML = roots.map(p => _byId[p.id] ? buildNode(_byId[p.id], 0) : '').join('');
+}
+
+function refPickerToggle(nodeId, selectedVal) {
+  if (!renderRefPicker._open) renderRefPicker._open = new Set();
+  if (renderRefPicker._open.has(nodeId)) renderRefPicker._open.delete(nodeId);
+  else renderRefPicker._open.add(nodeId);
+  const hidden = document.getElementById('p_ref');
+  renderRefPicker(hidden?.value || selectedVal);
+}
+
+function refPickerSelect(nodeId, label) {
+  const hidden = document.getElementById('p_ref');
+  if (hidden) hidden.value = nodeId;
+  renderRefPicker(nodeId);
+}  
+
 function editMasterProjet() { if (masterProjet) openProjetModal(masterProjet, 'definition'); }
 function openSousProjetModal() { openProjetModal(null, 'sousprojet'); }
 function editSousProjet(id) { const p = allProjets.find(x=>x.id===id); if(p) openProjetModal(p, 'sousprojet'); }
@@ -6137,6 +6188,7 @@ function editSousProjet(id) { const p = allProjets.find(x=>x.id===id); if(p) ope
 function closeProjetModal() {
   document.getElementById('projetModalOverlay').classList.remove('open');
   editingProjetId = null;
+  if (renderRefPicker._open) renderRefPicker._open.clear(); // ajouter cette ligne
 }
 function handleProjetOverlay(e) { if (e.target.id==='projetModalOverlay') closeProjetModal(); }
 
