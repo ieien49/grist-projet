@@ -6176,11 +6176,13 @@ function renderRefPicker(selectedVal) {
     const labelEl = document.createElement('span');
     labelEl.textContent = label;
     labelEl.style.cssText = `font-size:12.5px;color:${isSelected ? 'var(--text-primary)' : 'var(--text-secondary)'};font-weight:${isSelected ? '600' : '400'};flex:1`;
-    labelEl.onclick = () => {
-      if (hidden) hidden.value = node.id;
-      renderRefPicker(node.id);
-    };
     row.appendChild(labelEl);
+    row.onclick = (e) => {
+      if (e.target === row || e.target === labelEl || e.target === dot) {
+        if (hidden) hidden.value = node.id;
+        renderRefPicker(node.id);
+      }
+    };
 
     // Checkmark si sélectionné
     if (isSelected) {
