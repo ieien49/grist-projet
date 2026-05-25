@@ -1869,6 +1869,18 @@ function switchTab(name) {
 
 let spMode = 'liste';
 
+function openSousProjetModal(projet = null) {
+  openProjetModal(projet, 'sousprojet');
+}
+
+function editSousProjet(id) {
+  const p = allProjets.find(x => x.id === id);
+  if (p) openProjetModal(p, 'sousprojet');
+}
+
+
+
+  
 function switchSpMode(mode) {
   spMode = mode;
   document.getElementById('spModeListe').classList.toggle('active',   mode === 'liste');
