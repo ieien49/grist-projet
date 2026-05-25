@@ -6108,12 +6108,7 @@ renderRefPicker(currentRefVal);
   document.getElementById('p_pilote').value     = projet?.pilote || '';
   document.getElementById('p_antecedent').value = projet?.antecedent || '';
 
-  // Parent ref
-  if (isSub && projet?.ref) {
-    refSel.value = projet.ref;
-  } else if (isSub && masterProjet) {
-    refSel.value = masterProjet.id;
-  }
+  
 
   document.getElementById('projetModalOverlay').classList.add('open');
   setTimeout(() => document.getElementById('p_nom').focus(), 80);
