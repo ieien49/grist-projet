@@ -6026,6 +6026,7 @@ function openProjetModal(projet = null, mode = null) {
   if (!mode) mode = (projet && projet.ref) ? 'sousprojet' : 'definition';
   projetModalMode = mode;
   editingProjetId = projet?.id ?? null;
+  _refPickerOpen.clear(); 
 
   const isSub = mode === 'sousprojet';
   document.getElementById('projetModalTitle').textContent = projet
@@ -6044,7 +6045,9 @@ function openProjetModal(projet = null, mode = null) {
   });
 
   // FIX: Utiliser la valeur correcte du parent
-  const currentRefVal = projet ? String(projet.ref || 0) : (isSub && masterProjet ? String(masterProjet.id) : '');
+ const currentRefVal = projet
+  ? String(projet.ref && projet.ref !== 0 ? projet.ref : (masterProjet ? masterProjet.id : ''))
+  : (isSub && masterProjet ? String(masterProjet.id) : '');
   
  // Initialiser p_ref avec la bonne valeur AVANT de render
   document.getElementById('p_ref').value = currentRefVal;
@@ -6149,7 +6152,7 @@ function renderRefPicker(selectedVal) {
     if (node.id === editingProjetId) return '';
     const hasChildren = node.children.length > 0;
     const isOpen = _refPickerOpen.has(node.id);
-    const isSelected = String(node.id) === String(selectedVal);
+    const isSelected = selectedVal && selectedVal !== '0' && String(node.id) === String(selectedVal);
     const indent = depth * 16 + 10;
     const label = (node.code ? node.code + ' – ' : '') + (node.nom || '—');
     const hex = projetHex(node) || '#9B9B9B';
