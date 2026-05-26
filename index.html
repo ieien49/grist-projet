@@ -6038,12 +6038,18 @@ function openProjetModal(projet = null, mode = null) {
 
   // Populate parent select with hierarchy
   const _byId = {};
-allProjets.forEach(p => { _byId[p.id] = { ...p, children: [] }; });
-allProjets.forEach(p => {
-  if (p.ref && p.ref !== 0 && _byId[p.ref]) _byId[p.ref].children.push(_byId[p.id]);
-});
-const currentRefVal = String(projet?.ref || (isSub && masterProjet ? masterProjet.id : ''));
-renderRefPicker(currentRefVal);
+  allProjets.forEach(p => { _byId[p.id] = { ...p, children: [] }; });
+  allProjets.forEach(p => {
+    if (p.ref && p.ref !== 0 && _byId[p.ref]) _byId[p.ref].children.push(_byId[p.id]);
+  });
+
+  // FIX: Utiliser la valeur correcte du parent
+  const currentRefVal = projet ? String(projet.ref || 0) : (isSub && masterProjet ? String(masterProjet.id) : '');
+  
+ // Initialiser p_ref avec la bonne valeur AVANT de render
+  document.getElementById('p_ref').value = currentRefVal;
+  
+  renderRefPicker(currentRefVal);
 
   // Show pilote field only for sous-projets
   document.getElementById('p_piloteGroup').style.display     = isSub ? '' : 'none';
@@ -6198,8 +6204,8 @@ function refPickerToggle(nodeId) {
 
 function refPickerSelect(nodeId) {
   const hidden = document.getElementById('p_ref');
-  if (hidden) hidden.value = nodeId;
-  renderRefPicker(nodeId);
+  if (hidden) hidden.value = String(nodeId);  // Convertir en string pour cohérence
+  renderRefPicker(String(nodeId));
 }
   
   function closeProjetModal() {
