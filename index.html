@@ -6045,12 +6045,26 @@ function openProjetModal(projet = null, mode = null) {
   });
 
   // FIX: Utiliser la valeur correcte du parent
- const currentRefVal = projet
-  ? String(projet.ref && projet.ref !== 0 ? projet.ref : (masterProjet ? masterProjet.id : ''))
+ const currentRefVal = projet && projet.ref && projet.ref !== 0
+  ? String(projet.ref)
   : (isSub && masterProjet ? String(masterProjet.id) : '');
   
  // Initialiser p_ref avec la bonne valeur AVANT de render
   document.getElementById('p_ref').value = currentRefVal;
+
+// Déplier automatiquement les ancêtres du nœud sélectionné
+if (currentRefVal) {
+  const targetId = parseInt(currentRefVal);
+  const findAncestors = (id) => {
+    const node = allProjets.find(p => p.id === id);
+    if (!node || !node.ref || node.ref === 0) return;
+    _refPickerOpen.add(node.ref);
+    findAncestors(node.ref);
+  };
+  findAncestors(targetId);
+  _refPickerOpen.add(targetId); // déplier aussi le nœud lui-même s'il a des enfants
+}
+renderRefPicker(currentRefVal);
   
   renderRefPicker(currentRefVal);
 
