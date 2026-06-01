@@ -1993,11 +1993,19 @@ function renderSpMindmap() {
 
     const visibleTree = buildVisible(fullTree);
     const root = d3.hierarchy(visibleTree, d => d.children);
+    const leafCount = root.leaves().length;
     const nodeCount = root.descendants().length;
     const radius = Math.max(200, nodeCount * 16);
 
-    d3.tree().size([2 * Math.PI, radius])
-      .separation((a, b) => (a.parent === b.parent ? 1 : 1.8) / a.depth)(root);
+    d3.tree()
+      .size([2 * Math.PI, radius])
+      .separation((a, b) => {
+        // Séparation proportionnelle au nombre de feuilles sous chaque nœud
+        const la = a.leaves ? a.leaves().length : 1;
+        const lb = b.leaves ? b.leaves().length : 1;
+        const base = a.parent === b.parent ? 1 : 2;
+        return (base * (la + lb) / 2) / a.depth;
+      })(root);
 
     const radialPoint = (angle, r) => [r * Math.cos(angle - Math.PI/2), r * Math.sin(angle - Math.PI/2)];
 
@@ -2069,9 +2077,12 @@ function renderSpMindmap() {
         .text(lbl);
     });
   }
-
-  redraw();
-  svg.call(zoom.transform, d3.zoomIdentity.translate(W/2, H/2));
+redraw();
+  // Recentrer sans réinitialiser le zoom utilisateur si déjà positionné
+  const currentTransform = d3.zoomTransform(svgEl);
+  if (currentTransform.k === 1 && currentTransform.x === 0 && currentTransform.y === 0) {
+    svg.call(zoom.transform, d3.zoomIdentity.translate(W/2, H/2));
+  }
 }
   
 // ══ ROADMAP ══
