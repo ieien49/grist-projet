@@ -937,6 +937,10 @@ tr:hover .cr-del-btn { opacity: 1; }
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="19" cy="19" r="2"/><line x1="7" y1="12" x2="17" y2="6"/><line x1="7" y1="12" x2="17" y2="18"/></svg>
           Vue graphique
         </div>
+        <div class="cadre-subtab" id="spModeMindmap" data-sub="sp-mindmap" onclick="switchSpMode('mindmap')">
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="3" cy="6" r="2"/><circle cx="21" cy="6" r="2"/><circle cx="3" cy="18" r="2"/><circle cx="21" cy="18" r="2"/><line x1="5" y1="6.5" x2="9.5" y2="10.5"/><line x1="19" y1="6.5" x2="14.5" y2="10.5"/><line x1="5" y1="17.5" x2="9.5" y2="13.5"/><line x1="19" y1="17.5" x2="14.5" y2="13.5"/></svg>
+  Mind map
+</div>
         <div class="subnav-spacer"></div>
         <div class="subnav-controls" id="spListeControls">
           <div class="search-wrap" style="min-width:130px;max-width:190px">
@@ -1039,6 +1043,15 @@ tr:hover .cr-del-btn { opacity: 1; }
   <div id="feuillerouteContainer" style="padding:12px 14px;min-width:700px"></div>
 </div>
         </div>
+        <!-- Vue Mind map -->
+<div id="sp-mindmap" style="flex:1;overflow:hidden;display:none;background:#fafaf9;position:relative">
+  <svg id="spMindmapSvg" style="width:100%;height:100%"></svg>
+  <div class="graph-controls">
+    <button class="graph-ctrl-btn" id="spMmZoomIn">+</button>
+    <button class="graph-ctrl-btn" id="spMmZoomOut">−</button>
+    <button class="graph-ctrl-btn" id="spMmReset" title="Réinitialiser">⌂</button>
+  </div>
+</div>
         <!-- Vue graphique -->
         <div id="sp-graphe" style="flex:1;overflow:hidden;display:none">
           <div class="graph-view" id="graphView">
@@ -1908,17 +1921,159 @@ function switchSpMode(mode) {
   document.getElementById('spModeGantt').classList.toggle('active',   mode === 'gantt');
   document.getElementById('spModeFeuilleDeroute').classList.toggle('active', mode === 'feuilleroute');
   document.getElementById('spModeGraphe').classList.toggle('active',  mode === 'graphe');
-  document.getElementById('sp-liste').style.display   = mode === 'liste'   ? 'flex' : 'none';
-  document.getElementById('sp-gantt').style.display   = mode === 'gantt'   ? 'flex' : 'none';
+  document.getElementById('spModeMindmap').classList.toggle('active', mode === 'mindmap');
+  document.getElementById('sp-liste').style.display        = mode === 'liste'        ? 'flex' : 'none';
+  document.getElementById('sp-gantt').style.display        = mode === 'gantt'        ? 'flex' : 'none';
   document.getElementById('sp-feuilleroute').style.display = mode === 'feuilleroute' ? 'flex' : 'none';
-  document.getElementById('sp-graphe').style.display  = mode === 'graphe'  ? 'flex' : 'none';
+  document.getElementById('sp-graphe').style.display       = mode === 'graphe'       ? 'flex' : 'none';
+  document.getElementById('sp-mindmap').style.display      = mode === 'mindmap'      ? 'flex' : 'none';
   document.getElementById('spListeControls').style.display = mode === 'liste' ? '' : 'none';
-  if (mode === 'liste')   renderSousProjets();
-  if (mode === 'gantt')   { populateGanttProjetFilters(); renderGanttProjet(); }
+  if (mode === 'liste')        renderSousProjets();
+  if (mode === 'gantt')        { populateGanttProjetFilters(); renderGanttProjet(); }
   if (mode === 'feuilleroute') { populateFeuillerouteFilters(); renderFeuilleDeroute(); }
-  if (mode === 'graphe')  renderGraph();
+  if (mode === 'graphe')       renderGraph();
+  if (mode === 'mindmap')      renderSpMindmap();
 }
 
+function renderSpMindmap() {
+  const svgEl = document.getElementById('spMindmapSvg');
+  if (!svgEl || typeof d3 === 'undefined') return;
+  svgEl.innerHTML = '';
+  const svg = d3.select(svgEl);
+  const W = svgEl.clientWidth || 900;
+  const H = svgEl.clientHeight || 600;
+
+  if (!masterProjet) {
+    svg.append('text').attr('x', W/2).attr('y', H/2).attr('text-anchor','middle').attr('font-size',13).attr('fill','#999').text('Aucun projet maître défini');
+    return;
+  }
+
+  const g = svg.append('g');
+  const zoom = d3.zoom().scaleExtent([0.1, 4]).on('zoom', e => g.attr('transform', e.transform));
+  svg.call(zoom);
+  document.getElementById('spMmZoomIn').onclick  = () => svg.transition().duration(250).call(zoom.scaleBy, 1.3);
+  document.getElementById('spMmZoomOut').onclick = () => svg.transition().duration(250).call(zoom.scaleBy, 0.77);
+  document.getElementById('spMmReset').onclick   = () => svg.transition().duration(350).call(zoom.transform, d3.zoomIdentity.translate(W/2, H/2));
+
+  // État de dépliage : Set des IDs dépliés
+  const expanded = new Set([masterProjet.id]);
+
+  // Construction de l'arbre complet
+  function buildTree(projId) {
+    const p = allProjets.find(x => x.id === projId);
+    if (!p) return null;
+    const hex  = projetHex(p) || '#374151';
+    const done = !!p.finreelle;
+    return {
+      id:       p.id,
+      label:    (p.code ? p.code + ' – ' : '') + (p.nom || '—'),
+      color:    done ? '#888888' : hex,
+      done,
+      isMaster: !p.ref || p.ref === 0,
+      _allChildren: allProjets
+        .filter(c => c.ref === projId)
+        .sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999))
+        .map(c => buildTree(c.id))
+        .filter(Boolean),
+    };
+  }
+
+  const fullTree = buildTree(masterProjet.id);
+  if (!fullTree) return;
+
+  // Construire la hiérarchie visible selon `expanded`
+  function buildVisible(node) {
+    const isExpanded = expanded.has(node.id);
+    const children = isExpanded ? node._allChildren.map(buildVisible) : [];
+    return { ...node, children };
+  }
+
+  function redraw() {
+    g.selectAll('*').remove();
+
+    const visibleTree = buildVisible(fullTree);
+    const root = d3.hierarchy(visibleTree, d => d.children);
+    const nodeCount = root.descendants().length;
+    const radius = Math.max(200, nodeCount * 16);
+
+    d3.tree().size([2 * Math.PI, radius])
+      .separation((a, b) => (a.parent === b.parent ? 1 : 1.8) / a.depth)(root);
+
+    const radialPoint = (angle, r) => [r * Math.cos(angle - Math.PI/2), r * Math.sin(angle - Math.PI/2)];
+
+    // Liens
+    g.selectAll('path.mm-link')
+      .data(root.links())
+      .join('path')
+      .attr('class', 'mm-link')
+      .attr('fill', 'none')
+      .attr('stroke', d => d.target.data.color)
+      .attr('stroke-width', d => d.source.depth === 0 ? 2 : 1.2)
+      .attr('stroke-opacity', 0.4)
+      .attr('d', d3.linkRadial().angle(d => d.x).radius(d => d.y));
+
+    // Nœuds
+    const nodes = g.selectAll('g.mm-node')
+      .data(root.descendants(), d => d.data.id)
+      .join('g')
+      .attr('class', 'mm-node')
+      .attr('transform', d => {
+        if (d.depth === 0) return 'translate(0,0)';
+        const [x, y] = radialPoint(d.x, d.y);
+        return `translate(${x},${y})`;
+      })
+      .attr('cursor', d => d.data._allChildren?.length ? 'pointer' : 'default')
+      .on('click', (event, d) => {
+        event.stopPropagation();
+        if (!d.data._allChildren?.length) return;
+        if (expanded.has(d.data.id)) expanded.delete(d.data.id);
+        else expanded.add(d.data.id);
+        redraw();
+      });
+
+    // Formes
+    nodes.each(function(d) {
+      const el = d3.select(this);
+      const hasChildren = d.data._allChildren?.length > 0;
+      const isOpen = expanded.has(d.data.id);
+      if (d.depth === 0) {
+        el.append('rect').attr('x',-52).attr('y',-14).attr('width',104).attr('height',28).attr('rx',6).attr('fill',d.data.color);
+      } else {
+        const w = Math.min(130, d.data.label.length * 6 + 18);
+        el.append('rect').attr('x',-w/2).attr('y',-12).attr('width',w).attr('height',24).attr('rx',4)
+          .attr('fill', d.data.done ? '#f3f4f6' : 'white')
+          .attr('stroke', d.data.color).attr('stroke-width', d.depth === 1 ? 2 : 1.5);
+        // Badge +/- si enfants
+        if (hasChildren) {
+          el.append('circle').attr('cx', w/2).attr('cy', -12).attr('r', 7)
+            .attr('fill', isOpen ? '#6b7280' : d.data.color).attr('stroke','white').attr('stroke-width',1.5);
+          el.append('text').attr('x', w/2).attr('y', -12)
+            .attr('text-anchor','middle').attr('dominant-baseline','central')
+            .attr('font-size', 9).attr('font-weight','700').attr('fill','white').attr('pointer-events','none')
+            .text(isOpen ? '−' : '+');
+        }
+      }
+    });
+
+    // Labels
+    nodes.each(function(d) {
+      const el = d3.select(this);
+      const maxChars = 24;
+      const lbl = d.data.label.length > maxChars ? d.data.label.slice(0, maxChars-1)+'…' : d.data.label;
+      el.append('text')
+        .attr('text-anchor','middle').attr('dominant-baseline','central')
+        .attr('font-size', d.depth === 0 ? 11 : d.depth === 1 ? 9.5 : 9)
+        .attr('font-weight', d.depth <= 1 ? '600' : '400')
+        .attr('fill', d.depth === 0 ? 'white' : d.data.done ? '#888' : '#111')
+        .attr('pointer-events','none')
+        .text(lbl);
+    });
+  }
+
+  redraw();
+  svg.call(zoom.transform, d3.zoomIdentity.translate(W/2, H/2));
+}
+  
 // ══ ROADMAP ══
 
 const LANE_COLORS = [
