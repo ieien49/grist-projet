@@ -1280,10 +1280,7 @@ tr:hover .cr-del-btn { opacity: 1; }
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
           Par action
         </div>
-        <div class="cadre-subtab" id="acModeMindmap" data-sub="mindmap" onclick="switchAcMode('mindmap')">
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="3" cy="6" r="2"/><circle cx="21" cy="6" r="2"/><circle cx="3" cy="18" r="2"/><circle cx="21" cy="18" r="2"/><line x1="5" y1="6.5" x2="9.5" y2="10.5"/><line x1="19" y1="6.5" x2="14.5" y2="10.5"/><line x1="5" y1="17.5" x2="9.5" y2="13.5"/><line x1="19" y1="17.5" x2="14.5" y2="13.5"/></svg>
-  Mind map
-</div>
+        
 
         <div class="subnav-spacer"></div>
         <div class="subnav-controls">
@@ -1955,10 +1952,8 @@ function renderSpMindmap() {
   document.getElementById('spMmZoomOut').onclick = () => svg.transition().duration(250).call(zoom.scaleBy, 0.77);
   document.getElementById('spMmReset').onclick   = () => svg.transition().duration(350).call(zoom.transform, d3.zoomIdentity.translate(W/2, H/2));
 
-  // État de dépliage : Set des IDs dépliés
   const expanded = new Set([masterProjet.id]);
 
-  // Construction de l'arbre complet
   function buildTree(projId) {
     const p = allProjets.find(x => x.id === projId);
     if (!p) return null;
@@ -1981,13 +1976,152 @@ function renderSpMindmap() {
   const fullTree = buildTree(masterProjet.id);
   if (!fullTree) return;
 
-  // Construire la hiérarchie visible selon `expanded`
+  // Compter les feuilles visibles (pour calcul d'espace angulaire)
+  function countVisibleLeaves(node) {
+    if (!expanded.has(node.id) || !node._allChildren.length) return 1;
+    return node._allChildren.reduce((s, c) => s + countVisibleLeaves(c), 0);
+  }
+
   function buildVisible(node) {
     const isExpanded = expanded.has(node.id);
     const children = isExpanded ? node._allChildren.map(buildVisible) : [];
     return { ...node, children };
   }
 
+  // Layout manuel en éventail pour éviter les chevauchements
+  const NODE_W = 150; // largeur estimée d'un nœud
+  const NODE_H = 28;
+  const LEVEL_R = [0, 180, 340, 480, 600]; // rayon par niveau
+
+  function assignAngles(node, angleStart, angleEnd, depth) {
+    node._angle = (angleStart + angleEnd) / 2;
+    node._r     = LEVEL_R[Math.min(depth, LEVEL_R.length - 1)];
+    if (!node.children || !node.children.length) return;
+
+    const leaves = node.children.map(c => countVisibleLeaves(c));
+    const total  = leaves.reduce((s, v) => s + v, 0);
+    const span   = angleEnd - angleStart;
+
+    // Garantir un angle minimum par nœud pour éviter les chevauchements
+    const r = node._r || 180;
+    const minAngle = Math.atan2(NODE_H * 1.6, r); // angle min selon la circonférence
+    const rawAngles = leaves.map(l => (l / total) * span);
+    const clamped  = rawAngles.map(a => Math.max(a, minAngle));
+    const totalClamped = clamped.reduce((s, v) => s + v, 0);
+    // Rescaler si dépassement
+    const scale = totalClamped > span ? span / totalClamped : 1;
+    const finalAngles = clamped.map(a => a * scale);
+
+    let cursor = angleStart;
+    node.children.forEach((child, i) => {
+      assignAngles(child, cursor, cursor + finalAngles[i], depth + 1);
+      cursor += finalAngles[i];
+    });
+  }
+
+  function redraw() {
+    g.selectAll('*').remove();
+
+    const visibleTree = buildVisible(fullTree);
+
+    // Calculer l'angle total nécessaire
+    const totalLeaves = countVisibleLeaves(fullTree);
+    const totalAngle  = Math.min(2 * Math.PI, Math.max(2 * Math.PI, totalLeaves * 0.45));
+    assignAngles(visibleTree, -totalAngle / 2, totalAngle / 2, 0);
+
+    // Aplatir tous les nœuds
+    function flatten(node, result = []) {
+      result.push(node);
+      (node.children || []).forEach(c => flatten(c, result));
+      return result;
+    }
+    const allNodes = flatten(visibleTree);
+
+    const pos = (node) => {
+      if (node._r === 0) return [0, 0];
+      return [node._r * Math.cos(node._angle - Math.PI/2),
+              node._r * Math.sin(node._angle - Math.PI/2)];
+    };
+
+    // Liens
+    const links = [];
+    function collectLinks(node) {
+      (node.children || []).forEach(c => { links.push({ source: node, target: c }); collectLinks(c); });
+    }
+    collectLinks(visibleTree);
+
+    g.selectAll('path.mm-link')
+      .data(links)
+      .join('path')
+      .attr('class', 'mm-link')
+      .attr('fill', 'none')
+      .attr('stroke', d => d.target.color)
+      .attr('stroke-width', d => d.source._r === 0 ? 2 : 1.2)
+      .attr('stroke-opacity', 0.4)
+      .attr('d', d => {
+        const [sx, sy] = pos(d.source);
+        const [tx, ty] = pos(d.target);
+        const cx = (sx + tx) / 2;
+        const cy = (sy + ty) / 2;
+        return `M${sx},${sy} Q${cx},${cy} ${tx},${ty}`;
+      });
+
+    // Nœuds
+    const nodes = g.selectAll('g.mm-node')
+      .data(allNodes, d => d.id)
+      .join('g')
+      .attr('class', 'mm-node')
+      .attr('transform', d => { const [x,y] = pos(d); return `translate(${x},${y})`; })
+      .attr('cursor', d => d._allChildren?.length ? 'pointer' : 'default')
+      .on('click', (event, d) => {
+        event.stopPropagation();
+        if (!d._allChildren?.length) return;
+        if (expanded.has(d.id)) expanded.delete(d.id);
+        else expanded.add(d.id);
+        redraw();
+      });
+
+    // Formes
+    nodes.each(function(d) {
+      const el = d3.select(this);
+      const hasChildren = d._allChildren?.length > 0;
+      const isOpen = expanded.has(d.id);
+      if (d._r === 0) {
+        el.append('rect').attr('x',-52).attr('y',-14).attr('width',104).attr('height',28).attr('rx',6).attr('fill',d.color);
+      } else {
+        const w = Math.min(140, d.label.length * 6 + 18);
+        el.append('rect').attr('x',-w/2).attr('y',-12).attr('width',w).attr('height',24).attr('rx',4)
+          .attr('fill', d.done ? '#f3f4f6' : 'white')
+          .attr('stroke', d.color).attr('stroke-width', d._r <= 180 ? 2 : 1.5);
+        if (hasChildren) {
+          el.append('circle').attr('cx', w/2).attr('cy', -12).attr('r', 7)
+            .attr('fill', isOpen ? '#6b7280' : d.color).attr('stroke','white').attr('stroke-width',1.5);
+          el.append('text').attr('x', w/2).attr('y', -12)
+            .attr('text-anchor','middle').attr('dominant-baseline','central')
+            .attr('font-size', 9).attr('font-weight','700').attr('fill','white').attr('pointer-events','none')
+            .text(isOpen ? '−' : '+');
+        }
+      }
+    });
+
+    // Labels
+    nodes.each(function(d) {
+      const el = d3.select(this);
+      const maxChars = 22;
+      const lbl = d.label.length > maxChars ? d.label.slice(0, maxChars-1)+'…' : d.label;
+      el.append('text')
+        .attr('text-anchor','middle').attr('dominant-baseline','central')
+        .attr('font-size', d._r === 0 ? 11 : d._r <= 180 ? 9.5 : 9)
+        .attr('font-weight', d._r <= 180 ? '600' : '400')
+        .attr('fill', d._r === 0 ? 'white' : d.done ? '#888' : '#111')
+        .attr('pointer-events','none')
+        .text(lbl);
+    });
+  }
+
+  redraw();
+  svg.call(zoom.transform, d3.zoomIdentity.translate(W/2, H/2));
+}
   function redraw() {
     g.selectAll('*').remove();
 
