@@ -1267,6 +1267,10 @@ tr:hover .cr-del-btn { opacity: 1; }
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
           Par action
         </div>
+        <div class="cadre-subtab" id="acModeMindmap" data-sub="mindmap" onclick="switchAcMode('mindmap')">
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="3" cy="6" r="2"/><circle cx="21" cy="6" r="2"/><circle cx="3" cy="18" r="2"/><circle cx="21" cy="18" r="2"/><line x1="5" y1="6.5" x2="9.5" y2="10.5"/><line x1="19" y1="6.5" x2="14.5" y2="10.5"/><line x1="5" y1="17.5" x2="9.5" y2="13.5"/><line x1="19" y1="17.5" x2="14.5" y2="13.5"/></svg>
+  Mind map
+</div>
 
         <div class="subnav-spacer"></div>
         <div class="subnav-controls">
@@ -1329,6 +1333,22 @@ tr:hover .cr-del-btn { opacity: 1; }
     </div>
     <!-- Tooltip Gantt -->
     <div class="gantt-tooltip" id="ganttTooltip"></div>
+
+    <!-- Vue Mind map -->
+<div id="mindmapView" style="display:none;flex:1;overflow:hidden;background:#fafaf9;position:relative">
+  <svg id="mindmapSvg" style="width:100%;height:100%"></svg>
+  <div class="graph-controls">
+    <button class="graph-ctrl-btn" id="mmZoomIn">+</button>
+    <button class="graph-ctrl-btn" id="mmZoomOut">−</button>
+    <button class="graph-ctrl-btn" id="mmReset" title="Réinitialiser">⌂</button>
+  </div>
+  <div class="graph-legend" style="bottom:14px;left:14px">
+    <div class="graph-legend-item"><div style="width:14px;height:14px;border-radius:3px;background:#374151"></div>Sous-projet</div>
+    <div class="graph-legend-item"><div style="width:10px;height:10px;border-radius:50%;background:#6366f1"></div>Tâche</div>
+    <div class="graph-legend-item"><div style="width:10px;height:10px;border-radius:50%;background:#10b981"></div>Tâche réalisée</div>
+    <div class="graph-legend-item"><div style="width:10px;height:10px;border-radius:50%;background:#dc2626"></div>Tâche en retard</div>
+  </div>
+</div>
 
   </div><!-- /panels -->
 </div><!-- /app -->
@@ -2296,6 +2316,225 @@ function exportRoadmapPdf() {
   win.document.close();
   win.onload = () => { win.focus(); win.print(); };
 }
+
+
+function renderMindmap() {
+  const svgEl = document.getElementById('mindmapSvg');
+  if (!svgEl || typeof d3 === 'undefined') return;
+
+  svgEl.innerHTML = '';
+  const svg  = d3.select(svgEl);
+  const W    = svgEl.clientWidth  || 900;
+  const H    = svgEl.clientHeight || 600;
+  const now  = Date.now();
+
+  // Zoom
+  const g = svg.append('g');
+  const zoom = d3.zoom().scaleExtent([0.15, 4])
+    .on('zoom', e => g.attr('transform', e.transform));
+  svg.call(zoom);
+  document.getElementById('mmZoomIn').onclick  = () => svg.transition().duration(250).call(zoom.scaleBy, 1.3);
+  document.getElementById('mmZoomOut').onclick = () => svg.transition().duration(250).call(zoom.scaleBy, 0.77);
+  document.getElementById('mmReset').onclick   = () => svg.transition().duration(350).call(zoom.transform, d3.zoomIdentity.translate(W/2, H/2));
+
+  // Nœud racine = projet maître
+  if (!masterProjet) {
+    svg.append('text').attr('x', W/2).attr('y', H/2)
+      .attr('text-anchor','middle').attr('font-size',13).attr('fill','#999')
+      .text('Aucun projet maître défini');
+    return;
+  }
+
+  // Construire l'arbre : sous-projets + tâches
+  const root = {
+    id:       'root_' + masterProjet.id,
+    label:    masterProjet.nom || '—',
+    type:     'root',
+    color:    projetHex(masterProjet) || '#1A1A1A',
+    children: [],
+  };
+
+  // Récupérer tous les sous-projets du maître (tous niveaux)
+  const byId = {};
+  allProjets.forEach(p => { byId[p.id] = { ...p, _mmChildren: [] }; });
+  allProjets.forEach(p => {
+    if (p.ref && p.ref !== 0 && byId[p.ref]) byId[p.ref]._mmChildren.push(p.id);
+  });
+
+  const buildNode = (projId) => {
+    const p     = allProjets.find(x => x.id === projId);
+    if (!p) return null;
+    const hex   = projetHex(p) || '#374151';
+    const done  = !!p.finreelle;
+    const node  = {
+      id:       'sp_' + p.id,
+      label:    (p.code ? p.code + ' – ' : '') + (p.nom || '—'),
+      type:     'projet',
+      color:    done ? '#888888' : hex,
+      done,
+      children: [],
+    };
+    // Sous-projets enfants
+    (byId[p.id]?._mmChildren || [])
+      .sort((a, b) => {
+        const pa = allProjets.find(x => x.id === a);
+        const pb = allProjets.find(x => x.id === b);
+        return (pa?.ordre ?? 9999) - (pb?.ordre ?? 9999);
+      })
+      .forEach(childId => {
+        const child = buildNode(childId);
+        if (child) node.children.push(child);
+      });
+    // Tâches rattachées
+    allActions
+      .filter(a => a.projet === p.id)
+      .sort((a, b) => (a.echeance || 999999) - (b.echeance || 999999))
+      .forEach(a => {
+        const isDone  = a.etat === 'Réalisé';
+        const isLate  = a.echeance > 0 && !isDone && (a.echeance * 86400000) < now;
+        const actor   = a.qui ? allActors.find(x => x.id === a.qui) : null;
+        node.children.push({
+          id:       'ac_' + a.id,
+          label:    a.action || '—',
+          sublabel: actor ? actor.nom : '',
+          type:     'tache',
+          done:     isDone,
+          late:     isLate,
+          etat:     a.etat,
+          color:    isDone ? '#10b981' : isLate ? '#dc2626' : '#6366f1',
+          children: [],
+        });
+      });
+    return node;
+  };
+
+  // Fils directs du maître
+  allProjets
+    .filter(p => p.ref === masterProjet.id)
+    .sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999))
+    .forEach(p => {
+      const node = buildNode(p.id);
+      if (node) root.children.push(node);
+    });
+
+  if (!root.children.length) {
+    svg.append('text').attr('x', W/2).attr('y', H/2)
+      .attr('text-anchor','middle').attr('font-size',13).attr('fill','#999')
+      .text('Aucun sous-projet ni tâche à afficher');
+    return;
+  }
+
+  // Layout radial D3
+  const hierarchy = d3.hierarchy(root);
+  const nodeCount = hierarchy.descendants().length;
+  const radius    = Math.max(220, nodeCount * 14);
+
+  d3.tree().size([2 * Math.PI, radius])
+    .separation((a, b) => (a.parent === b.parent ? 1 : 1.5) / a.depth)(hierarchy);
+
+  const radialPoint = (angle, r) => [r * Math.cos(angle - Math.PI/2), r * Math.sin(angle - Math.PI/2)];
+
+  // Liens
+  g.selectAll('.mm-link')
+    .data(hierarchy.links())
+    .join('path')
+    .attr('class', 'mm-link')
+    .attr('fill', 'none')
+    .attr('stroke', d => d.target.data.type === 'tache' ? d.target.data.color : '#ccc')
+    .attr('stroke-width', d => d.source.depth === 0 ? 2 : 1.2)
+    .attr('stroke-opacity', d => d.target.data.type === 'tache' ? 0.35 : 0.6)
+    .attr('stroke-dasharray', d => d.target.data.type === 'tache' ? '4 3' : 'none')
+    .attr('d', d3.linkRadial().angle(d => d.x).radius(d => d.y));
+
+  // Nœuds
+  const nodes = g.selectAll('.mm-node')
+    .data(hierarchy.descendants())
+    .join('g')
+    .attr('class', 'mm-node')
+    .attr('transform', d => {
+      if (d.depth === 0) return `translate(0,0)`;
+      const [x, y] = radialPoint(d.x, d.y);
+      return `translate(${x},${y})`;
+    })
+    .attr('cursor', 'default');
+
+  // Fond et forme selon type
+  nodes.each(function(d) {
+    const el = d3.select(this);
+    if (d.data.type === 'root') {
+      el.append('rect')
+        .attr('x', -52).attr('y', -14).attr('width', 104).attr('height', 28)
+        .attr('rx', 6).attr('fill', d.data.color).attr('opacity', 0.95);
+    } else if (d.data.type === 'projet') {
+      const w = Math.min(120, d.data.label.length * 6.5 + 16);
+      el.append('rect')
+        .attr('x', -w/2).attr('y', -12).attr('width', w).attr('height', 24)
+        .attr('rx', 4)
+        .attr('fill', d.data.done ? '#f3f4f6' : 'white')
+        .attr('stroke', d.data.color)
+        .attr('stroke-width', d.depth === 1 ? 2 : 1.5);
+    } else {
+      // Tâche : cercle
+      el.append('circle')
+        .attr('r', 6)
+        .attr('fill', d.data.done ? '#ecfdf5' : d.data.late ? '#fef2f2' : '#eef2ff')
+        .attr('stroke', d.data.color)
+        .attr('stroke-width', 1.5);
+      if (d.data.done) {
+        el.append('text').attr('text-anchor','middle').attr('dominant-baseline','central')
+          .attr('font-size', 7).attr('fill', '#10b981').attr('pointer-events','none')
+          .text('✓');
+      }
+    }
+  });
+
+  // Labels
+  nodes.each(function(d) {
+    const el       = d3.select(this);
+    const isRight  = d.depth === 0 || d.x < Math.PI;
+    const labelX   = d.data.type === 'tache' ? (isRight ? 10 : -10) : 0;
+    const anchor   = d.data.type === 'tache' ? (isRight ? 'start' : 'end') : 'middle';
+    const maxChars = 22;
+
+    if (d.data.type === 'root') {
+      el.append('text')
+        .attr('text-anchor','middle').attr('dominant-baseline','central')
+        .attr('font-size', 11).attr('font-weight', '600').attr('fill', 'white')
+        .attr('pointer-events','none')
+        .text(d.data.label.length > maxChars ? d.data.label.slice(0, maxChars-1)+'…' : d.data.label);
+    } else if (d.data.type === 'projet') {
+      const lbl = d.data.label.length > maxChars ? d.data.label.slice(0, maxChars-1)+'…' : d.data.label;
+      el.append('text')
+        .attr('text-anchor','middle').attr('dominant-baseline','central')
+        .attr('font-size', d.depth === 1 ? 9.5 : 9)
+        .attr('font-weight', d.depth === 1 ? '600' : '400')
+        .attr('fill', d.data.done ? '#888' : '#111')
+        .attr('pointer-events','none')
+        .text(lbl);
+    } else {
+      const lbl = d.data.label.length > maxChars ? d.data.label.slice(0, maxChars-1)+'…' : d.data.label;
+      el.append('text')
+        .attr('x', labelX).attr('dominant-baseline','central')
+        .attr('text-anchor', anchor)
+        .attr('font-size', 8.5)
+        .attr('fill', d.data.done ? '#888' : d.data.late ? '#dc2626' : '#374151')
+        .attr('pointer-events','none')
+        .text(lbl);
+      if (d.data.sublabel) {
+        el.append('text')
+          .attr('x', labelX).attr('y', 10)
+          .attr('text-anchor', anchor)
+          .attr('font-size', 7.5)
+          .attr('fill', '#aaa')
+          .attr('pointer-events','none')
+          .text(d.data.sublabel);
+      }
+    }
+  });
+
+  // Centrer le graphe au départ
+  svg.call(zoom.transform, d3.zoomIdentity.translate(W/2, H/2));
+}
   
   function renderGraph() {
   const svgEl   = document.getElementById('graphSvg');
@@ -3171,30 +3410,34 @@ function switchAcMode(mode) {
   document.getElementById('acModeActions').classList.toggle('active', mode === 'actions');
   document.getElementById('acModeProjets').classList.toggle('active', mode === 'projets');
   document.getElementById('acModeKanban').classList.toggle('active', mode === 'kanban');
+  document.getElementById('acModeMindmap').classList.toggle('active', mode === 'mindmap');
 
-  const isKanban = mode === 'kanban';
-  const fpEl      = document.getElementById('actionFilterProjet');
-  const fEtat     = document.getElementById('actionFilterEtat');
-  const expEl     = document.getElementById('acExpandBtns');
-  const srEl      = document.querySelector('#panel-actions .search-wrap');
-  const addBtn    = document.getElementById('acAddBtn');
-  const tblView   = document.getElementById('actionTable');
-  const kbView    = document.getElementById('kanbanView');
-  const kbCtrl    = document.getElementById('kanbanControls');
+  const isKanban  = mode === 'kanban';
+  const isMindmap = mode === 'mindmap';
+  const fpEl   = document.getElementById('actionFilterProjet');
+  const fEtat  = document.getElementById('actionFilterEtat');
+  const expEl  = document.getElementById('acExpandBtns');
+  const srEl   = document.querySelector('#panel-actions .search-wrap');
+  const addBtn = document.getElementById('acAddBtn');
+  const tblView = document.getElementById('actionTable');
+  const kbView  = document.getElementById('kanbanView');
+  const kbCtrl  = document.getElementById('kanbanControls');
+  const mmView  = document.getElementById('mindmapView');
 
   if (fpEl)    fpEl.style.display    = mode === 'actions' ? '' : 'none';
-  if (fEtat)   fEtat.style.display   = !isKanban ? '' : 'none';
-  if (srEl)    srEl.style.display    = !isKanban ? '' : 'none';
+  if (fEtat)   fEtat.style.display   = (!isKanban && !isMindmap) ? '' : 'none';
+  if (srEl)    srEl.style.display    = (!isKanban && !isMindmap) ? '' : 'none';
   if (expEl)   expEl.style.display   = mode === 'projets' ? 'flex' : 'none';
-  if (addBtn)  addBtn.style.display  = !isKanban ? '' : 'none';
-  if (tblView) tblView.style.display = !isKanban ? '' : 'none';
+  if (addBtn)  addBtn.style.display  = (!isKanban && !isMindmap) ? '' : 'none';
+  if (tblView) tblView.style.display = (!isKanban && !isMindmap) ? '' : 'none';
   if (kbView)  kbView.style.display  = isKanban  ? 'flex' : 'none';
   if (kbCtrl)  kbCtrl.style.display  = isKanban  ? 'flex' : 'none';
+  if (mmView)  mmView.style.display  = isMindmap ? 'flex' : 'none';
 
-  if (isKanban) { populateKanbanFilters(); renderKanban(); }
+  if (isKanban)  { populateKanbanFilters(); renderKanban(); }
+  else if (isMindmap) renderMindmap();
   else renderActions();
 }
-
 // ══ KANBAN ══
 
 // ── Peupler les selects filtres Kanban ──
