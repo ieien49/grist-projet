@@ -1700,6 +1700,13 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 <script id="__app_code__" type="text/plain">
+
+function editMasterProjet() {
+  if (!masterProjet) return;
+  openProjetModal(masterProjet, 'definition');
+}
+
+  
 // ══ GLOBAL STATE ══
   let ganttShowActions = false;
 let allActors   = [];
