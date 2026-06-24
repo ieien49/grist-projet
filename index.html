@@ -7958,92 +7958,104 @@ function copyOdjForOutlook() {
 
   const validRows = odjRows.filter(r => r.probleme.trim());
 
-  // Membres par rôle
-  const membersHtml = members.length ? `
-    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px">
-      <tr>
-        <td style="font-family:Arial,sans-serif;font-size:11px;font-weight:bold;color:#999999;text-transform:uppercase;letter-spacing:1px;padding-bottom:8px">
-          Participants
-        </td>
-      </tr>
-      <tr>
-        <td>
-          ${members.map(a => {
-            const prc = roleColors[a.role] || { avatar: '#6B7280' };
-            const ini = (a.nom||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-            const roleShort = {
-              'Commanditaire':'Commanditaire',
-              'Directeur de projet':'Dir. projet',
-              'Chef de projet':'Chef de projet',
-              "Pilote d'actions":"Pilote d'actions",
-              'Contributeur interne':'Contributeur',
-              'Contributeur externe':'Contributeur ext.'
-            }[a.role] || (a.role || '');
-            return `<span style="display:inline-block;margin:2px 4px 2px 0;padding:4px 10px 4px 5px;border:1px solid #e0e0e0;border-radius:20px;font-family:Arial,sans-serif;font-size:12px;color:#333333;vertical-align:middle">
-              <span style="display:inline-block;width:20px;height:20px;border-radius:3px;background:${prc.avatar};text-align:center;line-height:20px;font-size:8px;font-weight:bold;color:white;vertical-align:middle;margin-right:5px">${ini}</span>${esc(a.nom)}${roleShort ? `<span style="color:#999999;font-size:10px;margin-left:4px">${esc(roleShort)}</span>` : ''}
-            </span>`;
-          }).join('')}
-        </td>
-      </tr>
-    </table>` : '';
+  // Participants : liste simple en texte
+  const membersRows = members.map(a => {
+    const roleShort = {
+      'Commanditaire':'Commanditaire',
+      'Directeur de projet':'Directeur de projet',
+      'Chef de projet':'Chef de projet',
+      "Pilote d'actions":"Pilote d'actions",
+      'Contributeur interne':'Contributeur',
+      'Contributeur externe':'Contributeur externe'
+    }[a.role] || (a.role || '');
+    return `<tr>
+      <td width="16" style="padding:1px 0;font-family:Arial,sans-serif;font-size:13px;color:#111111">&#8226;</td>
+      <td style="padding:1px 0;font-family:Arial,sans-serif;font-size:13px;color:#111111">${esc(a.nom)}</td>
+      <td style="padding:1px 0 1px 16px;font-family:Arial,sans-serif;font-size:12px;color:#888888">${esc(roleShort)}</td>
+    </tr>`;
+  }).join('');
 
   // Points OdJ
-  const itemsHtml = validRows.length === 0
-    ? `<p style="font-family:Arial,sans-serif;font-size:13px;color:#999999;font-style:italic">Aucun point à l'ordre du jour.</p>`
-    : validRows.map((r, i) => {
-        const proj = r.projet ? allProjets.find(p => p.id === parseInt(r.projet)) : null;
-        return `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:16px">
-          <tr>
-            <td width="32" valign="top" style="padding-top:2px">
-              <div style="width:24px;height:24px;border-radius:50%;background:#111111;text-align:center;line-height:24px;font-family:Arial,sans-serif;font-size:11px;font-weight:bold;color:white">${i+1}</div>
-            </td>
-            <td valign="top" style="padding-left:8px">
-              ${proj ? `<div style="display:inline-block;margin-bottom:5px;padding:1px 7px;background:#111111;border-radius:3px;font-family:Arial,sans-serif;font-size:10px;font-weight:bold;color:white;letter-spacing:1px;text-transform:uppercase">${esc(proj.code || proj.nom)}</div><br>` : ''}
-              <span style="font-family:Arial,sans-serif;font-size:13px;font-weight:600;color:#111111;line-height:1.5">${esc(r.probleme)}</span>
-            </td>
-          </tr>
-        </table>`;
-      }).join('');
+  const itemsRows = validRows.map((r, i) => {
+    const proj = r.projet ? allProjets.find(p => p.id === parseInt(r.projet)) : null;
+    const projLabel = proj ? (proj.code || proj.nom) : null;
+    return `<tr>
+      <td width="32" valign="top" style="padding:6px 8px 6px 0;font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:#111111">${i + 1}.</td>
+      <td style="padding:6px 0;border-bottom:1px solid #eeeeee">
+        ${projLabel ? `<span style="font-family:Arial,sans-serif;font-size:10px;font-weight:bold;color:#ffffff;background-color:#333333;padding:1px 6px;margin-right:8px;text-transform:uppercase;letter-spacing:1px">${esc(projLabel)}</span>` : ''}
+        <span style="font-family:Arial,sans-serif;font-size:13px;color:#111111;font-weight:600">${esc(r.probleme)}</span>
+      </td>
+    </tr>`;
+  }).join('');
 
   const projectLine = masterProjet
-    ? `<p style="font-family:Arial,sans-serif;font-size:11px;color:#bbbbbb;margin:0 0 4px 0">${esc(masterProjet.nom)}</p>`
+    ? `<tr><td colspan="2" style="padding:0 0 4px 0;font-family:Arial,sans-serif;font-size:11px;color:#aaaaaa">${esc(masterProjet.nom)}</td></tr>`
     : '';
 
-  const html = `
-    <div style="max-width:600px;font-family:Arial,sans-serif">
-      ${projectLine}
-      <p style="font-family:Arial,sans-serif;font-size:10px;font-weight:bold;color:#999999;text-transform:uppercase;letter-spacing:1px;margin:0 0 6px 0">Ordre du jour</p>
-      <p style="font-family:Arial,sans-serif;font-size:22px;font-weight:bold;color:#111111;margin:0 0 4px 0;line-height:1.2">${esc(instLabel)}</p>
-      <p style="font-family:Arial,sans-serif;font-size:14px;color:#555555;margin:0 0 24px 0">${esc(dateStr)}</p>
-      ${membersHtml}
-      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px">
-        <tr><td style="height:1px;background:#111111;font-size:0;line-height:0">&nbsp;</td></tr>
+  const html = `<table width="600" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;font-family:Arial,sans-serif">
+
+    <!-- En-tête -->
+    <tr><td colspan="2" style="padding:0 0 24px 0">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        ${projectLine}
+        <tr><td style="font-family:Arial,sans-serif;font-size:10px;font-weight:bold;color:#999999;text-transform:uppercase;letter-spacing:2px;padding-bottom:6px">Ordre du jour</td></tr>
+        <tr><td style="font-family:Arial,sans-serif;font-size:24px;font-weight:bold;color:#111111;padding-bottom:4px;line-height:1.2">${esc(instLabel)}</td></tr>
+        <tr><td style="font-family:Arial,sans-serif;font-size:14px;color:#555555;padding-bottom:0">${esc(dateStr)}</td></tr>
       </table>
-      ${itemsHtml}
-      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:32px">
-        <tr><td style="height:1px;background:#e8e8e8;font-size:0;line-height:0">&nbsp;</td></tr>
-        <tr><td style="font-family:Arial,sans-serif;font-size:10px;color:#bbbbbb;text-align:right;padding-top:8px">
+    </td></tr>
+
+    <!-- Séparateur -->
+    <tr><td colspan="2" style="padding:0 0 20px 0">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr><td height="2" style="background-color:#111111;font-size:0;line-height:0">&nbsp;</td></tr>
+      </table>
+    </td></tr>
+
+    <!-- Participants -->
+    ${members.length ? `<tr><td colspan="2" style="padding:0 0 20px 0">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr><td style="font-family:Arial,sans-serif;font-size:10px;font-weight:bold;color:#999999;text-transform:uppercase;letter-spacing:2px;padding-bottom:10px">Participants</td></tr>
+        ${membersRows}
+      </table>
+    </td></tr>
+
+    <!-- Séparateur léger -->
+    <tr><td colspan="2" style="padding:0 0 20px 0">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr><td height="1" style="background-color:#dddddd;font-size:0;line-height:0">&nbsp;</td></tr>
+      </table>
+    </td></tr>` : ''}
+
+    <!-- Points OdJ -->
+    <tr><td colspan="2" style="padding:0 0 8px 0">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr><td style="font-family:Arial,sans-serif;font-size:10px;font-weight:bold;color:#999999;text-transform:uppercase;letter-spacing:2px;padding-bottom:10px">Points à l'ordre du jour</td></tr>
+        ${itemsRows || `<tr><td style="font-family:Arial,sans-serif;font-size:13px;color:#aaaaaa;font-style:italic">Aucun point défini.</td></tr>`}
+      </table>
+    </td></tr>
+
+    <!-- Pied de page -->
+    <tr><td colspan="2" style="padding:24px 0 0 0">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr><td height="1" style="background-color:#eeeeee;font-size:0;line-height:0">&nbsp;</td></tr>
+        <tr><td style="font-family:Arial,sans-serif;font-size:10px;color:#bbbbbb;padding-top:8px;text-align:right">
           Édité le ${new Date().toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' })}
         </td></tr>
       </table>
-    </div>`;
+    </td></tr>
 
-  // Copier dans le presse-papier en tant que HTML riche
+  </table>`;
+
   try {
     const blob = new Blob([html], { type: 'text/html' });
     const item = new ClipboardItem({ 'text/html': blob });
     navigator.clipboard.write([item]).then(() => {
       showToast('Copié — collez dans Outlook (Ctrl+V)');
-    }).catch(() => {
-      // Fallback : ouvrir dans une nouvelle fenêtre pour copie manuelle
-      odjOutlookFallback(html);
-    });
+    }).catch(() => odjOutlookFallback(html));
   } catch(e) {
     odjOutlookFallback(html);
   }
-}
-
-function odjOutlookFallback(html) {
+}function odjOutlookFallback(html) {
   const win = window.open('', '_blank', 'width=700,height=600');
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
     <title>Copier pour Outlook</title>
