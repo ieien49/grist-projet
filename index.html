@@ -1247,7 +1247,7 @@ tr:hover .cr-del-btn { opacity: 1; }
           <select class="filter-select" id="pdfFilterInstance" onchange="onPdfInstanceChange()" style="min-width:180px">
             <option value="">Toutes les instances</option>
           </select>
-          <select class="filter-select" id="pdfFilterSeance" onchange="renderPdfView()" style="min-width:180px">
+          <select class="filter-select" id="pdfFilterSeance" onchange="()" style="min-width:180px">
             <option value="">Toutes les séances</option>
           </select>
           <select class="filter-select" id="pdfFilterEtat" onchange="renderPdfView()">
@@ -1259,6 +1259,10 @@ tr:hover .cr-del-btn { opacity: 1; }
             <option value="Pour information">Pour information</option>
           </select>
           <span style="flex:1"></span>
+          <button class="btn-ghost" onclick="copyCrForOutlook()">
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+  Copier pour Outlook
+</button>
           <button class="btn-add" onclick="printDecisions()">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
             Imprimer
@@ -8068,6 +8072,173 @@ function copyOdjForOutlook() {
     </div>
   </body></html>`);
   win.document.close();
+}
+
+  function copyCrForOutlook() {
+  const fInstance = document.getElementById('pdfFilterInstance')?.value || '';
+  const fSeance   = document.getElementById('pdfFilterSeance')?.value || '';
+  const fEtat     = document.getElementById('pdfFilterEtat')?.value || '';
+
+  let data = [...allDecisions].filter(d => d.etat !== 'Ordre du jour');
+  if (fInstance) data = data.filter(d => String(d.instance) === fInstance);
+  if (fSeance)   data = data.filter(d => String(d.date || 0) === String(fSeance));
+  if (fEtat)     data = data.filter(d => d.etat === fEtat);
+
+  if (!data.length) { showToast('Aucune décision à exporter', 'error'); return; }
+
+  // Grouper par instance → date
+  const groups = {};
+  data.forEach(d => {
+    const inst   = instances[d.instance];
+    const iKey   = inst ? String(inst.id) : '0';
+    const iLabel = inst ? (inst.sigle ? inst.sigle + ' – ' + inst.nom : inst.nom) : 'Sans instance';
+    const iOrdre = inst?.ordre ?? 9999;
+    if (!groups[iKey]) groups[iKey] = { inst, label: iLabel, ordre: iOrdre, dates: {} };
+    const dKey = String(d.date || 0);
+    if (!groups[iKey].dates[dKey]) groups[iKey].dates[dKey] = { dateVal: d.date, rows: [] };
+    groups[iKey].dates[dKey].rows.push(d);
+  });
+
+  const etatLabel = { 'A faire':'À faire', 'En cours':'En cours', 'En attente':'En attente', 'Réalisé':'Réalisé', 'Pour information':'Pour information' };
+  const etatBg    = { 'A faire':'#ede9fe', 'En cours':'#dbeafe', 'En attente':'#fef3c7', 'Réalisé':'#d1fae5', 'Pour information':'#f3f4f6' };
+  const etatColor = { 'A faire':'#5b21b6', 'En cours':'#1e40af', 'En attente':'#92400e', 'Réalisé':'#065f46', 'Pour information':'#374151' };
+
+  const today = new Date().toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' });
+
+  let pagesHtml = '';
+
+  Object.entries(groups)
+    .sort(([,a],[,b]) => a.ordre - b.ordre)
+    .forEach(([, g]) => {
+      Object.entries(g.dates)
+        .sort(([a],[b]) => Number(b) - Number(a))
+        .forEach(([, dg]) => {
+          const dateStr = dg.dateVal
+            ? new Date(dg.dateVal * 86400000).toLocaleDateString('fr-FR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' })
+            : '—';
+
+          // Participants
+          const withPart = dg.rows.find(d => d.participants);
+          let presents = [], excuses = [];
+          if (withPart) {
+            try { const p = JSON.parse(withPart.participants); presents = p.presents||[]; excuses = p.excuses||[]; } catch(e) {}
+          }
+          const instMembers = g.inst ? allActors.filter(a => {
+            const ids = getRefList(a.instance).map(v => resolveInstId(v));
+            return ids.includes(g.inst.id);
+          }).sort((a, b) => {
+            const order = ['Commanditaire','Directeur de projet','Chef de projet',"Pilote d'actions",'Contributeur interne','Contributeur externe'];
+            return (order.indexOf(a.role)+1||99) - (order.indexOf(b.role)+1||99);
+          }) : [];
+
+          const hasPresence = presents.length > 0 || excuses.length > 0;
+
+          const participantsRows = instMembers.map(a => {
+            const status = hasPresence
+              ? (presents.includes(a.id) ? 'Présent' : excuses.includes(a.id) ? 'Excusé' : 'Absent')
+              : '';
+            const statusColor = status === 'Présent' ? '#065f46' : status === 'Excusé' ? '#92400e' : '#aaaaaa';
+            const roleShort = {
+              'Commanditaire':'Commanditaire',
+              'Directeur de projet':'Dir. projet',
+              'Chef de projet':'Chef de projet',
+              "Pilote d'actions":"Pilote d'actions",
+              'Contributeur interne':'Contributeur',
+              'Contributeur externe':'Contributeur ext.'
+            }[a.role] || (a.role || '');
+            return `<tr>
+              <td width="16" style="padding:2px 0;font-family:Arial,sans-serif;font-size:12px;color:#aaaaaa">&#8226;</td>
+              <td style="padding:2px 0;font-family:Arial,sans-serif;font-size:12px;color:#111111">${esc(a.nom)}</td>
+              <td style="padding:2px 0 2px 12px;font-family:Arial,sans-serif;font-size:11px;color:#888888">${esc(roleShort)}</td>
+              ${hasPresence ? `<td style="padding:2px 0 2px 12px;font-family:Arial,sans-serif;font-size:11px;font-weight:bold;color:${statusColor}">${status}</td>` : '<td></td>'}
+            </tr>`;
+          }).join('');
+
+          // Décisions
+          const decisionsRows = dg.rows.map((d, i) => {
+            const proj = allProjets.find(p => p.id === d.projet);
+            const projLabel = proj ? (proj.code || proj.nom) : null;
+            const etat = d.etat || '';
+            const bg  = etatBg[etat]    || '#f3f4f6';
+            const col = etatColor[etat] || '#374151';
+            const lbl = etatLabel[etat] || etat;
+
+            const metaParts = [];
+            if (d.qui)      metaParts.push(`<span style="font-family:Arial,sans-serif;font-size:11px;color:#555555">&#128100; ${esc(d.qui)}</span>`);
+            if (d.echeance) metaParts.push(`<span style="font-family:Arial,sans-serif;font-size:11px;color:#555555">&#128197; ${fmtDateShort(d.echeance)}</span>`);
+
+            return `<tr>
+              <td valign="top" width="28" style="padding:10px 8px 10px 0;font-family:Arial,sans-serif;font-size:12px;font-weight:bold;color:#aaaaaa;border-bottom:1px solid #eeeeee">${i+1}.</td>
+              <td style="padding:10px 0;border-bottom:1px solid #eeeeee">
+                ${projLabel ? `<span style="font-family:Arial,sans-serif;font-size:11px;font-weight:bold;color:#ffffff;background-color:#333333;padding:1px 6px;text-transform:uppercase;letter-spacing:1px">${esc(projLabel)}</span>&nbsp;&nbsp;` : ''}
+                ${d.probleme ? `<span style="font-family:Arial,sans-serif;font-size:11px;color:#888888;font-style:italic">${esc(d.probleme)}</span>` : ''}
+                ${d.decision ? `<br><span style="font-family:Arial,sans-serif;font-size:13px;font-weight:bold;color:#111111;line-height:1.5">${esc(d.decision)}</span>` : ''}
+                ${metaParts.length || etat ? `<br><span style="display:inline-block;margin-top:5px">${metaParts.join('&nbsp;&nbsp;&nbsp;')}&nbsp;&nbsp;&nbsp;<span style="font-family:Arial,sans-serif;font-size:10px;font-weight:bold;color:${col};background-color:${bg};padding:1px 7px">${esc(lbl)}</span></span>` : ''}
+                ${d.commentaire ? `<br><span style="font-family:Arial,sans-serif;font-size:11px;color:#888888;font-style:italic">${esc(d.commentaire)}</span>` : ''}
+              </td>
+            </tr>`;
+          }).join('');
+
+          pagesHtml += `<table width="600" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin-bottom:40px">
+
+            <!-- En-tête -->
+            <tr><td colspan="2" style="padding:0 0 20px 0">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                ${masterProjet ? `<tr><td style="font-family:Arial,sans-serif;font-size:11px;color:#aaaaaa;padding-bottom:4px">${esc(masterProjet.nom)}</td></tr>` : ''}
+                <tr><td style="font-family:Arial,sans-serif;font-size:10px;font-weight:bold;color:#999999;text-transform:uppercase;letter-spacing:2px;padding-bottom:6px">Compte rendu</td></tr>
+                <tr><td style="font-family:Arial,sans-serif;font-size:24px;font-weight:bold;color:#111111;padding-bottom:4px;line-height:1.2">${esc(g.label)}</td></tr>
+                <tr><td style="font-family:Arial,sans-serif;font-size:14px;color:#555555">${esc(dateStr)}</td></tr>
+              </table>
+            </td></tr>
+
+            <!-- Séparateur épais -->
+            <tr><td colspan="2" style="padding:0 0 20px 0">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr><td height="2" style="background-color:#111111;font-size:0;line-height:0">&nbsp;</td></tr>
+              </table>
+            </td></tr>
+
+            <!-- Participants -->
+            ${instMembers.length ? `<tr><td colspan="2" style="padding:0 0 20px 0">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr><td style="font-family:Arial,sans-serif;font-size:10px;font-weight:bold;color:#999999;text-transform:uppercase;letter-spacing:2px;padding-bottom:10px">Participants</td></tr>
+                ${participantsRows}
+              </table>
+            </td></tr>
+            <tr><td colspan="2" style="padding:0 0 20px 0">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr><td height="1" style="background-color:#dddddd;font-size:0;line-height:0">&nbsp;</td></tr>
+              </table>
+            </td></tr>` : ''}
+
+            <!-- Décisions -->
+            <tr><td colspan="2">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                ${decisionsRows}
+              </table>
+            </td></tr>
+
+            <!-- Pied de page -->
+            <tr><td colspan="2" style="padding:24px 0 0 0">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr><td height="1" style="background-color:#eeeeee;font-size:0;line-height:0">&nbsp;</td></tr>
+                <tr><td style="font-family:Arial,sans-serif;font-size:10px;color:#bbbbbb;text-align:right;padding-top:8px">Édité le ${today}</td></tr>
+              </table>
+            </td></tr>
+
+          </table>`;
+        });
+    });
+
+  try {
+    const blob = new Blob([pagesHtml], { type: 'text/html' });
+    const item = new ClipboardItem({ 'text/html': blob });
+    navigator.clipboard.write([item]).then(() => {
+      showToast('Copié — collez dans Outlook (Ctrl+V)');
+    }).catch(() => odjOutlookFallback(pagesHtml));
+  } catch(e) {
+    odjOutlookFallback(pagesHtml);
+  }
 }
 </script>
 </body>
