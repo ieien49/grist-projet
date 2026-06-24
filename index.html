@@ -3621,9 +3621,10 @@ async function deleteAction(id) {
 function switchAcMode(mode) {
   acMode = mode;
   document.getElementById('acModeActions').classList.toggle('active', mode === 'actions');
-  document.getElementById('acModeProjets').classList.toggle('active', mode === 'projets');
-  document.getElementById('acModeKanban').classList.toggle('active', mode === 'kanban');
-  document.getElementById('acModeMindmap').classList.toggle('active', mode === 'mindmap');
+document.getElementById('acModeProjets').classList.toggle('active', mode === 'projets');
+document.getElementById('acModeKanban').classList.toggle('active', mode === 'kanban');
+const mmBtn = document.getElementById('acModeMindmap');
+if (mmBtn) mmBtn.classList.toggle('active', mode === 'mindmap');
 
   const isKanban  = mode === 'kanban';
   const isMindmap = mode === 'mindmap';
