@@ -1228,10 +1228,14 @@ tr:hover .cr-del-btn { opacity: 1; }
             </div>
           </div>
           <div class="cr-save-bar">
-            <span id="crStatus" style="font-size:12px;color:var(--text-muted)"></span>
-            <button class="btn-ghost" onclick="resetCr()">Réinitialiser</button>
-            <button class="btn-primary" onclick="saveCr()">Enregistrer le compte rendu</button>
-          </div>
+  <span id="crStatus" style="font-size:12px;color:var(--text-muted)"></span>
+  <button class="btn-ghost" onclick="resetCr()">Réinitialiser</button>
+  <button class="btn-ghost" onclick="copyCompteRenduForOutlook()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+    Copier pour Outlook
+  </button>
+  <button class="btn-primary" onclick="saveCr()">Enregistrer le compte rendu</button>
+</div>
           </div><!-- /cr-form-inner -->
         </div>
       </div>
@@ -8239,6 +8243,253 @@ function copyOdjForOutlook() {
   } catch(e) {
     odjOutlookFallback(pagesHtml);
   }
+
+  }
+
+  function copyCompteRenduForOutlook() {
+  const dateVal     = document.getElementById('cr_date').value;
+  const instanceVal = document.getElementById('cr_instance').value;
+  if (!dateVal || !instanceVal) {
+    showToast('Renseignez la date et l\'instance', 'error');
+    return;
+  }
+
+  const instId  = parseInt(instanceVal);
+  const inst    = instances[instId];
+  const instLabel = inst ? (inst.sigle ? inst.sigle + ' – ' + inst.nom : inst.nom) : '—';
+  const instColor = (couleurs[inst?.couleur]?.hex) || '#1A1A1A';
+  const dateStr = new Date(dateVal + 'T00:00:00Z').toLocaleDateString('fr-FR', {
+    weekday: 'long', day: '2-digit', month: 'long', year: 'numeric'
+  });
+  const today = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+
+  const validRows = crRows.filter(r => r.probleme.trim() || r.decision.trim());
+  if (!validRows.length) {
+    showToast('Aucune ligne à exporter', 'error');
+    return;
+  }
+
+  // ── Participants ──
+  const members = inst ? allActors.filter(a => {
+    const ids = getRefList(a.instance).map(v => resolveInstId(v));
+    return ids.includes(instId);
+  }).sort((a, b) => {
+    const order = ['Commanditaire','Directeur de projet','Chef de projet',"Pilote d'actions",'Contributeur interne','Contributeur externe'];
+    return (order.indexOf(a.role)+1||99) - (order.indexOf(b.role)+1||99);
+  }) : [];
+
+  // Statuts participants depuis crParticipants
+  const presents = members.filter(a => crParticipants[a.id] === 'present');
+  const excuses  = members.filter(a => crParticipants[a.id] === 'excuse');
+  const absents  = members.filter(a => !crParticipants[a.id] || crParticipants[a.id] === '');
+  const hasParticipantData = presents.length > 0 || excuses.length > 0;
+
+  const avatarCell = (a, bgColor) => {
+    const ini = (a.nom||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const prc = roleColors[a.role] || { avatar: '#6B7280' };
+    const col = bgColor || prc.avatar;
+    return `<td width="24" valign="middle" style="padding:2px 6px 2px 0">
+      <div style="width:22px;height:22px;border-radius:4px;background:${col};display:inline-block;
+                  text-align:center;line-height:22px;font-family:Arial,sans-serif;
+                  font-size:8px;font-weight:bold;color:#ffffff">${ini}</div>
+    </td>`;
+  };
+
+  const participantRow = (a, label, labelColor) => {
+    const prc = roleColors[a.role] || { avatar: '#6B7280' };
+    return `<tr>
+      ${avatarCell(a, prc.avatar)}
+      <td valign="middle" style="padding:2px 0;font-family:Arial,sans-serif;font-size:12px;color:#333333">
+        ${esc(a.nom)}
+        ${label ? `<span style="font-size:10px;color:${labelColor};margin-left:6px;font-weight:600">${label}</span>` : ''}
+        ${a.role ? `<span style="font-size:10px;color:#999999;margin-left:4px">— ${esc(a.role)}</span>` : ''}
+      </td>
+    </tr>`;
+  };
+
+  // Section participants (si des données existent)
+  let participantsBlock = '';
+  if (members.length > 0) {
+    const presentsRows = hasParticipantData
+      ? presents.map(a => participantRow(a, '✓ Présent', '#15803d')).join('')
+      : members.map(a => participantRow(a, '', '')).join('');
+    const excusesRows  = hasParticipantData && excuses.length
+      ? excuses.map(a => participantRow(a, '~ Excusé', '#c2410c')).join('') : '';
+    const absentsRows  = hasParticipantData && absents.length
+      ? absents.map(a => participantRow(a, '✗ Absent', '#9ca3af')).join('') : '';
+
+    participantsBlock = `
+    <!-- PARTICIPANTS -->
+    <tr><td style="padding:0 0 20px 0">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr><td style="font-family:Arial,sans-serif;font-size:9px;font-weight:bold;
+                       color:#999999;text-transform:uppercase;letter-spacing:2px;padding-bottom:10px">
+          Participants
+        </td></tr>
+        <tr><td>
+          <table cellpadding="0" cellspacing="0" border="0">
+            ${presentsRows}${excusesRows}${absentsRows}
+          </table>
+        </td></tr>
+      </table>
+    </td></tr>
+    <!-- SEPARATEUR LEGER -->
+    <tr><td style="padding:0 0 20px 0">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr><td height="1" bgcolor="#dddddd" style="font-size:0;line-height:0">&nbsp;</td></tr>
+      </table>
+    </td></tr>`;
+  }
+
+  // ── Items décisions ──
+  const etatColors = {
+    'A faire':          { bg:'#EDE9FE', text:'#5B21B6' },
+    'En cours':         { bg:'#DBEAFE', text:'#1E40AF' },
+    'En attente':       { bg:'#FEF3C7', text:'#92400E' },
+    'Réalisé':          { bg:'#D1FAE5', text:'#065F46' },
+    'Pour information': { bg:'#F3F4F6', text:'#374151' },
+  };
+
+  const itemsHtml = validRows.map((r, i) => {
+    const proj     = r.projet ? allProjets.find(p => p.id === parseInt(r.projet)) : null;
+    const projCode = proj ? (proj.code || proj.nom) : null;
+    const projName = proj ? proj.nom : null;
+    const etatConf = etatColors[r.etat] || etatColors['En cours'];
+    const echStr   = r.echeance ? fmtDateShort(fromDateInput ? r.echeance : r.echeance) : null;
+    // echeance est déjà une string YYYY-MM-DD dans crRows
+    const echNum   = r.echeance ? fromDateInput(r.echeance) : null;
+    const echFmt   = echNum ? fmtDateShort(echNum) : null;
+
+    const metaParts = [];
+    if (r.qui?.trim())  metaParts.push(`<span style="font-family:Arial,sans-serif;font-size:11px;color:#555555">&#128100; ${esc(r.qui.trim())}</span>`);
+    if (echFmt)         metaParts.push(`<span style="font-family:Arial,sans-serif;font-size:11px;color:#555555">&#128197; ${echFmt}</span>`);
+    if (r.etat)         metaParts.push(`<span style="font-family:Arial,sans-serif;font-size:10px;font-weight:bold;
+                                              padding:1px 8px;border-radius:3px;
+                                              background:${etatConf.bg};color:${etatConf.text}">${esc(r.etat)}</span>`);
+
+    return `<tr>
+      <!-- Numéro cercle -->
+      <td width="36" valign="top" style="padding:0 12px 20px 0">
+        <div style="width:28px;height:28px;border-radius:50%;background:#111111;
+                    display:inline-block;text-align:center;line-height:28px;
+                    font-family:Arial,sans-serif;font-size:12px;font-weight:bold;color:#ffffff">${i+1}</div>
+      </td>
+      <!-- Contenu -->
+      <td valign="top" style="padding:0 0 20px 0;border-bottom:1px solid #f0f0f0">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+          ${projCode ? `<tr><td style="padding:0 0 6px 0">
+            <span style="font-family:Arial,sans-serif;font-size:10px;font-weight:bold;
+                         letter-spacing:0.06em;text-transform:uppercase;color:#ffffff;
+                         background:#111111;padding:2px 8px;border-radius:3px">${esc(projCode)}</span>
+            ${projName && projName !== projCode ? `<span style="font-family:Arial,sans-serif;font-size:11px;color:#888888;margin-left:8px;font-style:italic">${esc(projName)}</span>` : ''}
+          </td></tr>` : ''}
+          ${r.probleme?.trim() ? `<tr><td style="padding:0 0 4px 0;font-family:Arial,sans-serif;font-size:12px;color:#888888;font-style:italic">
+            ${esc(r.probleme.trim())}
+          </td></tr>` : ''}
+          ${r.decision?.trim() ? `<tr><td style="padding:0 0 8px 0;font-family:Arial,sans-serif;font-size:14px;font-weight:600;color:#111111;line-height:1.4">
+            &#10003; ${esc(r.decision.trim())}
+          </td></tr>` : ''}
+          ${metaParts.length ? `<tr><td style="padding:0 0 6px 0">
+            <table cellpadding="0" cellspacing="0" border="0"><tr>
+              ${metaParts.map(m => `<td style="padding:0 12px 0 0">${m}</td>`).join('')}
+            </tr></table>
+          </td></tr>` : ''}
+          ${r.commentaire?.trim() ? `<tr><td style="padding:4px 0 0 12px;border-left:2px solid #e5e5e5;
+                                           font-family:Arial,sans-serif;font-size:11px;
+                                           color:#999999;font-style:italic;line-height:1.5">
+            ${esc(r.commentaire.trim())}
+          </td></tr>` : ''}
+        </table>
+      </td>
+    </tr>`;
+  }).join('');
+
+  const html = `
+<table width="600" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;font-family:Arial,sans-serif;max-width:600px">
+
+  <!-- BANDEAU EN-TETE -->
+  <tr><td bgcolor="#111111" style="padding:24px 28px 20px 28px;border-radius:6px 6px 0 0">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+      ${masterProjet ? `<tr><td style="font-family:Arial,sans-serif;font-size:10px;font-weight:bold;
+                               color:rgba(255,255,255,0.4);text-transform:uppercase;
+                               letter-spacing:2px;padding-bottom:6px">${esc(masterProjet.nom)}</td></tr>` : ''}
+      <tr><td style="font-family:Arial,sans-serif;font-size:9px;font-weight:bold;
+                     color:rgba(255,255,255,0.5);text-transform:uppercase;
+                     letter-spacing:2px;padding-bottom:8px">Compte rendu</td></tr>
+      <tr><td style="font-family:Arial,sans-serif;font-size:22px;font-weight:bold;
+                     color:#ffffff;line-height:1.2;padding-bottom:6px">${esc(instLabel)}</td></tr>
+      <tr><td style="font-family:Arial,sans-serif;font-size:13px;
+                     color:rgba(255,255,255,0.65)">${esc(dateStr)}</td></tr>
+    </table>
+  </td></tr>
+
+  <!-- BANDE COULEUR INSTANCE -->
+  <tr><td height="4" bgcolor="${instColor}" style="font-size:0;line-height:0">&nbsp;</td></tr>
+
+  <!-- CORPS -->
+  <tr><td style="padding:24px 28px 8px 28px;background:#ffffff">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+
+      ${participantsBlock}
+
+      <!-- DECISIONS -->
+      <tr><td style="font-family:Arial,sans-serif;font-size:9px;font-weight:bold;
+                     color:#999999;text-transform:uppercase;letter-spacing:2px;padding-bottom:16px">
+        Décisions &amp; actions
+      </td></tr>
+      <tr><td>
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+          ${itemsHtml}
+        </table>
+      </td></tr>
+
+    </table>
+  </td></tr>
+
+  <!-- PIED DE PAGE -->
+  <tr><td style="padding:12px 28px 20px 28px;background:#fafafa;border-radius:0 0 6px 6px;border-top:1px solid #eeeeee">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+      <tr>
+        <td style="font-family:Arial,sans-serif;font-size:10px;color:#bbbbbb">
+          ${validRows.length} décision${validRows.length > 1 ? 's' : ''}
+          · ${presents.length > 0 ? presents.length + ' présent' + (presents.length > 1 ? 's' : '') : members.length + ' participant' + (members.length > 1 ? 's' : '')}
+        </td>
+        <td align="right" style="font-family:Arial,sans-serif;font-size:10px;color:#bbbbbb">
+          Édité le ${today}
+        </td>
+      </tr>
+    </table>
+  </td></tr>
+
+</table>`;
+
+  try {
+    const blob = new Blob([html], { type: 'text/html' });
+    const item = new ClipboardItem({ 'text/html': blob });
+    navigator.clipboard.write([item]).then(() => {
+      showToast('Copié — collez dans Outlook (Ctrl+V)');
+    }).catch(() => crOutlookFallback(html));
+  } catch(e) {
+    crOutlookFallback(html);
+  }
+}
+
+function crOutlookFallback(html) {
+  const win = window.open('', '_blank', 'width=700,height=600');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Copier pour Outlook</title>
+    <style>
+      body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+      .instr { background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px;
+               padding: 12px 16px; margin-bottom: 20px; font-size: 13px; color: #92400e; }
+      .zone  { background: white; border: 1px solid #e5e5e5; border-radius: 4px;
+               padding: 20px; min-height: 300px; }
+    </style>
+  </head><body>
+    <div class="instr">⚠️ Sélectionnez tout (Ctrl+A dans la zone blanche), copiez (Ctrl+C), puis collez dans Outlook.</div>
+    <div class="zone" contenteditable="true">${html}</div>
+  </body></html>`);
+  win.document.close();
 }
 </script>
 </body>
