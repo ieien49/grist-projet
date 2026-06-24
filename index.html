@@ -2003,6 +2003,10 @@ function renderOdjApercu() {
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
         Imprimer
       </button>
+  <button class="btn-ghost" onclick="copyOdjForOutlook()">
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+  Copier pour Outlook
+</button>
       <button class="btn-ghost" onclick="toggleOdjApercu()">← Retour à la saisie</button>
     </div>
   </div>`;
@@ -7935,7 +7939,125 @@ async function updateEtat(id, newEtat, selectEl) {
     showToast(e.message, 'error');
   }
 }
+function copyOdjForOutlook() {
+  const instVal  = document.getElementById('odj_instance').value;
+  const dateVal  = document.getElementById('odj_date').value;
+  const inst     = instVal ? instances[parseInt(instVal)] : null;
+  const instLabel = inst ? (inst.sigle ? inst.sigle + ' – ' + inst.nom : inst.nom) : '—';
+  const dateStr  = dateVal
+    ? new Date(dateVal + 'T00:00:00Z').toLocaleDateString('fr-FR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' })
+    : '—';
 
+  const members = inst ? allActors.filter(a => {
+    const ids = getRefList(a.instance).map(v => resolveInstId(v));
+    return ids.includes(inst.id);
+  }).sort((a, b) => {
+    const order = ['Commanditaire','Directeur de projet','Chef de projet',"Pilote d'actions",'Contributeur interne','Contributeur externe'];
+    return (order.indexOf(a.role)+1||99) - (order.indexOf(b.role)+1||99);
+  }) : [];
+
+  const validRows = odjRows.filter(r => r.probleme.trim());
+
+  // Membres par rôle
+  const membersHtml = members.length ? `
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px">
+      <tr>
+        <td style="font-family:Arial,sans-serif;font-size:11px;font-weight:bold;color:#999999;text-transform:uppercase;letter-spacing:1px;padding-bottom:8px">
+          Participants
+        </td>
+      </tr>
+      <tr>
+        <td>
+          ${members.map(a => {
+            const prc = roleColors[a.role] || { avatar: '#6B7280' };
+            const ini = (a.nom||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+            const roleShort = {
+              'Commanditaire':'Commanditaire',
+              'Directeur de projet':'Dir. projet',
+              'Chef de projet':'Chef de projet',
+              "Pilote d'actions":"Pilote d'actions",
+              'Contributeur interne':'Contributeur',
+              'Contributeur externe':'Contributeur ext.'
+            }[a.role] || (a.role || '');
+            return `<span style="display:inline-block;margin:2px 4px 2px 0;padding:4px 10px 4px 5px;border:1px solid #e0e0e0;border-radius:20px;font-family:Arial,sans-serif;font-size:12px;color:#333333;vertical-align:middle">
+              <span style="display:inline-block;width:20px;height:20px;border-radius:3px;background:${prc.avatar};text-align:center;line-height:20px;font-size:8px;font-weight:bold;color:white;vertical-align:middle;margin-right:5px">${ini}</span>${esc(a.nom)}${roleShort ? `<span style="color:#999999;font-size:10px;margin-left:4px">${esc(roleShort)}</span>` : ''}
+            </span>`;
+          }).join('')}
+        </td>
+      </tr>
+    </table>` : '';
+
+  // Points OdJ
+  const itemsHtml = validRows.length === 0
+    ? `<p style="font-family:Arial,sans-serif;font-size:13px;color:#999999;font-style:italic">Aucun point à l'ordre du jour.</p>`
+    : validRows.map((r, i) => {
+        const proj = r.projet ? allProjets.find(p => p.id === parseInt(r.projet)) : null;
+        return `<table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:16px">
+          <tr>
+            <td width="32" valign="top" style="padding-top:2px">
+              <div style="width:24px;height:24px;border-radius:50%;background:#111111;text-align:center;line-height:24px;font-family:Arial,sans-serif;font-size:11px;font-weight:bold;color:white">${i+1}</div>
+            </td>
+            <td valign="top" style="padding-left:8px">
+              ${proj ? `<div style="display:inline-block;margin-bottom:5px;padding:1px 7px;background:#111111;border-radius:3px;font-family:Arial,sans-serif;font-size:10px;font-weight:bold;color:white;letter-spacing:1px;text-transform:uppercase">${esc(proj.code || proj.nom)}</div><br>` : ''}
+              <span style="font-family:Arial,sans-serif;font-size:13px;font-weight:600;color:#111111;line-height:1.5">${esc(r.probleme)}</span>
+            </td>
+          </tr>
+        </table>`;
+      }).join('');
+
+  const projectLine = masterProjet
+    ? `<p style="font-family:Arial,sans-serif;font-size:11px;color:#bbbbbb;margin:0 0 4px 0">${esc(masterProjet.nom)}</p>`
+    : '';
+
+  const html = `
+    <div style="max-width:600px;font-family:Arial,sans-serif">
+      ${projectLine}
+      <p style="font-family:Arial,sans-serif;font-size:10px;font-weight:bold;color:#999999;text-transform:uppercase;letter-spacing:1px;margin:0 0 6px 0">Ordre du jour</p>
+      <p style="font-family:Arial,sans-serif;font-size:22px;font-weight:bold;color:#111111;margin:0 0 4px 0;line-height:1.2">${esc(instLabel)}</p>
+      <p style="font-family:Arial,sans-serif;font-size:14px;color:#555555;margin:0 0 24px 0">${esc(dateStr)}</p>
+      ${membersHtml}
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px">
+        <tr><td style="height:1px;background:#111111;font-size:0;line-height:0">&nbsp;</td></tr>
+      </table>
+      ${itemsHtml}
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:32px">
+        <tr><td style="height:1px;background:#e8e8e8;font-size:0;line-height:0">&nbsp;</td></tr>
+        <tr><td style="font-family:Arial,sans-serif;font-size:10px;color:#bbbbbb;text-align:right;padding-top:8px">
+          Édité le ${new Date().toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' })}
+        </td></tr>
+      </table>
+    </div>`;
+
+  // Copier dans le presse-papier en tant que HTML riche
+  try {
+    const blob = new Blob([html], { type: 'text/html' });
+    const item = new ClipboardItem({ 'text/html': blob });
+    navigator.clipboard.write([item]).then(() => {
+      showToast('Copié — collez dans Outlook (Ctrl+V)');
+    }).catch(() => {
+      // Fallback : ouvrir dans une nouvelle fenêtre pour copie manuelle
+      odjOutlookFallback(html);
+    });
+  } catch(e) {
+    odjOutlookFallback(html);
+  }
+}
+
+function odjOutlookFallback(html) {
+  const win = window.open('', '_blank', 'width=700,height=600');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Copier pour Outlook</title>
+    <style>body{font-family:Arial,sans-serif;padding:20px} .instructions{background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#92400e}</style>
+  </head><body>
+    <div class="instructions">
+      ⚠️ Sélectionnez tout le contenu ci-dessous (Ctrl+A dans la zone), copiez (Ctrl+C), puis collez dans Outlook.
+    </div>
+    <div contenteditable="true" style="border:1px solid #e5e5e5;border-radius:4px;padding:16px;min-height:200px">
+      ${html}
+    </div>
+  </body></html>`);
+  win.document.close();
+}
 </script>
 </body>
 </html>
