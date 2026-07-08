@@ -976,6 +976,9 @@ tr:hover .cr-del-btn { opacity: 1; }
             <select class="filter-select" id="gpFilterTheme" onchange="renderGanttProjet()">
               <option value="">Tous les thèmes</option>
             </select>
+            <select class="filter-select" id="gpFilterInstance" onchange="renderGanttProjet()">
+  <option value="">Toutes les instances</option>
+</select>
             <select class="filter-select" id="gpFilterEtat" onchange="renderGanttProjet()">
               <option value="">Tous les états</option>
               <option value="encours">En cours</option>
@@ -4327,6 +4330,7 @@ function renderGanttProjet() {
   const maxDepth = parseInt(document.getElementById('gpFilterNiveau2')?.value || '2');
   const fProjetGantt = document.getElementById('gpFilterProjet')?.value || '';
   const fThemeGantt  = document.getElementById('gpFilterTheme')?.value  || '';
+  const fInstanceGantt = document.getElementById('gpFilterInstance')?.value || '';
 
   // Tous les sous-projets (hors maître)
   let subs = allProjets.filter(p => p.ref && p.ref !== 0);
@@ -4369,6 +4373,7 @@ function renderGanttProjet() {
   if (fEtat === 'realise')  rows = rows.filter(r =>  r.finreelle && r.finreelle !== 0);
   if (fPilote) rows = rows.filter(r => r.pilote === parseInt(fPilote));
   if (fThemeGantt) rows = rows.filter(r => parseThemes(r.theme).includes(fThemeGantt));
+  if (fInstanceGantt) rows = rows.filter(r => String(r.instance) === fInstanceGantt);
 
   if (!rows.length) {
     cont.innerHTML = `<div style="padding:48px;text-align:center;color:var(--text-muted);font-size:13px">Aucun sous-projet pour ces filtres.</div>`;
@@ -4624,6 +4629,18 @@ const BAR_H    = Math.round(14 * ganttScale);
     getAllThemes().forEach(t => tSel.appendChild(new Option(t, t)));
     tSel.value = cur;
   }
+  const iSel = document.getElementById('gpFilterInstance');
+if (iSel) {
+  const cur = iSel.value;
+  while (iSel.options.length > 1) iSel.remove(1);
+  const usedInstIds = new Set(allProjets.map(p => p.instance).filter(Boolean));
+  const seenInst = new Set();
+  Object.values(instances)
+    .filter(v => typeof v.id === 'number' && usedInstIds.has(v.id) && !seenInst.has(v.id) && seenInst.add(v.id))
+    .sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999))
+    .forEach(inst => iSel.appendChild(new Option(inst.sigle ? inst.sigle + ' – ' + inst.nom : inst.nom, inst.id)));
+  if (cur) iSel.value = cur;
+}
 }
 
 function exportGanttPng() {
