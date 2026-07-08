@@ -973,6 +973,9 @@ tr:hover .cr-del-btn { opacity: 1; }
             <select class="filter-select" id="gpFilterProjet" onchange="renderGanttProjet()">
   <option value="">Tous les projets</option>
 </select>
+            <select class="filter-select" id="gpFilterTheme" onchange="renderGanttProjet()">
+              <option value="">Tous les thèmes</option>
+            </select>
             <select class="filter-select" id="gpFilterEtat" onchange="renderGanttProjet()">
               <option value="">Tous les états</option>
               <option value="encours">En cours</option>
@@ -1326,8 +1329,11 @@ tr:hover .cr-del-btn { opacity: 1; }
           </button>
           <!-- Contrôles Kanban (masqués hors mode kanban) -->
           <div id="kanbanControls" style="display:none;align-items:center;gap:6px;flex-wrap:wrap">
-            <select class="filter-select" id="kbFilterProjet" onchange="renderKanban()">
+           <select class="filter-select" id="kbFilterProjet" onchange="renderKanban()">
               <option value="">Tous les sous-projets</option>
+            </select>
+            <select class="filter-select" id="kbFilterTheme" onchange="renderKanban()">
+              <option value="">Tous les thèmes</option>
             </select>
             <select class="filter-select" id="kbFilterPilote" onchange="renderKanban()">
               <option value="">Tous les pilotes</option>
@@ -1557,6 +1563,16 @@ tr:hover .cr-del-btn { opacity: 1; }
     <div class="form-group full" id="p_piloteGroup" style="display:none">
       <label class="field-label">Pilote</label>
       <select class="form-control" id="p_pilote"><option value="">— Sélectionner un acteur —</option></select>
+    </div>
+    <div class="form-group full">
+      <label class="field-label">Instance / groupe de travail</label>
+      <select class="form-control" id="p_instance"><option value="">— Aucune instance —</option></select>
+    </div>
+    <div class="form-group full">
+      <label class="field-label">Thème(s)</label>
+      <input type="text" class="form-control" id="p_theme" list="p_themeList" placeholder="Ex: Communication, RH" oninput="updateThemeHint()">
+      <datalist id="p_themeList"></datalist>
+      <div id="p_themeHint" style="font-size:11px;margin-top:4px;color:var(--text-muted)"></div>
     </div>
     <div class="form-group">
       <label class="field-label">Date de début</label>
@@ -3837,6 +3853,13 @@ if (pSel) {
     .forEach(a => pSel.appendChild(new Option(a.nom, a.id)));
   pSel.value = cur;
 }
+  const tSel = document.getElementById('kbFilterTheme');
+  if (tSel) {
+    const cur = tSel.value;
+    while (tSel.options.length > 1) tSel.remove(1);
+    getAllThemes().forEach(t => tSel.appendChild(new Option(t, t)));
+    tSel.value = cur;
+  }
 }
 
 
@@ -3875,6 +3898,7 @@ function renderKanban() {
   const fProjet    = document.getElementById('kbFilterProjet')?.value   || '';
   const fPilote    = document.getElementById('kbFilterPilote')?.value   || '';
   const fEcheance  = document.getElementById('kbFilterEcheance')?.value || '';
+  const fTheme     = document.getElementById('kbFilterTheme')?.value    || '';
   const now        = Date.now();
   const day7       = now + 7  * 86400000;
   const day30      = now + 30 * 86400000;
@@ -3892,6 +3916,10 @@ function renderKanban() {
   data = data.filter(a => subIds.has(a.projet));
 }
   if (fPilote)  data = data.filter(a => String(a.qui) === fPilote);
+  if (fTheme) data = data.filter(a => {
+    const p = allProjets.find(x => x.id === a.projet);
+    return p && parseThemes(p.theme).includes(fTheme);
+  });
   if (fEcheance === 'overdue')  data = data.filter(a => a.echeance > 0 && a.echeance * 86400000 < now && a.etat !== 'Réalisé');
   if (fEcheance === 'soon7')    data = data.filter(a => a.echeance > 0 && a.echeance * 86400000 >= now && a.echeance * 86400000 <= day7);
   if (fEcheance === 'soon30')   data = data.filter(a => a.echeance > 0 && a.echeance * 86400000 >= now && a.echeance * 86400000 <= day30);
@@ -3953,6 +3981,7 @@ function kanbanCard(a, compact = false) {
   const badgeHtml = projet
     ? `<span class="kb-card-badge" style="background:${etatConf.bg};color:${etatConf.text}" title="${esc(projet.nom)}">${esc((projet.code||projet.nom||'').slice(0,18))}</span>`
     : '';
+  const themeHtml = projet ? themeBadgesHtml(projet.theme) : '';
 
   // Avatar pilote
   const avatarHtml = pilote
@@ -3987,7 +4016,7 @@ function kanbanCard(a, compact = false) {
       ondblclick="openActionModal(${a.id})">
     <div class="kb-card-title">${esc(a.action||'—')}</div>
     <div class="kb-card-meta">
-      ${badgeHtml}${prioHtml}${avatarHtml}${dateHtml}
+      ${badgeHtml}${themeHtml}${prioHtml}${avatarHtml}${dateHtml}
     </div>
   </div>`;
 }
@@ -4297,6 +4326,7 @@ function renderGanttProjet() {
   const showDep  = document.getElementById('gpShowDepBtn')?.classList.contains('on') ?? true;
   const maxDepth = parseInt(document.getElementById('gpFilterNiveau2')?.value || '2');
   const fProjetGantt = document.getElementById('gpFilterProjet')?.value || '';
+  const fThemeGantt  = document.getElementById('gpFilterTheme')?.value  || '';
 
   // Tous les sous-projets (hors maître)
   let subs = allProjets.filter(p => p.ref && p.ref !== 0);
@@ -4338,6 +4368,7 @@ function renderGanttProjet() {
   if (fEtat === 'encours')  rows = rows.filter(r => !r.finreelle || r.finreelle === 0);
   if (fEtat === 'realise')  rows = rows.filter(r =>  r.finreelle && r.finreelle !== 0);
   if (fPilote) rows = rows.filter(r => r.pilote === parseInt(fPilote));
+  if (fThemeGantt) rows = rows.filter(r => parseThemes(r.theme).includes(fThemeGantt));
 
   if (!rows.length) {
     cont.innerHTML = `<div style="padding:48px;text-align:center;color:var(--text-muted);font-size:13px">Aucun sous-projet pour ces filtres.</div>`;
@@ -4573,7 +4604,7 @@ const BAR_H    = Math.round(14 * ganttScale);
       const ri = Math.floor((svgY - HEADER_H) / ROW_H);
       const r  = cont._ganttRows?.[ri];
       if (!r) { tip.classList.remove('show'); return; }
-      const label = (r.code ? r.code + ' – ' : '') + (r.nom || '—');
+      const label = (r.code ? r.code + ' – ' : '') + (r.nom || '—') + ${themeBadgesHtml(r.theme)};
       const pilote = r.pilote ? allActors.find(a => a.id === r.pilote) : null;
       const dateStr = [r.debut > 0 ? '▶ ' + new Date(r.debut*86400000).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}) : null,
         (r.finreelle > 0 ? r.finreelle : r.fin) > 0 ? '■ ' + new Date(((r.finreelle||0) > 0 ? r.finreelle : r.fin)*86400000).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}) : null
@@ -4584,6 +4615,14 @@ const BAR_H    = Math.round(14 * ganttScale);
       tip.classList.add('show');
     });
     svg.addEventListener('mouseleave', () => tip.classList.remove('show'));
+  }
+
+  const tSel = document.getElementById('gpFilterTheme');
+  if (tSel) {
+    const cur = tSel.value;
+    while (tSel.options.length > 1) tSel.remove(1);
+    getAllThemes().forEach(t => tSel.appendChild(new Option(t, t)));
+    tSel.value = cur;
   }
 }
 
@@ -5186,6 +5225,8 @@ async function fetchProjets() {
           pilote:      t.pilote?.[i]       || 0,
           antecedent:  t.antecedent?.[i]  || 0,  // référence vers un autre sous-projet
           couleur:     t.couleur?.[i]      || 0,
+          instance: t.instance?.[i] || 0,   // id de la référence vers Instances
+          theme:    t.theme?.[i]    || '',  // texte brut, tags séparés par virgule
         });
       });
     }
@@ -5206,6 +5247,40 @@ async function fetchProjets() {
   } catch(e) { console.error('fetchProjets error', e); }
 }
 
+// ══ THEMES / TAGS (Projet) ══
+function parseThemes(str) {
+  return (str || '').split(',').map(s => s.trim()).filter(Boolean);
+}
+function getAllThemes() {
+  const set = new Set();
+  allProjets.forEach(p => parseThemes(p.theme).forEach(t => set.add(t)));
+  return [...set].sort((a, b) => a.localeCompare(b, 'fr'));
+}
+function themeHexColor(tag) {
+  let h = 0;
+  for (let i = 0; i < tag.length; i++) h = tag.charCodeAt(i) + ((h << 5) - h);
+  return `hsl(${h % 360}, 55%, 88%)`;
+}
+function themeBadgesHtml(themeStr) {
+  return parseThemes(themeStr).map(t =>
+    `<span class="badge" style="background:${themeHexColor(t)};color:#333">${esc(t)}</span>`
+  ).join('');
+}
+
+function updateThemeHint() {
+  const input = document.getElementById('p_theme');
+  const hint  = document.getElementById('p_themeHint');
+  if (!input || !hint) return;
+  const parts = input.value.split(',');
+  const current = parts[parts.length - 1].trim().toLowerCase();
+  if (!current) { hint.textContent = ''; return; }
+  const existing = getAllThemes().map(t => t.toLowerCase());
+  hint.innerHTML = existing.includes(current)
+    ? `<span style="color:var(--success)">✓ tag existant</span>`
+    : `<span style="color:var(--warning)">+ nouveau tag</span>`;
+}
+
+  
 function projetHex(p) {
   if (!p) return null;
   const co = couleurs[p.couleur];
@@ -6713,10 +6788,24 @@ renderRefPicker(currentRefVal);
       pilSel.appendChild(new Option(a.nom + (a.role ? ' — ' + a.role : ''), a.id));
     });
 
+  // Populate instance select
+  const instSel = document.getElementById('p_instance');
+  while (instSel.options.length > 1) instSel.remove(1);
+  allInstances
+    .filter((v,i,arr) => typeof v.id === 'number' && arr.findIndex(x=>x.id===v.id)===i)
+    .sort((a,b) => (a.ordre??9999)-(b.ordre??9999))
+    .forEach(inst => instSel.appendChild(new Option(inst.sigle ? inst.sigle + ' – ' + inst.nom : inst.nom, inst.id)));
+
+  // Populate datalist des thèmes existants
+  const themeList = document.getElementById('p_themeList');
+  themeList.innerHTML = getAllThemes().map(t => `<option value="${esc(t)}">`).join('');
   
   // Fill fields
   document.getElementById('p_code').value = projet?.code || '';
   document.getElementById('p_nom').value  = projet?.nom  || '';
+  document.getElementById('p_instance').value = projet?.instance || '';
+  document.getElementById('p_theme').value    = projet?.theme    || '';
+  updateThemeHint();
 
   // Peupler le select couleur
   const picker = document.getElementById('p_couleurPicker');
@@ -6878,6 +6967,8 @@ async function saveProjet() {
     pilote:      parseInt(document.getElementById('p_pilote').value) || 0,
     couleur:     parseInt(document.getElementById('p_couleur').value) || 0,
     antecedent:  isSub ? (parseInt(document.getElementById('p_antecedent').value) || 0) : 0,
+    instance:    parseInt(document.getElementById('p_instance').value) || 0,
+    theme:       document.getElementById('p_theme').value.trim() || null,
   };
 
   try {
