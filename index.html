@@ -4604,7 +4604,7 @@ const BAR_H    = Math.round(14 * ganttScale);
       const ri = Math.floor((svgY - HEADER_H) / ROW_H);
       const r  = cont._ganttRows?.[ri];
       if (!r) { tip.classList.remove('show'); return; }
-      const label = (r.code ? r.code + ' – ' : '') + (r.nom || '—') + ${themeBadgesHtml(r.theme)};
+      const label = (r.code ? r.code + ' – ' : '') + (r.nom || '—') + themeBadgesHtml(r.theme);
       const pilote = r.pilote ? allActors.find(a => a.id === r.pilote) : null;
       const dateStr = [r.debut > 0 ? '▶ ' + new Date(r.debut*86400000).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}) : null,
         (r.finreelle > 0 ? r.finreelle : r.fin) > 0 ? '■ ' + new Date(((r.finreelle||0) > 0 ? r.finreelle : r.fin)*86400000).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}) : null
