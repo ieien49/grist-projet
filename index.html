@@ -136,6 +136,7 @@ td { padding: 7px 10px; vertical-align: middle; font-size: 12.5px; }
 /* ══ BADGES ══ */
 /* Teintes très légères, lisibles, cohérentes */
 .badge { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 3px; font-size: 11px; font-weight: 500; white-space: nowrap; }
+#sp-liste .badge { padding: 1px 6px; border-radius: 999px; font-size: 10px; }
 .badge-dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
 .badge-ext { background: #fff7ed; color: #a16207; }
 .badge-int { background: #f0fdf4; color: #15803d; }
@@ -630,10 +631,10 @@ tr:hover .cr-del-btn { opacity: 1; }
 .gantt-tooltip {
   position: fixed; z-index: 500;
   background: var(--bg); border: 1px solid var(--border-strong);
-  border-radius: var(--radius); padding: 7px 10px;
+  border-radius: var(--radius); padding: 9px 12px;
   font-size: 12px; color: var(--text-primary);
   box-shadow: var(--shadow-md); pointer-events: none;
-  max-width: 240px; line-height: 1.5;
+  max-width: 340px; line-height: 1.5;
   opacity: 0; transition: opacity 0.1s;
 }
 .gantt-tooltip.show { opacity: 1; }
@@ -921,14 +922,15 @@ tr:hover .cr-del-btn { opacity: 1; }
     <!-- ── OBJECTIFS ── -->
     <div class="panel" id="panel-objectifs">
       <nav class="cadre-subnav">
-        <div class="cadre-subtab active" id="spModeListe" data-sub="sp-liste" onclick="switchSpMode('liste')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-          Liste
-        </div>
-        <div class="cadre-subtab" id="spModeGantt" data-sub="sp-gantt" onclick="switchSpMode('gantt')">
+        <div class="cadre-subtab active" id="spModeGantt" data-sub="sp-gantt" onclick="switchSpMode('gantt')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="15" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="12" y2="18"/></svg>
           Gantt
         </div>
+        <div class="cadre-subtab" id="spModeListe" data-sub="sp-liste" onclick="switchSpMode('liste')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          Liste
+        </div>
+        
         <div class="cadre-subtab" id="spModeFeuilleDeroute" data-sub="sp-feuilleroute" onclick="switchSpMode('feuilleroute')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="6" height="10" rx="1"/><rect x="9" y="4" width="6" height="13" rx="1"/><rect x="16" y="9" width="6" height="8" rx="1"/></svg>
           Feuille de route
@@ -942,7 +944,7 @@ tr:hover .cr-del-btn { opacity: 1; }
   Mind map
 </div>
         <div class="subnav-spacer"></div>
-        <div class="subnav-controls" id="spListeControls">
+        <div class="subnav-controls" id="spListeControls" style="display:none">
           <div class="search-wrap" style="min-width:130px;max-width:190px">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
             <input type="text" class="search-input" id="spSearch" placeholder="Rechercher…">
@@ -962,13 +964,13 @@ tr:hover .cr-del-btn { opacity: 1; }
       </nav>
       <div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
         <!-- Vue liste -->
-        <div id="sp-liste" style="flex:1;overflow:auto;display:flex;flex-direction:column">
+        <div id="sp-liste" style="flex:1;overflow:auto;display:none">
           <div class="table-scroll">
             <div id="spTable"><div class="loading"><div class="spinner"></div> Chargement…</div></div>
           </div>
         </div>
         <!-- Vue Gantt sous-projets -->
-        <div id="sp-gantt" style="flex:1;flex-direction:column;overflow:hidden;display:none">
+        <div id="sp-gantt" style="flex:1;flex-direction:column;overflow:hidden;display:flex">
           <div id="ganttProjetFilters" style="padding:8px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;background:var(--bg)">
             <select class="filter-select" id="gpFilterProjet" onchange="renderGanttProjet()">
   <option value="">Tous les projets</option>
@@ -1002,6 +1004,10 @@ tr:hover .cr-del-btn { opacity: 1; }
             <button class="gantt-toggle-actions on" id="gpShowDepBtn" onclick="toggleGanttDep()" title="Masquer les dépendances">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 0 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
               Dépendances
+            </button>
+            <button class="gantt-toggle-actions on" id="gpShowTasksBtn" onclick="toggleGanttTasks()" title="Masquer les jalons">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z" transform="rotate(45 12 12)"/></svg>
+              Jalons
             </button>
             <button class="btn-add-ghost" onclick="exportGanttPng()" style="margin-left:auto">
   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -1332,6 +1338,10 @@ tr:hover .cr-del-btn { opacity: 1; }
           </button>
           <!-- Contrôles Kanban (masqués hors mode kanban) -->
           <div id="kanbanControls" style="display:none;align-items:center;gap:6px;flex-wrap:wrap">
+           <div class="search-wrap" style="min-width:130px;max-width:190px">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input type="text" class="search-input" id="kbSearch" placeholder="Rechercher…" oninput="renderKanban()">
+            </div>
            <select class="filter-select" id="kbFilterProjet" onchange="renderKanban()">
               <option value="">Tous les sous-projets</option>
             </select>
@@ -1518,14 +1528,15 @@ tr:hover .cr-del-btn { opacity: 1; }
           <textarea class="form-control" id="i_role" placeholder="Ex: Décision, Consultation…" rows="2" style="resize:vertical;min-height:52px"></textarea>
         </div>
         <div class="form-group">
-          <label class="field-label">Couleur</label>
-          <div class="color-sel-wrap">
-            <span class="color-sel-dot" id="i_coulDot"></span>
-            <select class="form-control" id="i_couleur" onchange="updateCoulDot('i_couleur','i_coulDot')">
-              <option value="">— Sélectionner —</option>
-            </select>
-          </div>
-        </div>
+  <label class="field-label">Couleur</label>
+  <div class="ms-wrap" id="i_coulWrap">
+    <div class="ms-tags" id="i_coulTags" onclick="toggleMsDropdown('i_coulWrap','i_coulDrop')">
+      <span class="ms-placeholder" id="i_coulPlaceholder">— Sélectionner —</span>
+    </div>
+    <div class="ms-dropdown" id="i_coulDrop"></div>
+  </div>
+  <input type="hidden" id="i_couleur">
+</div>
       </div>
     </div>
     <div class="modal-foot">
@@ -1899,17 +1910,58 @@ function populateSelects() {
       .forEach(d => { dSel.appendChild(new Option(d.sigle ? `${d.sigle} – ${d.nom}` : d.nom, d.id)); });
     if (dVal) dSel.value = dVal;
   }
-  const icSel = document.getElementById('i_couleur');
-  while (icSel.options.length > 1) icSel.remove(1);
-  const seenIC = new Set();
+  populateColorPicker();
+}
+
+function populateColorPicker() {
+  const drop = document.getElementById('i_coulDrop');
+  drop.innerHTML = '';
+
+  const noneItem = document.createElement('div');
+  noneItem.className = 'ms-item';
+  noneItem.dataset.id = '';
+  noneItem.innerHTML = `<span class="cdot" style="width:9px;height:9px;background:transparent;border:1.5px dashed var(--border-strong)"></span><span>— Aucune —</span><span class="ms-check">✓</span>`;
+  noneItem.addEventListener('click', e => { e.stopPropagation(); selectColor(''); });
+  drop.appendChild(noneItem);
+
+  const seen = new Set();
   Object.values(couleurs)
-    .filter(c => { if(seenIC.has(c.id)) return false; seenIC.add(c.id); return true; })
+    .filter(c => { if (seen.has(c.id) || typeof c.id !== 'number') return false; seen.add(c.id); return true; })
     .forEach(c => {
-      const o = new Option(c.hex ? `${c.nom} — ${c.hex}` : c.nom, c.id);
-      o.setAttribute('data-hex', c.hex);
-      icSel.appendChild(o);
+      const el = document.createElement('div');
+      el.className = 'ms-item';
+      el.dataset.id = c.id;
+      el.innerHTML = `<span class="cdot" style="width:9px;height:9px;background:${c.hex||'#ccc'}"></span><span>${esc(c.nom)}${c.hex?' — '+esc(c.hex):''}</span><span class="ms-check">✓</span>`;
+      el.addEventListener('click', e => { e.stopPropagation(); selectColor(c.id); });
+      drop.appendChild(el);
     });
 }
+
+function selectColor(id) {
+  document.getElementById('i_couleur').value = id;
+  renderColorClosed(id);
+  closeMsDropdown('i_coulWrap','i_coulDrop');
+}
+
+function renderColorClosed(id) {
+  const tagsEl = document.getElementById('i_coulTags');
+  const ph     = document.getElementById('i_coulPlaceholder');
+  const drop   = document.getElementById('i_coulDrop');
+  tagsEl.querySelectorAll('.ms-tag').forEach(el => el.remove());
+  const co = id ? couleurs[id] : null;
+  if (!co) { ph.style.display = ''; }
+  else {
+    ph.style.display = 'none';
+    const tag = document.createElement('span');
+    tag.className = 'ms-tag';
+    tag.innerHTML = `<span class="cdot" style="width:9px;height:9px;background:${co.hex||'#ccc'}"></span>${esc(co.nom)}`;
+    tagsEl.appendChild(tag);
+  }
+  if (drop) drop.querySelectorAll('.ms-item').forEach(item => {
+    item.classList.toggle('sel', String(item.dataset.id) === String(id||''));
+  });
+}
+
 
 // ══ TAB NAVIGATION ══
 function switchTab(name) {
@@ -1926,6 +1978,9 @@ function switchTab(name) {
   if (name === 'objectifs') {
     const activeSub = document.querySelector('#panel-objectifs .cadre-subtab.active');
     if (activeSub?.id === 'spModeGraphe') renderGraph();
+    else if (activeSub?.id === 'spModeGantt') { populateGanttProjetFilters(); renderGanttProjet(); }
+    else if (activeSub?.id === 'spModeFeuilleDeroute') { populateFeuillerouteFilters(); renderFeuilleDeroute(); }
+    else if (activeSub?.id === 'spModeMindmap') renderSpMindmap();
     else renderSousProjets();
   }
   if (name === 'decisions') {
@@ -1937,7 +1992,7 @@ function switchTab(name) {
   }
 }
 
-let spMode = 'liste';
+let spMode = 'gantt';
 
 function openSousProjetModal(projet = null) {
   openProjetModal(projet, 'sousprojet');
@@ -3348,12 +3403,13 @@ function openInstanceModal(inst = null) {
   document.getElementById('i_nom').value     = inst?.nom     || '';
   document.getElementById('i_role').value    = inst?.role    || '';
   document.getElementById('i_couleur').value = inst?.couleur || '';
-  updateCoulDot('i_couleur','i_coulDot');
+renderColorClosed(inst?.couleur || '');
   document.getElementById('instanceModalOverlay').classList.add('open');
   setTimeout(() => document.getElementById('i_sigle').focus(), 80);
 }
 function closeInstanceModal() {
   document.getElementById('instanceModalOverlay').classList.remove('open');
+  closeMsDropdown('i_coulWrap','i_coulDrop');
   editingInstanceId = null;
 }
 function handleInstOverlay(e) { if (e.target.id==='instanceModalOverlay') closeInstanceModal(); }
@@ -3902,6 +3958,7 @@ function renderKanban() {
   const fPilote    = document.getElementById('kbFilterPilote')?.value   || '';
   const fEcheance  = document.getElementById('kbFilterEcheance')?.value || '';
   const fTheme     = document.getElementById('kbFilterTheme')?.value    || '';
+  const search     = (document.getElementById('kbSearch')?.value || '').trim().toLowerCase();
   const now        = Date.now();
   const day7       = now + 7  * 86400000;
   const day30      = now + 30 * 86400000;
@@ -3927,6 +3984,12 @@ function renderKanban() {
   if (fEcheance === 'soon7')    data = data.filter(a => a.echeance > 0 && a.echeance * 86400000 >= now && a.echeance * 86400000 <= day7);
   if (fEcheance === 'soon30')   data = data.filter(a => a.echeance > 0 && a.echeance * 86400000 >= now && a.echeance * 86400000 <= day30);
   if (fEcheance === 'none')     data = data.filter(a => !a.echeance || a.echeance === 0);
+  if (search) data = data.filter(a => {
+    const projet = allProjets.find(p => p.id === a.projet);
+    const qui    = a.qui ? allActors.find(x => x.id === a.qui) : null;
+    const text = [a.action, a.description, projet?.nom, projet?.code, qui?.nom].filter(Boolean).join(' ').toLowerCase();
+    return text.includes(search);
+  });
 
   // Colonnes par statut
   const columns = ETAT_KANBAN.map(e => ({
@@ -4082,6 +4145,14 @@ function toggleGanttDep() {
   if (!btn) return;
   const isOn = btn.classList.toggle('on');
   btn.title = isOn ? 'Masquer les dépendances' : 'Afficher les dépendances';
+  renderGanttProjet();
+}
+
+function toggleGanttTasks() {
+  const btn = document.getElementById('gpShowTasksBtn');
+  if (!btn) return;
+  const isOn = btn.classList.toggle('on');
+  btn.title = isOn ? 'Masquer les jalons' : 'Afficher les jalons';
   renderGanttProjet();
 }
 
@@ -4318,6 +4389,48 @@ function populateGanttProjetFilters() {
 // ── Zoom du Gantt ──
 const ganttScale = 1;
   
+function showGanttInfo(evt, id) {
+  evt.stopPropagation();
+  const p = allProjets.find(x => x.id === id);
+  const tip = document.getElementById('ganttTooltip');
+  if (!p || !tip) return;
+
+  const label  = (p.code ? p.code + ' – ' : '') + (p.nom || '—');
+  const pilote = p.pilote ? allActors.find(a => a.id === p.pilote) : null;
+  const d1 = p.debut > 0 ? new Date(p.debut * 86400000).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : null;
+  const endMs = p.finreelle > 0 ? p.finreelle : p.fin;
+  const d2 = endMs > 0 ? new Date(endMs * 86400000).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : null;
+  const closedTag = p.finreelle > 0 ? ' <span style="color:#DC2626">(clôturé)</span>' : '';
+
+  tip.innerHTML = `<strong style="display:block;margin-bottom:4px">${esc(label)}</strong>
+    <span style="font-size:11px;color:var(--text-muted)">${pilote ? esc(pilote.nom) : 'Pilote non défini'}</span><br>
+    <span style="font-size:11px;color:var(--text-muted)">${d1 || '—'} → ${d2 || '—'}${closedTag}</span>`;
+  tip.style.left = (evt.clientX + 12) + 'px';
+  tip.style.top  = (evt.clientY - 8)  + 'px';
+  tip.classList.add('show');
+}
+document.addEventListener('click', () => document.getElementById('ganttTooltip')?.classList.remove('show'));
+
+function showGanttTaskInfo(evt, id) {
+  evt.stopPropagation();
+  const t = allActions.find(x => x.id === id);
+  const tip = document.getElementById('ganttTooltip');
+  if (!t || !tip) return;
+
+  const qui = t.qui ? allActors.find(a => a.id === t.qui) : null;
+  const echeanceStr = t.echeance > 0 ? new Date(t.echeance * 86400000).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : null;
+  const done = t.etat === 'Réalisé';
+
+  tip.innerHTML = `<strong style="display:block;margin-bottom:4px">${esc(t.action || '(tâche sans nom)')}</strong>
+    <span style="font-size:11px;color:var(--text-muted)">${qui ? esc(qui.nom) : 'Responsable non défini'}</span><br>
+    <span style="font-size:11px;color:var(--text-muted)">Échéance : ${echeanceStr || '—'}</span><br>
+    <span style="font-size:11px;font-weight:600;color:${done ? '#1A7A4F' : '#DC2626'}">${esc(t.etat || 'En cours')}</span>
+    ${t.description ? `<br><span style="font-size:11px;color:var(--text-muted)">${esc(t.description)}</span>` : ''}`;
+  tip.style.left = (evt.clientX + 12) + 'px';
+  tip.style.top  = (evt.clientY - 8)  + 'px';
+  tip.classList.add('show');
+}
+
 function renderGanttProjet() {
   const cont = document.getElementById('ganttProjetContainer');
   if (!cont) return;
@@ -4327,6 +4440,7 @@ function renderGanttProjet() {
   const zoom = document.getElementById('gpFilterZoom')?.value || 'month';
   const fPilote  = document.getElementById('gpFilterPilote')?.value  || '';
   const showDep  = document.getElementById('gpShowDepBtn')?.classList.contains('on') ?? true;
+  const showTasks = document.getElementById('gpShowTasksBtn')?.classList.contains('on') ?? true;
   const maxDepth = parseInt(document.getElementById('gpFilterNiveau2')?.value || '2');
   const fProjetGantt = document.getElementById('gpFilterProjet')?.value || '';
   const fThemeGantt  = document.getElementById('gpFilterTheme')?.value  || '';
@@ -4414,20 +4528,48 @@ while (cur2.getTime() < dEnd.getTime()) {
 }
 
   // Dimensions
-  const LABEL_W  = Math.round(220 * ganttScale);
-const CHART_W  = Math.round(900 * ganttScale);
-  const TOTAL_W  = LABEL_W + CHART_W;
+  const CHART_PAD_L = 14;
+  const CHART_W  = Math.round(900 * ganttScale);
+  const TOTAL_W  = CHART_PAD_L + CHART_W + 14;
   const HEADER_H = 44;
-  const ROW_H    = Math.round(34 * ganttScale);
-const BAR_H    = Math.round(14 * ganttScale);
+  const H_PHASE  = Math.round(26 * ganttScale);
+  const H_SUB    = Math.round(22 * ganttScale);
+  const H_TASK   = Math.round(15 * ganttScale);
+  const BAR_H    = Math.round(15 * ganttScale);
   const BAR_R    = 4;
 
-  const msX = ms => LABEL_W + pct(ms) / 100 * CHART_W;
+  const msX = ms => CHART_PAD_L + pct(ms) / 100 * CHART_W;
   const todayX = msX(Date.now());
 
-  // Index des lignes par id pour les flèches de dépendances
-  const rowIndex = {};
-  rows.forEach((r, i) => { rowIndex[r.id] = i; });
+  // Construction du layout à hauteur variable :
+  // depth 0 = "sous-projet" -> barre pleine ; depth >=1 = "sous-sous-projet" -> ligne + cercles,
+  // suivie des tâches liées (table Taches) affichées en jalons (losanges) datés.
+  let layout = [];
+  let curY = HEADER_H + 6;
+  rows.forEach(p => {
+    if (p.depth === 0) {
+      layout.push({ type: 'phase', p, y: curY, h: H_PHASE });
+      curY += H_PHASE + 3;
+    } else {
+      layout.push({ type: 'sub', p, y: curY, h: H_SUB });
+      curY += H_SUB;
+      if (showTasks) {
+        const tasks = allActions
+          .filter(a => a.projet === p.id && a.echeance > 0)
+          .sort((a, b) => a.echeance - b.echeance);
+        tasks.forEach(t => {
+          layout.push({ type: 'task', p, t, y: curY, h: H_TASK });
+          curY += H_TASK;
+        });
+      }
+      curY += 6;
+    }
+  });
+  const totalH = curY + 70;
+
+  // Centre Y des sous-projets/sous-sous-projets (pour les flèches de dépendance)
+  const rowCenterY = {};
+  layout.forEach(l => { if (l.type === 'phase' || l.type === 'sub') rowCenterY[l.p.id] = l.y + l.h - (l.type === 'sub' ? 5 : l.h / 2); });
 
   let svgBody = '';
   let svgArrows = '';
@@ -4435,103 +4577,96 @@ const BAR_H    = Math.round(14 * ganttScale);
   // Grille mois
   months.forEach(m => {
     const x = msX(m.getTime());
-    svgBody += `<line x1="${x.toFixed(1)}" y1="0" x2="${x.toFixed(1)}" y2="9999" stroke="#e8e8e8" stroke-width="0.5"/>`;
+    svgBody += `<line x1="${x.toFixed(1)}" y1="0" x2="${x.toFixed(1)}" y2="${totalH}" stroke="#eee" stroke-width="0.5"/>`;
   });
 
   // Ligne aujourd'hui
-  svgBody += `<line x1="${todayX.toFixed(1)}" y1="${HEADER_H}" x2="${todayX.toFixed(1)}" y2="9999" stroke="#DC2626" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.65"/>`;
+  svgBody += `<line x1="${todayX.toFixed(1)}" y1="${HEADER_H}" x2="${todayX.toFixed(1)}" y2="${totalH}" stroke="#DC2626" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.6"/>`;
 
-  // Lignes de fond alternées + barres
-  rows.forEach((p, ri) => {
-    const y = HEADER_H + ri * ROW_H;
-    const bg = ri % 2 === 1 ? 'rgba(0,0,0,0.015)' : 'none';
-    const termine   = p.finreelle && p.finreelle > 0;
-    const piloteActor = p.pilote ? allActors.find(a => a.id === p.pilote) : null;
-    const piloteColor = piloteActor ? (roleColors[piloteActor.role]?.avatar || '#6B7280') : null;
-
-    // Couleur barre
-    let barColor;
-    if (termine) barColor = '#888888';
-    else barColor = projetHex(p) || (p.depth === 0 ? '#374151' : '#1A7A4F');
-
-    svgBody += `<rect x="0" y="${y}" width="${TOTAL_W}" height="${ROW_H}" fill="${bg}"/>`;
-    svgBody += `<line x1="${LABEL_W}" y1="${y}" x2="${LABEL_W}" y2="${y+ROW_H}" stroke="#e8e8e8" stroke-width="0.5"/>`;
-
-    // Label
-    const indent = p.depth * 14;
-    const labelRaw = (p.code ? p.code + ' – ' : '') + (p.nom || '—');
-    const maxLen = Math.floor((LABEL_W - indent - 14) / 5.8);
-    const label  = labelRaw.length > maxLen ? labelRaw.slice(0, maxLen-1) + '…' : labelRaw;
-    const fw = p.depth === 0 ? '600' : '400';
-    const fs = p.depth === 0 ? 9.5 : 9;
-    // Barre colorée latérale gauche pour niveau 0
-    if (p.depth === 0) {
-      svgBody += `<rect x="0" y="${y+4}" width="2" height="${ROW_H-8}" rx="1" fill="${barColor}"/>`;
-    }
-    svgBody += `<g><text x="${5+indent}" y="${y+ROW_H/2}" dominant-baseline="central" font-size="${fs}" font-weight="${fw}" fill="#1a1a1a" font-family="system-ui,sans-serif">${esc(label)}</text></g>`;
-
-    // Barre Gantt
-    const sMs = p.debut     > 0 ? p.debut     * 86400000 : null;
+  layout.forEach(l => {
+    const p = l.p;
+    const termine = p.finreelle && p.finreelle > 0;
+    const barColor = termine ? '#888888' : (projetHex(p) || (l.type === 'phase' ? '#374151' : '#1A7A4F'));
+    const sMs = p.debut > 0 ? p.debut * 86400000 : null;
     const eMs = p.finreelle > 0 ? p.finreelle * 86400000 : (p.fin > 0 ? p.fin * 86400000 : null);
+    const label = (p.code ? p.code + ' – ' : '') + (p.nom || '—');
 
-    if (sMs && eMs) {
-      const x1 = msX(sMs), x2 = msX(eMs);
-      const bw = Math.max(x2 - x1, 4);
-      const by = y + (ROW_H - BAR_H) / 2;
-      // Fond barre (progression visuelle si pas réalisé)
-      const barLabel = (p.code ? p.code + ' – ' : '') + (p.nom || '');
-      const maxChars = Math.max(0, Math.floor(bw / 5.8) - 2);
-      const barLabelTrunc = maxChars > 3 ? (barLabel.length > maxChars ? barLabel.slice(0, maxChars - 1) + '\u2026' : barLabel) : '';
-      if (!termine && sMs <= Date.now() && eMs > sMs) {
-        const progPct = Math.min(1, (Date.now() - sMs) / (eMs - sMs));
-        const progW   = bw * progPct;
-        svgBody += `<g><title>${esc(barLabel)}</title>
-  <rect x="${x1.toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(1)}" height="${BAR_H}" rx="${BAR_R}" fill="${barColor}" opacity="0.18"/>
-  ${progW > 0 ? `<rect x="${x1.toFixed(1)}" y="${by.toFixed(1)}" width="${progW.toFixed(1)}" height="${BAR_H}" rx="${BAR_R}" fill="${barColor}" opacity="0.9"/>` : ''}
-  ${barLabelTrunc ? `<text x="${(x1 + 4).toFixed(1)}" y="${(by + BAR_H / 2).toFixed(1)}" dominant-baseline="central" font-size="8.5" fill="white" font-family="system-ui,sans-serif" opacity="0.92" pointer-events="none">${esc(barLabelTrunc)}</text>` : ''}
+    if (l.type === 'phase') {
+      if (sMs && eMs) {
+        const x1 = msX(sMs), x2 = msX(eMs);
+        const bw = Math.max(x2 - x1, 60);
+        const by = l.y + (l.h - BAR_H) / 2;
+        const codeLabelPhase = p.code || label;
+        const maxCharsPhase = Math.max(4, Math.floor((bw - 16) / (5.6 * ganttScale)));
+        const labelUp = codeLabelPhase.length > maxCharsPhase ? codeLabelPhase.slice(0, maxCharsPhase - 1) + '…' : codeLabelPhase;
+        svgBody += `<g style="cursor:pointer" onclick="showGanttInfo(event, ${p.id})">
+  <rect x="${x1.toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(1)}" height="${BAR_H}" rx="${BAR_R}" fill="${barColor}" opacity="${termine ? 0.7 : 0.95}"/>
+  <text x="${(x1 + 10).toFixed(1)}" y="${(by + BAR_H / 2).toFixed(1)}" dominant-baseline="central" font-size="${Math.round(9.5 * ganttScale)}" font-weight="700" fill="#fff" font-family="system-ui,sans-serif" letter-spacing="0.02em">${esc(labelUp.toUpperCase())}</text>
 </g>`;
       } else {
-        svgBody += `<g><title>${esc(barLabel)}</title>
-  <rect x="${x1.toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(1)}" height="${BAR_H}" rx="${BAR_R}" fill="${barColor}" opacity="${termine ? 0.65 : 0.9}"/>
-  ${barLabelTrunc ? `<text x="${(x1 + 4).toFixed(1)}" y="${(by + BAR_H / 2).toFixed(1)}" dominant-baseline="central" font-size="8.5" fill="white" font-family="system-ui,sans-serif" opacity="0.92" pointer-events="none" clip-path="url(#clip_${p.id})">${esc(barLabelTrunc)}</text>` : ''}
-</g>`;
+        svgBody += `<text x="${CHART_PAD_L}" y="${(l.y + l.h / 2).toFixed(1)}" dominant-baseline="central" font-size="10.5" fill="#bbb" font-family="system-ui,sans-serif">${esc(label)} — dates manquantes</text>`;
       }
-      // Date fin dans la barre si assez de place
-      if (bw > 36) {
-        const dateFin = p.finreelle > 0 ? new Date(p.finreelle*86400000) : new Date(p.fin*86400000);
-        const df = dateFin.toLocaleDateString('fr-FR',{day:'2-digit',month:'short'}).replace('.','');
-        svgBody += `<text x="${(x2-4).toFixed(1)}" y="${(by+BAR_H/2).toFixed(1)}" dominant-baseline="central" text-anchor="end" font-size="${Math.round(8.5 * ganttScale)}" fill="white" font-family="system-ui,sans-serif" opacity="0.9">${df}</text>`;
-      }
+    }
 
-      // Dépendances : flèche depuis la fin du prédécesseur vers le début de ce projet
-      if (showDep && p.antecedent && rowIndex[p.antecedent] !== undefined) {
-        const predI = rowIndex[p.antecedent];
-        const pred  = rows[predI];
-        const predEndMs = pred.finreelle > 0 ? pred.finreelle * 86400000 : (pred.fin > 0 ? pred.fin * 86400000 : null);
-        if (predEndMs) {
-          const ax1 = msX(predEndMs);
-          const ay1 = HEADER_H + predI * ROW_H + ROW_H / 2;
-          const ax2 = x1;
-          const ay2 = y + ROW_H / 2;
-          const cx  = (ax1 + ax2) / 2;
-          // Flèche courbe en S
-          svgArrows += `<path d="M${ax1.toFixed(1)},${ay1.toFixed(1)} C${cx.toFixed(1)},${ay1.toFixed(1)} ${cx.toFixed(1)},${ay2.toFixed(1)} ${ax2.toFixed(1)},${ay2.toFixed(1)}" fill="none" stroke="#6366f1" stroke-width="1.5" stroke-dasharray="5 3" opacity="0.7" marker-end="url(#arrowGP)"/>`;
+    if (l.type === 'sub') {
+      if (sMs && eMs) {
+        const x1 = msX(sMs), x2 = msX(eMs);
+        const cy = l.y + l.h - 5;
+        const codeLabelSub = p.code || label;
+        const maxCharsSub = Math.max(5, Math.floor((TOTAL_W - x1 - 14) / (5.4 * ganttScale)));
+        const labelSub = codeLabelSub.length > maxCharsSub ? codeLabelSub.slice(0, maxCharsSub - 1) + '…' : codeLabelSub;
+        svgBody += `<g style="cursor:pointer" onclick="showGanttInfo(event, ${p.id})">
+  <line x1="${x1.toFixed(1)}" y1="${cy.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${cy.toFixed(1)}" stroke="${barColor}" stroke-width="2"/>
+  <circle cx="${x1.toFixed(1)}" cy="${cy.toFixed(1)}" r="3.2" fill="${barColor}"/>
+  <circle cx="${x2.toFixed(1)}" cy="${cy.toFixed(1)}" r="3.2" fill="${barColor}"/>
+  <text x="${x1.toFixed(1)}" y="${(cy - 8).toFixed(1)}" font-size="${Math.round(9 * ganttScale)}" font-weight="600" fill="#1a1a1a" font-family="system-ui,sans-serif">${esc(labelSub)}</text>
+</g>`;
+        if (showDep && p.antecedent && rowCenterY[p.antecedent] !== undefined) {
+          const predY = rowCenterY[p.antecedent];
+          const predRow = rows.find(r => r.id === p.antecedent);
+          const predEndMs = predRow?.finreelle > 0 ? predRow.finreelle * 86400000 : (predRow?.fin > 0 ? predRow.fin * 86400000 : null);
+          if (predEndMs) {
+            const ax1 = msX(predEndMs), ay1 = predY, ax2 = x1, ay2 = cy;
+            const cx = (ax1 + ax2) / 2;
+            svgArrows += `<path d="M${ax1.toFixed(1)},${ay1.toFixed(1)} C${cx.toFixed(1)},${ay1.toFixed(1)} ${cx.toFixed(1)},${ay2.toFixed(1)} ${ax2.toFixed(1)},${ay2.toFixed(1)}" fill="none" stroke="#6366f1" stroke-width="1.5" stroke-dasharray="5 3" opacity="0.7" marker-end="url(#arrowGP)"/>`;
+          }
         }
+      } else {
+        svgBody += `<text x="${CHART_PAD_L}" y="${(l.y + l.h / 2).toFixed(1)}" dominant-baseline="central" font-size="10" fill="#bbb" font-family="system-ui,sans-serif">${esc(label)} — dates manquantes</text>`;
       }
-    } else {
-      svgBody += `<text x="${(LABEL_W+8).toFixed(0)}" y="${y+ROW_H/2}" dominant-baseline="central" font-size="${Math.round(10.5 * ganttScale)}"" fill="#bbb" font-family="system-ui,sans-serif">—</text>`;
+    }
+
+    if (l.type === 'task') {
+      const t = l.t;
+      const tx = msX(t.echeance * 86400000);
+      const ty = l.y + l.h / 2;
+      const done = t.etat === 'Réalisé';
+      const dColor = done ? '#999999' : barColor;
+      const tLabel = t.action || '(tâche sans nom)';
+      const charW = 4.7 * ganttScale;
+      const availLeft = tx - CHART_PAD_L - 12;
+      let tAnchor, tX, maxChars;
+      if (availLeft > 40) {
+        tAnchor = 'end';
+        tX = tx - 10;
+        maxChars = Math.max(6, Math.floor(availLeft / charW));
+      } else {
+        tAnchor = 'start';
+        tX = tx + 10;
+        maxChars = Math.max(6, Math.floor((TOTAL_W - tx - 12) / charW));
+      }
+      const tLabelTrunc = tLabel.length > maxChars ? tLabel.slice(0, maxChars - 1) + '…' : tLabel;
+      svgBody += `<g style="cursor:pointer" onclick="showGanttTaskInfo(event, ${t.id})" opacity="${done ? 0.55 : 1}">
+  <text x="${tX.toFixed(1)}" y="${ty.toFixed(1)}" dominant-baseline="central" text-anchor="${tAnchor}" font-size="${Math.round(8.2 * ganttScale)}" fill="${done ? '#999' : '#444'}" font-family="system-ui,sans-serif">${esc(tLabelTrunc)}</text>
+  <rect x="${(tx - 3).toFixed(1)}" y="${(ty - 3).toFixed(1)}" width="6" height="6" fill="${dColor}" transform="rotate(45 ${tx.toFixed(1)} ${ty.toFixed(1)})"/>
+</g>`;
     }
   });
-
-  const totalH = HEADER_H + rows.length * ROW_H + (ganttShowActions ? rows.reduce((s, p) => s + allActions.filter(a => a.projet === p.id).length * ACT_H, 0) : 0) + 100;
 
   // Header double ligne
   const ROW1_H = Math.round(18 * ganttScale), ROW2_H = Math.round(26 * ganttScale);
   let svgHeader = `<rect x="0" y="0" width="${TOTAL_W}" height="${HEADER_H}" fill="#f4f4f2"/>`;
   svgHeader += `<line x1="0" y1="${HEADER_H}" x2="${TOTAL_W}" y2="${HEADER_H}" stroke="#d0d0ce" stroke-width="1"/>`;
-  svgHeader += `<line x1="${LABEL_W}" y1="0" x2="${LABEL_W}" y2="${HEADER_H}" stroke="#d0d0ce" stroke-width="1"/>`;
-  svgHeader += `<line x1="${LABEL_W}" y1="${ROW1_H}" x2="${TOTAL_W}" y2="${ROW1_H}" stroke="#e0e0de" stroke-width="0.5"/>`;
-  svgHeader += `<text x="8" y="${HEADER_H/2}" dominant-baseline="central" font-size="9.5" font-weight="600" fill="#999" font-family="system-ui,sans-serif" letter-spacing="0.06em">SOUS-PROJET</text>`;
 
   months.forEach((m, i) => {
     const x1 = msX(m.getTime());
@@ -4540,46 +4675,43 @@ const BAR_H    = Math.round(14 * ganttScale);
     else if (zoom === 'semester') nextPeriod.setMonth(nextPeriod.getMonth() + 6);
     else if (zoom === 'year') nextPeriod.setFullYear(nextPeriod.getFullYear() + 1);
     else nextPeriod.setMonth(nextPeriod.getMonth() + 1);
-    
+
     const x2 = Math.min(msX(nextPeriod.getTime()), TOTAL_W);
     const cellW = x2 - x1;
-    const cx2 = x1 + cellW/2;
-    
+    const cx2 = x1 + cellW / 2;
+
     svgHeader += `<line x1="${x1.toFixed(1)}" y1="${ROW1_H}" x2="${x1.toFixed(1)}" y2="${HEADER_H}" stroke="#e0e0de" stroke-width="0.5"/>`;
-    
-    // Afficher l'année
-    if (i===0 || m.getFullYear() !== months[i-1]?.getFullYear()) {
-      svgHeader += `<text x="${x1+4}" y="${ROW1_H/2}" dominant-baseline="central" font-size="${Math.round(9 * ganttScale)}" font-weight="600" fill="#aaa" font-family="system-ui,sans-serif">${m.getFullYear()}</text>`;
-      if (i>0) svgHeader += `<line x1="${x1.toFixed(1)}" y1="0" x2="${x1.toFixed(1)}" y2="${ROW1_H}" stroke="#c0c0be" stroke-width="1"/>`;
+
+    if (i === 0 || m.getFullYear() !== months[i - 1]?.getFullYear()) {
+      svgHeader += `<text x="${x1 + 4}" y="${ROW1_H / 2}" dominant-baseline="central" font-size="${Math.round(9 * ganttScale)}" font-weight="600" fill="#aaa" font-family="system-ui,sans-serif">${m.getFullYear()}</text>`;
+      if (i > 0) svgHeader += `<line x1="${x1.toFixed(1)}" y1="0" x2="${x1.toFixed(1)}" y2="${ROW1_H}" stroke="#c0c0be" stroke-width="1"/>`;
     }
-    
-    // Afficher le label de la période
+
     if (cellW > 18) {
-      let label = '';
+      let plabel = '';
       if (zoom === 'quarter') {
-        const q = Math.floor(m.getMonth()/3) + 1;
-        label = `T${q}`;
+        const q = Math.floor(m.getMonth() / 3) + 1;
+        plabel = `T${q}`;
       } else if (zoom === 'semester') {
-        label = m.getMonth() < 6 ? 'S1' : 'S2';
+        plabel = m.getMonth() < 6 ? 'S1' : 'S2';
       } else if (zoom === 'year') {
-        label = ''; // Pas de label supplémentaire, l'année suffit
+        plabel = '';
       } else {
-        label = m.toLocaleDateString('fr-FR',{month:'short'}).replace('.','');
+        plabel = m.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '');
       }
-      if (label) svgHeader += `<text x="${cx2.toFixed(1)}" y="${ROW1_H+ROW2_H/2}" dominant-baseline="central" text-anchor="middle" font-size="${Math.round(9.5 * ganttScale)}" fill="#666" font-family="system-ui,sans-serif">${label}</text>`;
+      if (plabel) svgHeader += `<text x="${cx2.toFixed(1)}" y="${ROW1_H + ROW2_H / 2}" dominant-baseline="central" text-anchor="middle" font-size="${Math.round(9.5 * ganttScale)}" fill="#666" font-family="system-ui,sans-serif">${plabel}</text>`;
     }
   });
-  if (todayX > LABEL_W && todayX < TOTAL_W) {
+  if (todayX > CHART_PAD_L && todayX < TOTAL_W) {
     svgHeader += `<line x1="${todayX.toFixed(1)}" y1="0" x2="${todayX.toFixed(1)}" y2="${HEADER_H}" stroke="#DC2626" stroke-width="1" opacity="0.45"/>`;
-    svgHeader += `<text x="${todayX+3}" y="${ROW1_H+ROW2_H/2}" dominant-baseline="central" font-size="${Math.round(8.5 * ganttScale)}" fill="#DC2626" font-family="system-ui,sans-serif">auj.</text>`;
+    svgHeader += `<text x="${todayX + 3}" y="${ROW1_H + ROW2_H / 2}" dominant-baseline="central" font-size="${Math.round(8.5 * ganttScale)}" fill="#DC2626" font-family="system-ui,sans-serif">auj.</text>`;
   }
 
   // Marqueur flèche
   const defs = showDep ? `<defs><marker id="arrowGP" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><polygon points="0 0, 7 3.5, 0 7" fill="#6366f1" opacity="0.7"/></marker></defs>` : '';
 
-  // Stocker les lignes pour le tooltip
-  cont._ganttRows = rows;
-  cont._ganttDims = { HEADER_H, ROW_H, LABEL_W, TOTAL_W };
+  cont._ganttLayout = layout;
+  cont._ganttDims = { HEADER_H, TOTAL_W };
 
   cont.innerHTML = `<svg id="ganttProjetSvg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${TOTAL_W} ${totalH}" width="100%" style="display:block;height:auto;min-height:${totalH}px;cursor:default">
     ${defs}
@@ -4588,39 +4720,14 @@ const BAR_H    = Math.round(14 * ganttScale);
     ${svgHeader}
   </svg>
   <div style="margin-top:10px;display:flex;gap:14px;flex-wrap:wrap;padding-bottom:8px">
-    <span style="font-size:10.5px;color:var(--text-muted);display:inline-flex;align-items:center;gap:4px"><span style="width:12px;height:7px;border-radius:2px;background:var(--text-primary);display:inline-block"></span>Couleur du projet</span>
+    <span style="font-size:10.5px;color:var(--text-muted);display:inline-flex;align-items:center;gap:4px"><span style="width:16px;height:10px;border-radius:2px;background:var(--text-primary);display:inline-block"></span>PHASES</span>
+    <span style="font-size:10.5px;color:var(--text-muted);display:inline-flex;align-items:center;gap:4px"><span style="width:16px;height:2px;background:#1A7A4F;display:inline-block"></span>Chantier</span>
+    <span style="font-size:10.5px;color:var(--text-muted);display:inline-flex;align-items:center;gap:4px"><span style="width:6px;height:6px;background:#1A7A4F;display:inline-block;transform:rotate(45deg)"></span>Tâche (jalon daté)</span>
     <span style="font-size:10.5px;color:var(--text-muted);display:inline-flex;align-items:center;gap:4px"><span style="width:12px;height:7px;border-radius:2px;background:#888888;opacity:0.7;display:inline-block"></span>Réalisé</span>
     <span style="font-size:10.5px;color:#DC2626;display:inline-flex;align-items:center;gap:4px"><span style="width:1.5px;height:10px;background:#DC2626;display:inline-block"></span>Aujourd'hui</span>
     ${showDep ? '<span style="font-size:10.5px;color:#6366f1;display:inline-flex;align-items:center;gap:4px"><span style="width:14px;height:1.5px;background:#6366f1;display:inline-block;border-top:1.5px dashed #6366f1"></span>Dépendance</span>' : ''}
-    <span style="font-size:10.5px;color:var(--text-muted);display:inline-flex;align-items:center;gap:4px"><span style="width:12px;height:7px;border-radius:2px;background:linear-gradient(90deg,#374151 50%,rgba(55,65,81,0.15) 50%);display:inline-block"></span>Progression</span>
   </div>`;
 
-  // Tooltip survol colonne label
-  const svg = document.getElementById('ganttProjetSvg');
-  const tip = document.getElementById('ganttTooltip');
-  if (svg && tip) {
-    svg.addEventListener('mousemove', function(e) {
-      const rect  = svg.getBoundingClientRect();
-      const scaleX = TOTAL_W / rect.width;
-      const scaleY = totalH / rect.height;
-      const svgX  = (e.clientX - rect.left) * scaleX;
-      const svgY  = (e.clientY - rect.top)  * scaleY;
-      if (svgX > LABEL_W || svgY < HEADER_H) { tip.classList.remove('show'); return; }
-      const ri = Math.floor((svgY - HEADER_H) / ROW_H);
-      const r  = cont._ganttRows?.[ri];
-      if (!r) { tip.classList.remove('show'); return; }
-      const label = (r.code ? r.code + ' – ' : '') + (r.nom || '—') + themeBadgesHtml(r.theme);
-      const pilote = r.pilote ? allActors.find(a => a.id === r.pilote) : null;
-      const dateStr = [r.debut > 0 ? '▶ ' + new Date(r.debut*86400000).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}) : null,
-        (r.finreelle > 0 ? r.finreelle : r.fin) > 0 ? '■ ' + new Date(((r.finreelle||0) > 0 ? r.finreelle : r.fin)*86400000).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}) : null
-      ].filter(Boolean).join('&nbsp;&nbsp;');
-      tip.innerHTML = `<strong style="display:block;margin-bottom:3px">${esc(label)}</strong>${pilote?`<span style="font-size:11px;color:var(--text-muted)">${esc(pilote.nom)}</span><br>`:''}<span style="font-size:11px;color:var(--text-muted)">${dateStr}</span>`;
-      tip.style.left = (e.clientX + 12) + 'px';
-      tip.style.top  = (e.clientY - 8)  + 'px';
-      tip.classList.add('show');
-    });
-    svg.addEventListener('mouseleave', () => tip.classList.remove('show'));
-  }
 
   const tSel = document.getElementById('gpFilterTheme');
   if (tSel) {
@@ -6568,17 +6675,24 @@ const matchingIds = search
 
     const dates = fmtMonthYear(p.debut) + ((p.debut && p.fin) ? ' \u2192 ' : '') + fmtMonthYear(p.fin);
 
-    return `<div class="tl-node${isTop?' tl-node-top':''}" data-sp-node="${cid}" data-depth="${depth}">
+  // AJOUT — badge instance
+  const inst = p.instance ? instances[p.instance] : null;
+const instDotHtml = inst
+  ? `<span style="width:9px;height:9px;border-radius:50%;background:${couleurs[inst.couleur]?.hex||inst.couleur||'#9C9691'};flex-shrink:0;display:inline-block;cursor:help" title="${esc(inst.sigle||inst.nom)}"></span>`
+  : '';
+
+  return `<div class="tl-node${isTop?' tl-node-top':''}" data-sp-node="${cid}" data-depth="${depth}">
       <div class="tl-content">
         <div class="sp-tl-head" style="display:flex;align-items:center;gap:0;padding-left:6px;border-left:2.5px solid ${markerColor};border-radius:0 var(--radius-sm) var(--radius-sm) 0;transition:opacity 0.15s;"
              onmouseenter="this.querySelector('.tl-hbtns').style.opacity='1'"
              onmouseleave="this.querySelector('.tl-hbtns').style.opacity='0'">
           <!-- Zone nom (flex:1) -->
           <div style="display:flex;align-items:center;gap:7px;flex:1;min-width:0;cursor:pointer;padding-right:12px" onclick="toggleSpChildren('${cid}')" ondblclick="event.stopPropagation();openSubCanvas(${p.id})">
-            ${hasChildren
-              ? `<svg class="sp-acc-toggle${isOpen?' open':''}" id="${cid}_t" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;color:var(--text-muted)"><path d="M9 18l6-6-6-6"/></svg>`
-              : `<span style="width:9px;flex-shrink:0;display:inline-block"></span>`}
-          ${p.code ? `<span class="tl-code" style="font-size:11px">${esc(p.code)}</span>` : ''}
+  ${hasChildren
+    ? `<svg class="sp-acc-toggle${isOpen?' open':''}" id="${cid}_t" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;color:var(--text-muted)"><path d="M9 18l6-6-6-6"/></svg>`
+    : `<span style="width:9px;flex-shrink:0;display:inline-block"></span>`}
+${instDotHtml}
+${p.code ? `<span class="tl-code" style="font-size:11px">${esc(p.code)}</span>` : ''}
 <span class="tl-name" style="font-weight:${isTop?'600':'500'};font-size:${isTop?'13px':'12px'}">${esc(p.nom||'Sans nom')}</span>
 ${themeBadgesHtml(p.theme)}
 ${childCount > 0 ? `<span class="tl-count">${childCount}</span>` : ''}
