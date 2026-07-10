@@ -322,6 +322,10 @@ textarea.form-control { resize: vertical; min-height: 64px; line-height: 1.5; }
 .def-block-label { font-size: 12.5px; font-weight: 600; color: var(--text-primary); flex: 1; }
 .def-block-preview { font-size: 11.5px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 280px; }
 .def-block-body { display: none; padding: 11px 13px; font-size: 12.5px; color: var(--text-secondary); line-height: 1.7; border-top: 1px solid var(--border); background: var(--bg); }
+.def-block-body[contenteditable] { outline: none; cursor: text; }
+.def-block-body[contenteditable]:focus { background: rgba(0,0,0,0.02); }
+.def-block-body[contenteditable]:empty::before { content: attr(data-placeholder); color: #bbb; font-style: italic; font-size: 12px; }
+.def-block-save-btn { margin-left: auto; flex-shrink: 0; }
 .def-block-body.open { display: block; }
 .def-block-empty { font-style: italic; color: var(--text-muted); }
 
@@ -731,11 +735,7 @@ tr:hover .cr-del-btn { opacity: 1; }
   <nav class="tabbar">
     <div class="tab active" data-tab="definition" onclick="switchTab('definition')">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-      PILOTAGE
-    </div>
-    <div class="tab" data-tab="cadre" onclick="switchTab('cadre')">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-      Acteurs & instances
+      PROJET
     </div>
     <div class="tab" data-tab="objectifs" onclick="switchTab('objectifs')">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
@@ -759,12 +759,9 @@ tr:hover .cr-del-btn { opacity: 1; }
       <nav class="cadre-subnav">
         <div class="cadre-subtab active" data-sub="def-definition" onclick="switchDefTab('def-definition')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-          Définition du projet
+          Présentation
         </div>
-        <div class="cadre-subtab" data-sub="def-canvas" onclick="switchDefTab('def-canvas')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><line x1="2" y1="9" x2="22" y2="9"/><line x1="12" y1="9" x2="12" y2="21"/><line x1="2" y1="15" x2="12" y2="15"/></svg>
-          Canvas
-        </div>
+        
         <div class="cadre-subtab" data-sub="def-cadrage" onclick="switchDefTab('def-cadrage')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
           Note de cadrage
@@ -773,7 +770,15 @@ tr:hover .cr-del-btn { opacity: 1; }
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
           Chiffres clés
         </div>
-        
+        <div class="cadre-subtab" data-sub="def-acteurs" onclick="switchDefTab('def-acteurs')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></svg>
+          Acteurs
+        </div>
+        <div class="cadre-subtab" data-sub="def-instances" onclick="switchDefTab('def-instances')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+          Instances
+        </div>
+
         <!-- Boutons contextuels Définition -->
         <div class="subnav-spacer"></div>
         <div class="subnav-controls" id="defSubnavControls">
@@ -802,28 +807,7 @@ tr:hover .cr-del-btn { opacity: 1; }
             </div>
           </div>
         </div>
-        <!-- Sous-panel Canvas -->
-        <div class="cadre-subpanel" id="def-canvas" style="overflow:auto;background:var(--surface2)">
-          <div id="canvasToolbar" style="padding:8px 14px;display:flex;align-items:center;gap:8px;background:var(--bg);border-bottom:1px solid var(--border);flex-shrink:0">
-            <span style="font-size:12px;font-weight:600;color:var(--text-secondary);letter-spacing:.04em">PROJECT MODEL CANVAS</span>
-            <span style="flex:1"></span>
-            <button class="btn-add-ghost" id="canvasSaveBtn" onclick="saveCanvas()" style="display:none">
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-  Enregistrer
-</button>
-<button class="btn-add-ghost" onclick="exportCanvasPng()">
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-  PNG
-</button>
-<button class="btn-add-ghost" onclick="exportCanvasPdf()">
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-  PDF
-</button>
-          </div>
-          <div style="padding:14px;min-width:900px">
-            <div id="canvasGrid"></div>
-          </div>
-        </div>
+        
         <!-- Sous-panel Note de cadrage -->
         <div class="cadre-subpanel" id="def-cadrage" style="overflow:auto;background:var(--bg)">
           <div style="display:flex;align-items:center;gap:8px;padding:8px 20px;border-bottom:1px solid var(--border);background:var(--surface2);flex-shrink:0;flex-wrap:wrap">
@@ -838,84 +822,66 @@ tr:hover .cr-del-btn { opacity: 1; }
             <div class="loading"><div class="spinner"></div> Chargement…</div>
           </div>
         </div>
-      </div>
-    </div>
-
-    <!-- ── CADRE DU PROJET ── -->
-    <div class="panel" id="panel-cadre">
-      <nav class="cadre-subnav">
-        <div class="cadre-subtab active" data-sub="acteurs" onclick="switchCadreTab('acteurs')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></svg>
-          Acteurs
+        <!-- Sous-panel Acteurs -->
+        <div class="cadre-subpanel" id="def-acteurs">
+          <div class="panel-header">
+            <span class="panel-title">Acteurs</span>
+            <span class="count-badge" id="acteurCount">—</span>
+            <div class="search-wrap">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input type="text" class="search-input" id="acteurSearch" placeholder="Rechercher…">
+            </div>
+            <select class="filter-select" id="acteurFilterRole">
+              <option value="">Tous les rôles</option>
+              <option value="Commanditaire">Commanditaire</option>
+              <option value="Directeur de projet">Directeur de projet</option>
+              <option value="Chef de projet">Chef de projet</option>
+              <option value="Contributeur interne">Contributeur interne</option>
+              <option value="Contributeur externe">Contributeur externe</option>
+              <option value="Pilote d'actions">Pilote d'actions</option>
+              <option value="Bénéficiaire">Bénéficiaire</option>
+              <option value="Partie intéressée">Partie intéressée</option>
+            </select>
+            <select class="filter-select" id="acteurFilterDirection" onchange="renderActeurs()">
+              <option value="">Toutes les directions</option>
+            </select>
+            <select class="filter-select" id="acteurFilterType">
+              <option value="">Int. & Ext.</option>
+              <option value="interne">Interne</option>
+              <option value="externe">Externe</option>
+            </select>
+            <select class="filter-select" id="acteurFilterInstance">
+              <option value="">Toutes les instances</option>
+            </select>
+            <div class="spacer"></div>
+            <button class="btn-add" onclick="openActeurModal()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Ajouter
+            </button>
+          </div>
+          <div class="table-scroll">
+            <div id="acteurTable"><div class="loading"><div class="spinner"></div> Chargement…</div></div>
+          </div>
         </div>
-        <div class="cadre-subtab" data-sub="instances" onclick="switchCadreTab('instances')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
-          Instances
+        <!-- Sous-panel Instances -->
+        <div class="cadre-subpanel" id="def-instances">
+          <div class="panel-header">
+            <span class="panel-title">Instances</span>
+            <span class="count-badge" id="instanceCount">—</span>
+            <div class="search-wrap">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input type="text" class="search-input" id="instanceSearch" placeholder="Rechercher…">
+            </div>
+            <div class="spacer"></div>
+            <button class="btn-add" onclick="openInstanceModal()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Ajouter
+            </button>
+          </div>
+          <div class="table-scroll">
+            <div id="instanceTable"><div class="loading"><div class="spinner"></div> Chargement…</div></div>
+          </div>
         </div>
-
-      </nav>
-      <div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
-    <div class="cadre-subpanel" id="cadre-acteurs">
-      <div class="panel-header">
-        <span class="panel-title">Acteurs</span>
-        <span class="count-badge" id="acteurCount">—</span>
-        <div class="search-wrap">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input type="text" class="search-input" id="acteurSearch" placeholder="Rechercher…">
-        </div>
-        <select class="filter-select" id="acteurFilterRole">
-          <option value="">Tous les rôles</option>
-          <option value="Commanditaire">Commanditaire</option>
-          <option value="Directeur de projet">Directeur de projet</option>
-          <option value="Chef de projet">Chef de projet</option>
-          <option value="Contributeur interne">Contributeur interne</option>
-          <option value="Contributeur externe">Contributeur externe</option>
-          <option value="Pilote d'actions">Pilote d'actions</option>
-          <option value="Bénéficiaire">Bénéficiaire</option>
-          <option value="Partie intéressée">Partie intéressée</option>
-        </select>
-        <select class="filter-select" id="acteurFilterDirection" onchange="renderActeurs()">
-          <option value="">Toutes les directions</option>
-        </select>
-        <select class="filter-select" id="acteurFilterType">
-          <option value="">Int. & Ext.</option>
-          <option value="interne">Interne</option>
-          <option value="externe">Externe</option>
-        </select>
-        <select class="filter-select" id="acteurFilterInstance">
-          <option value="">Toutes les instances</option>
-        </select>
-        <div class="spacer"></div>
-        <button class="btn-add" onclick="openActeurModal()">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Ajouter
-        </button>
-      </div>
-      <div class="table-scroll">
-        <div id="acteurTable"><div class="loading"><div class="spinner"></div> Chargement…</div></div>
-      </div>
-    </div>
-
-    <div class="cadre-subpanel" id="cadre-instances">
-      <div class="panel-header">
-        <span class="panel-title">Instances</span>
-        <span class="count-badge" id="instanceCount">—</span>
-        <div class="search-wrap">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input type="text" class="search-input" id="instanceSearch" placeholder="Rechercher…">
-        </div>
-        <div class="spacer"></div>
-        <button class="btn-add" onclick="openInstanceModal()">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Ajouter
-        </button>
-      </div>
-      <div class="table-scroll">
-        <div id="instanceTable"><div class="loading"><div class="spinner"></div> Chargement…</div></div>
-      </div>
-    </div>
-
-
       </div>
     </div>
 
@@ -935,14 +901,8 @@ tr:hover .cr-del-btn { opacity: 1; }
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="6" height="10" rx="1"/><rect x="9" y="4" width="6" height="13" rx="1"/><rect x="16" y="9" width="6" height="8" rx="1"/></svg>
           Feuille de route
         </div>
-        <div class="cadre-subtab" id="spModeGraphe" data-sub="sp-graphe" onclick="switchSpMode('graphe')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="19" cy="19" r="2"/><line x1="7" y1="12" x2="17" y2="6"/><line x1="7" y1="12" x2="17" y2="18"/></svg>
-          Vue graphique
-        </div>
-        <div class="cadre-subtab" id="spModeMindmap" data-sub="sp-mindmap" onclick="switchSpMode('mindmap')">
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="3" cy="6" r="2"/><circle cx="21" cy="6" r="2"/><circle cx="3" cy="18" r="2"/><circle cx="21" cy="18" r="2"/><line x1="5" y1="6.5" x2="9.5" y2="10.5"/><line x1="19" y1="6.5" x2="14.5" y2="10.5"/><line x1="5" y1="17.5" x2="9.5" y2="13.5"/><line x1="19" y1="17.5" x2="14.5" y2="13.5"/></svg>
-  Mind map
-</div>
+        
+        
         <div class="subnav-spacer"></div>
         <div class="subnav-controls" id="spListeControls" style="display:none">
           <div class="search-wrap" style="min-width:130px;max-width:190px">
@@ -1055,45 +1015,10 @@ tr:hover .cr-del-btn { opacity: 1; }
   <div id="feuillerouteContainer" style="padding:12px 14px;min-width:700px"></div>
 </div>
         </div>
-        <!-- Vue Mind map -->
-<div id="sp-mindmap" style="flex:1;overflow:hidden;display:none;background:#fafaf9;position:relative">
-  <svg id="spMindmapSvg" style="width:100%;height:100%"></svg>
-  <div class="graph-controls">
-    <button class="graph-ctrl-btn" id="spMmZoomIn">+</button>
-    <button class="graph-ctrl-btn" id="spMmZoomOut">−</button>
-    <button class="graph-ctrl-btn" id="spMmReset" title="Réinitialiser">⌂</button>
-  </div>
-</div>
-        <!-- Vue graphique -->
-        <div id="sp-graphe" style="flex:1;overflow:hidden;display:none">
-          <div class="graph-view" id="graphView">
-            <svg id="graphSvg">
-              <defs>
-                <filter id="gNodeShadow" x="-30%" y="-30%" width="160%" height="160%">
-                  <feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="rgba(0,0,0,0.1)"/>
-                </filter>
-                <marker id="gArrow" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
-                  <path d="M0,0 L0,6 L8,3 z" fill="rgba(0,0,0,0.15)"/>
-                </marker>
-              </defs>
-              <g id="graphRoot"></g>
-            </svg>
-            <div class="graph-tooltip" id="graphTooltip"></div>
-            <div class="graph-legend" id="graphLegend">
-              <div class="graph-legend-item"><div class="graph-legend-dot" style="background:#1A1A1A"></div>Projet maître</div>
-              <div class="graph-legend-item"><div class="graph-legend-dot" style="background:#1A7A4F"></div>En cours (couleur du projet)</div>
-              <div class="graph-legend-item"><div class="graph-legend-dot" style="background:#888888"></div>Réalisé</div>
-            </div>
-            <div class="graph-controls">
-              <button class="graph-ctrl-btn" id="graphZoomIn">+</button>
-              <button class="graph-ctrl-btn" id="graphZoomOut">−</button>
-              <button class="graph-ctrl-btn" id="graphReset" title="Réinitialiser">⌂</button>
-            </div>
-          </div>
-        </div>
       </div>
-    </div>
-
+    </div><!-- /panel-objectifs -->
+        
+        
     <!-- ── DÉCISIONS ── -->
     <div class="panel" id="panel-decisions">
       <nav class="cadre-subnav">
@@ -1972,15 +1897,11 @@ function switchTab(name) {
     const activeDefSub = document.querySelector('#panel-definition .cadre-subtab.active');
     if (activeDefSub?.dataset.sub === 'def-kpi') renderKpi();
   }
-  if (name === 'cadre') {
-    switchCadreTab('acteurs');
-  }
   if (name === 'objectifs') {
     const activeSub = document.querySelector('#panel-objectifs .cadre-subtab.active');
-    if (activeSub?.id === 'spModeGraphe') renderGraph();
+    if (activeSub?.id === 'spModeListe') renderSousProjets();
     else if (activeSub?.id === 'spModeGantt') { populateGanttProjetFilters(); renderGanttProjet(); }
     else if (activeSub?.id === 'spModeFeuilleDeroute') { populateFeuillerouteFilters(); renderFeuilleDeroute(); }
-    else if (activeSub?.id === 'spModeMindmap') renderSpMindmap();
     else renderSousProjets();
   }
   if (name === 'decisions') {
@@ -2160,19 +2081,19 @@ function switchSpMode(mode) {
   document.getElementById('spModeListe').classList.toggle('active',   mode === 'liste');
   document.getElementById('spModeGantt').classList.toggle('active',   mode === 'gantt');
   document.getElementById('spModeFeuilleDeroute').classList.toggle('active', mode === 'feuilleroute');
-  document.getElementById('spModeGraphe').classList.toggle('active',  mode === 'graphe');
-  document.getElementById('spModeMindmap').classList.toggle('active', mode === 'mindmap');
+  
+  
   document.getElementById('sp-liste').style.display        = mode === 'liste'        ? 'flex' : 'none';
   document.getElementById('sp-gantt').style.display        = mode === 'gantt'        ? 'flex' : 'none';
   document.getElementById('sp-feuilleroute').style.display = mode === 'feuilleroute' ? 'flex' : 'none';
-  document.getElementById('sp-graphe').style.display       = mode === 'graphe'       ? 'flex' : 'none';
-  document.getElementById('sp-mindmap').style.display      = mode === 'mindmap'      ? 'flex' : 'none';
+  
+  
   document.getElementById('spListeControls').style.display = mode === 'liste' ? '' : 'none';
   if (mode === 'liste')        renderSousProjets();
   if (mode === 'gantt')        { populateGanttProjetFilters(); renderGanttProjet(); }
   if (mode === 'feuilleroute') { populateFeuillerouteFilters(); renderFeuilleDeroute(); }
-  if (mode === 'graphe')       renderGraph();
-  if (mode === 'mindmap')      renderSpMindmap();
+  
+  
 }
 
 function renderSpMindmap() {
@@ -3199,22 +3120,15 @@ function renderMindmap() {
   draw();
 }
 
-function switchCadreTab(sub) {
-  document.querySelectorAll('.cadre-subtab').forEach(t => t.classList.toggle('active', t.dataset.sub === sub));
-  document.querySelectorAll('.cadre-subpanel').forEach(p => p.classList.toggle('active', p.id === 'cadre-' + sub));
-  if (sub === 'sousprojets') renderSousProjets();
-  if (sub === 'acteurs')     renderActeurs();
-  if (sub === 'instances')   renderInstances();
-}
-
 function switchDefTab(sub) {
   document.querySelectorAll('#panel-definition .cadre-subtab').forEach(t => t.classList.toggle('active', t.dataset.sub === sub));
   document.querySelectorAll('#panel-definition .cadre-subpanel').forEach(p => p.classList.toggle('active', p.id === sub));
   const ctrl = document.getElementById('defSubnavControls');
   if (ctrl) ctrl.style.display = sub === 'def-definition' ? '' : 'none';
-  if (sub === 'def-kpi')     renderKpi();
-  if (sub === 'def-canvas')  renderCanvas();
-  if (sub === 'def-cadrage') renderNoteCadrage();
+  if (sub === 'def-kpi')      renderKpi();
+  if (sub === 'def-cadrage')  renderNoteCadrage();
+  if (sub === 'def-acteurs')  renderActeurs();
+  if (sub === 'def-instances') renderInstances();
 }
 
 // ══ RENDER ACTEURS ══
@@ -5335,14 +5249,15 @@ async function fetchProjets() {
           code:        t.code?.[i]        || '',
           nom:         t.nom?.[i]         || '',
           ref:         t.ref?.[i]         || 0,   // 0 = no parent
-          cadrage:     t.cadrage?.[i]     || '',
+          perimetre:  t.perimetre?.[i]  || '',
           contexte:    t.contexte?.[i]    || '',
           objectifs:   t.objectifs?.[i]   || '',
           livrables:   t.livrables?.[i]   || '',
           debut:       t.debut?.[i]       || null,
           fin:         t.fin?.[i]         || null,
           risques:     t.risques?.[i]     || '',
-          moyens:      t.moyens?.[i]      || '',
+opportunites: t.opportunites?.[i] || '',
+moyens:      t.moyens?.[i]      || '',
           qualitatif:  t.qualitatif?.[i]  || '',
           quantitatif: t.quantitatif?.[i] || '',
           finreelle:   t.finreelle?.[i]   || null,
@@ -5413,6 +5328,41 @@ function projetHex(p) {
   const isSub = p.ref && p.ref !== 0;
   return isSub ? '#1A7A4F' : '#1A1A1A';
 }  
+
+let defBlockDirty = {};
+
+function defBlockMarkDirty(id) {
+  if (!defBlockDirty[id]) {
+    defBlockDirty[id] = true;
+    const btn = document.getElementById(id + '_save');
+    if (btn) btn.style.display = '';
+  }
+}
+
+async function saveDefBlock(field, id) {
+  if (!masterProjet) return;
+  const el = document.getElementById(id);
+  if (!el) return;
+  const val = el.innerHTML
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<div><br\s*\/?><\/div>/gi, '\n')
+    .replace(/<div>/gi, '\n')
+    .replace(/<\/div>/gi, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+  try {
+    await grist.docApi.applyUserActions([['UpdateRecord', 'Projet', masterProjet.id, { [field]: val || null }]]);
+    masterProjet[field] = val;
+    defBlockDirty[id] = false;
+    const btn = document.getElementById(id + '_save');
+    if (btn) btn.style.display = 'none';
+    showToast('Enregistré');
+  } catch(e) { showToast(e.message, 'error'); }
+}
 
 // ══ RENDER DÉFINITION ══
 function renderDefinition() {
@@ -5532,20 +5482,20 @@ function renderDefinition() {
     </div>`;
 
   // ── Accordéon blocks ──
-  const block = (icon, label, value) => {
-    const empty   = !value || !value.trim();
-    const preview = empty ? '' : value.split('\n').join(' ').slice(0, 60) + (value.length > 60 ? '…' : '');
-    const id      = 'block_' + label.split(' ').join('_');
+  const block = (icon, label, field) => {
+    const value = p[field] || '';
+    const empty = !value || !value.trim();
+    const id    = 'block_' + field;
     return `<div class="def-block">
       <div class="def-block-header" onclick="toggleBlock('${id}')">
         <svg class="def-block-toggle" id="${id}_toggle" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
         <span class="def-block-icon">${icon}</span>
         <span class="def-block-label">${label}</span>
-        ${!empty ? `<span class="def-block-preview">${esc(preview)}</span>` : ''}
+        <span class="def-block-save-btn" id="${id}_save" style="display:none">
+          <button class="btn-add-ghost" style="padding:2px 8px;font-size:11px" onclick="event.stopPropagation();saveDefBlock('${field}','${id}')">Enregistrer</button>
+        </span>
       </div>
-      <div class="def-block-body" id="${id}">
-        ${empty ? '<span class="def-block-empty">Non renseigné</span>' : esc(value.trim()).split('\n').join('<br>')}
-      </div>
+      <div class="def-block-body" id="${id}" contenteditable="true" data-field="${field}" data-placeholder="Cliquez pour renseigner…" oninput="defBlockMarkDirty('${id}')">${empty ? '' : esc(value.trim()).split('\n').join('<br>')}</div>
     </div>`;
   };
 
@@ -5579,18 +5529,27 @@ function renderDefinition() {
     <div style="margin-bottom:24px">${teamHtml}</div>
 
     <!-- Instances du projet -->
-    ${section('Instances du projet', groupeProjetHtml)}
+    <div class="def-block" style="margin-bottom:24px">
+  <div class="def-block-header" onclick="toggleBlock('block_instances')">
+    <svg class="def-block-toggle" id="block_instances_toggle" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+    <span class="def-block-label" style="font-size:10.5px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted)">Instances du projet</span>
+  </div>
+  <div class="def-block-body" id="block_instances" style="padding:11px 13px 13px">
+    ${groupeProjetHtml}
+  </div>
+</div>
 
     <!-- Détail du projet -->
     ${section('Détail du projet', `<div class="def-blocks">
-      ${block('<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>', 'Cadrage',     p.cadrage)}
-      ${block('<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>', 'Contexte',    p.contexte)}
-      ${block('<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>', 'Objectifs',   p.objectifs)}
-      ${block('<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>', 'Livrables',   p.livrables)}
-      ${block('<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>', 'Moyens',      p.moyens)}
-      ${block('<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>', 'Risques',     p.risques)}
-      ${block('<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>', 'Qualitatif',  p.qualitatif)}
-      ${block('<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>', 'Quantitatif', p.quantitatif)}
+      ${block('<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>', 'Périmètre',   'perimetre')}
+      ${block('<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>', 'Contexte',    'contexte')}
+      ${block('<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>', 'Objectifs',   'objectifs')}
+      ${block('<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>', 'Livrables',   'livrables')}
+      ${block('<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>', 'Moyens',      'moyens')}
+      ${block('<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>', 'Risques',     'risques')}
+      ${block('<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 1 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>', 'Opportunités', 'opportunites')}
+      ${block('<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>', 'Qualitatif',  'qualitatif')}
+      ${block('<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>', 'Quantitatif', 'quantitatif')}
     </div>`)}
 
   </div>`;
@@ -5624,11 +5583,12 @@ const CANVAS_BLOCKS = [
   { id:'equipe',      col:'1', row:'2', span:'1', title:'Équipe projet',           subtitle:'Acteurs impliqués',           num:4,  color:'#374151', field:null,          auto:'equipe' },
   { id:'qualitatif',  col:'2', row:'2', span:'1', title:'Bénéfices qualitatifs', subtitle:'Valeur perçue',         num:5,  color:'#B45309', field:'qualitatif',  placeholder:'Amélioration de la satisfaction, de la qualité…' },
   { id:'quantitatif', col:'3', row:'2', span:'1', title:'Bénéfices quantitatifs', subtitle:'Valeur mesurable',     num:6,  color:'#3B5BDB', field:'quantitatif', placeholder:'Économies, gains de temps, revenus…' },
-  { id:'risques',     col:'4', row:'2', span:'1', title:'Risques et opportunités',          subtitle:'Menaces et leviers identifiés',        num:7,  color:'#DC2626', field:'risques',     placeholder:'Identifiez les principaux risques et incertitudes…' },
-  { id:'cadrage',     col:'5', row:'2', span:'1', title:'Périmètre du projet',          subtitle:'Périmètre & contraintes',    num:8,  color:'#6B7280', field:'cadrage',     placeholder:'Périmètre, exclusions, contraintes…' },
+  { id:'risques',     col:'4', row:'2', span:'1', title:'Risques',          subtitle:'Menaces identifiées',        num:7,  color:'#DC2626', field:'risques',     placeholder:'Identifiez les principaux risques et incertitudes…' },
+  { id:'opportunites',col:'5', row:'2', span:'1', title:'Opportunités',     subtitle:'Leviers identifiés',         num:8,  color:'#0D9488', field:'opportunites', placeholder:'Identifiez les opportunités à saisir…' },
   // row 3
-  { id:'moyens',      col:'1', row:'3', span:'2', title:'Moyens mis à disposition', subtitle:'Humains, techniques, financiers', num:9, color:'#374151', field:'moyens', placeholder:'Équipes, budget, outils nécessaires…' },
-  { id:'etapes',      col:'3', row:'3', span:'3', title:'Étapes clés',      subtitle:'Jalons principaux',          num:10, color:'#0E7490', field:null,          auto:'etapes' },
+  { id:'perimetre',   col:'1', row:'3', span:'1', title:'Périmètre du projet',          subtitle:'Périmètre & contraintes',    num:9,  color:'#6B7280', field:'perimetre',   placeholder:'Périmètre, exclusions, contraintes…' },
+  { id:'moyens',      col:'2', row:'3', span:'2', title:'Moyens mis à disposition', subtitle:'Humains, techniques, financiers', num:10, color:'#374151', field:'moyens', placeholder:'Équipes, budget, outils nécessaires…' },
+  { id:'etapes',      col:'4', row:'3', span:'2', title:'Étapes clés',      subtitle:'Jalons principaux',          num:11, color:'#0E7490', field:null,          auto:'etapes' },
 ];
 
 let canvasDirty = false;
@@ -5854,13 +5814,14 @@ function buildCanvasPrintHtml(gridHtml, title) {
 const SUB_CANVAS_BLOCKS = [
   { id:'contexte',   span:2, title:'Contexte', subtitle:'Pourquoi ce sous-projet ?',    num:1, color:'#6D28D9', field:'contexte'    },
   { id:'objectifs',  span:2, title:'Objectifs',               subtitle:'Résultats attendus',           num:2, color:'#1A7A4F', field:'objectifs'    },
-  { id:'cadrage',    span:1, title:'Périmètre',                 subtitle:'Périmètre & contraintes',      num:3, color:'#6B7280', field:'cadrage'      },
+  { id:'perimetre',  span:1, title:'Périmètre',                 subtitle:'Périmètre & contraintes',      num:3, color:'#6B7280', field:'perimetre'    },
   { id:'livrables',  span:2, title:'Livrables',               subtitle:'Ce qui sera produit',          num:4, color:'#0E7490', field:'livrables'    },
-  { id:'risques',    span:1, title:'Risques et opportunités',                 subtitle:'Menaces identifiées',          num:5, color:'#DC2626', field:'risques'      },
-  { id:'suivi',      span:2, title:'Suivi',                   subtitle:'Indicateurs de suivi',         num:6, color:'#8B5CF6', field:'suivi',       rowSpan:4 },
-  { id:'qualitatif', span:2, title:'Indicateurs qualitatifs',  subtitle:'Valeur perçue',                num:7, color:'#F59E0B', field:'qualitatif'  },
-  { id:'quantitatif',span:1, title:'Indicateurs quantitatifs', subtitle:'Valeur mesurable',             num:8, color:'#3B82F6', field:'quantitatif' },
-  { id:'etapes',     span:3, title:'Étapes & tâches',         subtitle:'Jalons et actions rattachées', num:9, color:'#10B981', field:null, auto:'etapes' },
+  { id:'risques',    span:1, title:'Risques',                 subtitle:'Menaces identifiées',          num:5, color:'#DC2626', field:'risques'      },
+  { id:'opportunites', span:1, title:'Opportunités',          subtitle:'Leviers identifiés',           num:6, color:'#0D9488', field:'opportunites' },
+  { id:'suivi',      span:2, title:'Suivi',                   subtitle:'Indicateurs de suivi',         num:7, color:'#8B5CF6', field:'suivi',       rowSpan:4 },
+  { id:'qualitatif', span:2, title:'Indicateurs qualitatifs',  subtitle:'Valeur perçue',                num:8, color:'#F59E0B', field:'qualitatif'  },
+  { id:'quantitatif',span:1, title:'Indicateurs quantitatifs', subtitle:'Valeur mesurable',             num:9, color:'#3B82F6', field:'quantitatif' },
+  { id:'etapes',     span:3, title:'Étapes & tâches',         subtitle:'Jalons et actions rattachées', num:10, color:'#10B981', field:null, auto:'etapes' },
 ];
 
 function openSubCanvas(projetId) {
@@ -6414,41 +6375,8 @@ function printNoteCadrage() {
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'Inter',sans-serif;background:white;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-    @page{size:A4;margin:16mm 14mm}
-    .nc-page{max-width:680px;margin:0 auto;padding:32px 40px 48px}
-    .nc-header-band{background:#111;color:#fff;padding:24px 32px 20px;border-radius:6px;margin-bottom:28px}
-    .nc-pretitle{font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:8px}
-    .nc-title{font-size:26px;font-weight:700;letter-spacing:-.02em;line-height:1.15;margin-bottom:12px}
-    .nc-dates{display:flex;gap:20px;flex-wrap:wrap}
-    .nc-date-item{display:flex;align-items:center;gap:6px;font-size:11.5px;color:rgba(255,255,255,.75)}
-    .nc-date-label{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.45);display:block;margin-bottom:1px}
-    .nc-date-val{font-size:13px;font-weight:600;color:#fff}
-    .nc-section{margin-bottom:22px}
-    .nc-section-title{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#999;border-bottom:1px solid #e5e5e5;padding-bottom:5px;margin-bottom:12px}
-    .nc-team-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:0}
-    .nc-team-card{display:inline-flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid #e8e8e8;border-radius:5px;background:#fafafa}
-    .nc-avatar{width:28px;height:28px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;flex-shrink:0}
-    .nc-actor-name{font-size:12px;font-weight:500;color:#111}
-    .nc-actor-role{font-size:10px;color:#888;display:block}
-    .nc-text-block{font-size:12.5px;color:#333;line-height:1.75;white-space:pre-wrap;background:#fafafa;border-left:3px solid #e0e0e0;padding:10px 14px;border-radius:0 4px 4px 0}
-    .nc-text-empty{font-size:12px;color:#bbb;font-style:italic}
-    .nc-instances{display:flex;flex-direction:column;gap:8px}
-    .nc-inst-row{border:1px solid #e8e8e8;border-radius:5px;overflow:hidden}
-    .nc-inst-head{display:flex;align-items:center;gap:8px;padding:7px 11px;background:#f7f7f7}
-    .nc-inst-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-    .nc-inst-sigle{font-size:12px;font-weight:600;color:#111}
-    .nc-inst-nom{font-size:11.5px;color:#666}
-    .nc-inst-role{font-size:10.5px;color:#999;margin-left:auto;font-style:italic}
-    .nc-inst-members{display:flex;flex-wrap:wrap;gap:5px;padding:7px 11px;background:#fff}
-    .nc-inst-member{display:inline-flex;align-items:center;gap:4px;padding:2px 7px 2px 4px;border:1px solid #e8e8e8;border-radius:20px;font-size:11px;color:#444}
-    .nc-inst-member-av{width:14px;height:14px;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:6px;font-weight:700;color:#fff;flex-shrink:0}
-    .nc-divider{height:1px;background:#111;margin:24px 0}
-    .nc-footer{margin-top:32px;font-size:10px;color:#ccc;text-align:right;border-top:1px solid #e8e8e8;padding-top:10px}
-    .nc-two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-    .nc-info-prop{display:flex;align-items:flex-start;border-bottom:1px solid #f0f0f0;padding:6px 0;min-height:28px}
-    .nc-info-label{width:140px;flex-shrink:0;font-size:10.5px;font-weight:500;color:#999}
-    .nc-info-value{flex:1;font-size:12.5px;color:#111}
+    body{background:white;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    @page{size:A4;margin:18mm 16mm}
   </style>
   </head><body>
   <div id="ncPrintArea">${buildNoteCadrageHtml(true)}</div>
@@ -6463,135 +6391,52 @@ function buildNoteCadrageHtml(forPrint) {
   if (!masterProjet) {
     return `<div style="padding:64px;text-align:center;color:var(--text-muted);font-size:13px">Aucun projet maître défini.</div>`;
   }
-  const p      = masterProjet;
-  const today  = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
-  const termine = !!p.finreelle;
-
-  const d1 = p.debut    > 0 ? new Date(p.debut    * 86400000).toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' }) : null;
-  const d2 = p.fin      > 0 ? new Date(p.fin      * 86400000).toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' }) : null;
-  const d3 = p.finreelle> 0 ? new Date(p.finreelle* 86400000).toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' }) : null;
-
-  // Acteurs clés
-  const byRole = (role) => allActors.filter(a => a.role === role && typeof a.id === 'number');
-  const keyActors = [...byRole('Commanditaire'), ...byRole('Directeur de projet'), ...byRole('Chef de projet')];
-
-  // Équipe projet (membres de l'instance GR-PROJ)
-  const grProjInst = Object.values(instances).find(i => i.sigle === 'GR-PROJ');
-  const grProjId   = grProjInst ? grProjInst.id : null;
-  const teamActors = grProjId
-    ? allActors.filter(a => typeof a.id === 'number' && getRefList(a.instance).map(v => resolveInstId(v)).includes(grProjId))
-    : allActors.filter(a => typeof a.id === 'number');
-
-  // Instances
-  const seenInstIds = new Set();
-  const instList = Object.values(instances).filter(v => {
-    if (typeof v.id !== 'number' || seenInstIds.has(v.id)) return false;
-    seenInstIds.add(v.id); return true;
-  }).sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999));
-
-  // ── Helpers (styles inline, compatibles écran et impression) ──
-
-  const actorCard = (a) => {
-    const rc  = roleColors[a.role] || { bg:'#F3F4F6', text:'#374151', avatar:'#6B7280' };
-    const ini = (a.nom||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-    const roleShort = { 'Commanditaire':'Commanditaire','Directeur de projet':'Dir. de projet','Chef de projet':'Chef de projet' }[a.role] || a.role;
-    return `<div style="display:inline-flex;align-items:center;gap:8px;padding:7px 11px;border:1px solid #e5e5e5;border-radius:5px;background:${rc.bg};margin:0">
-      <div style="width:28px;height:28px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;background:${rc.avatar};flex-shrink:0">${ini}</div>
-      <div><div style="font-size:12px;font-weight:600;color:${rc.text}">${esc(a.nom)}</div><div style="font-size:10.5px;color:${rc.text};opacity:0.7">${esc(roleShort)}</div></div>
-    </div>`;
-  };
-
-  const teamCard = (a) => {
-    const rc  = roleColors[a.role] || { bg:'#F3F4F6', text:'#374151', avatar:'#6B7280' };
-    const ini = (a.nom||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-    return `<span style="display:inline-flex;align-items:center;gap:6px;padding:3px 9px 3px 4px;border:1px solid #e5e5e5;border-radius:20px;background:#fff">
-      <span style="width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:6.5px;font-weight:700;color:#fff;background:${rc.avatar};flex-shrink:0">${ini}</span>
-      <span style="font-size:11px;color:#444">${esc(a.nom)}</span>
-      ${a.role ? `<span style="font-size:9.5px;color:#999">${esc(a.role)}</span>` : ''}
-    </span>`;
-  };
+  const p     = masterProjet;
+  const today = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+  const SERIF = "Georgia, 'Times New Roman', serif";
 
   const textBlock = (val) => {
     if (!val || !val.trim()) {
-      return `<span style="font-size:12px;color:#bbb;font-style:italic">Non renseigné</span>`;
+      return `<p style="font-family:${SERIF};font-size:12.5px;color:#aaa;font-style:italic;margin:0">Non renseigné</p>`;
     }
-    return `<div style="font-size:12.5px;color:#333;line-height:1.75;white-space:pre-wrap;padding:9px 13px;background:#fafafa;border-left:3px solid #e0e0e0;border-radius:0 4px 4px 0">${esc(val.trim()).split('\n').join('<br>')}</div>`;
+    return `<p style="font-family:${SERIF};font-size:12.5px;color:#222;line-height:1.85;text-align:justify;white-space:pre-wrap;margin:0">${esc(val.trim()).split('\n').join('<br>')}</p>`;
   };
 
-  const section = (title, bodyHtml) => `
-    <div style="margin-bottom:22px">
-      <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#999;border-bottom:1px solid #e5e5e5;padding-bottom:5px;margin-bottom:12px">${title}</div>
-      ${bodyHtml}
-    </div>`;
-
-  // Instances
-  const instHtml = instList.map(inst => {
-    const hex = couleurs[inst.couleur]?.hex || '#9B9B9B';
-    const members = allActors.filter(a => {
-      const ids = getRefList(a.instance).map(v => resolveInstId(v));
-      return typeof a.id === 'number' && ids.includes(inst.id);
-    });
-    const membersHtml = members.map(a => {
-      const rc  = roleColors[a.role] || { avatar:'#6B7280' };
-      const ini = (a.nom||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-      return `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 7px 2px 4px;border:1px solid #e8e8e8;border-radius:20px;font-size:11px;color:#444">
-        <span style="width:14px;height:14px;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:6px;font-weight:700;color:#fff;background:${rc.avatar};flex-shrink:0">${ini}</span>
-        ${esc(a.nom)}
-      </span>`;
-    }).join('');
-    return `<div style="display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid #f0f0f0">
-      <span style="width:7px;height:7px;border-radius:50%;background:${hex};flex-shrink:0;margin-top:4px;display:inline-block"></span>
-      <div style="flex:1;min-width:0">
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:${members.length?'5px':'0'}">
-          <span style="font-size:11.5px;font-weight:600;color:#111">${esc(inst.sigle||inst.nom)}</span>
-          ${inst.nom && inst.sigle ? `<span style="font-size:11px;color:#888">${esc(inst.nom)}</span>` : ''}
-          ${inst.role ? `<span style="font-size:10.5px;color:#aaa;font-style:italic">${esc(inst.role)}</span>` : ''}
-        </div>
-        ${members.length ? `<div style="display:flex;flex-wrap:wrap;gap:4px">${membersHtml}</div>` : ''}
+  const section = (num, title, val) => `
+    <div style="margin-bottom:26px;page-break-inside:avoid">
+      <div style="display:flex;align-items:baseline;gap:10px;border-bottom:1px solid #ccc;padding-bottom:6px;margin-bottom:10px">
+        <span style="font-family:${SERIF};font-size:13px;font-weight:700;color:#111">${num}.</span>
+        <span style="font-family:${SERIF};font-size:13px;font-weight:700;letter-spacing:.02em;color:#111;text-transform:uppercase">${title}</span>
       </div>
+      ${textBlock(val)}
     </div>`;
-  }).join('');
 
-  // ── Corps principal (identique écran et print) ──
   const body = `
     <!-- En-tête -->
-    <div style="margin-bottom:28px;padding-bottom:20px;border-bottom:2px solid #111">
-      <div style="font-size:9.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#999;margin-bottom:8px">Note de cadrage${p.code ? ' · ' + esc(p.code) : ''}</div>
-      <div style="font-size:22px;font-weight:700;letter-spacing:-.02em;line-height:1.2;color:#111;margin-bottom:14px">${esc(p.nom || '—')}</div>
-      <div style="display:flex;gap:28px;flex-wrap:wrap">
-        ${d1 ? `<div><div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:#999;margin-bottom:2px">Début</div><div style="font-size:12.5px;font-weight:600;color:#111">${d1}</div></div>` : ''}
-        ${d2 ? `<div><div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:#999;margin-bottom:2px">Fin prévue</div><div style="font-size:12.5px;font-weight:600;color:#111">${d2}</div></div>` : ''}
-        ${d3 ? `<div><div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:#DC2626;margin-bottom:2px">Clôturé le</div><div style="font-size:12.5px;font-weight:600;color:#DC2626">${d3}</div></div>` : ''}
-      </div>
+    <div style="text-align:center;margin-bottom:40px">
+      <div style="height:3px;background:#111;margin-bottom:22px"></div>
+      <div style="font-family:${SERIF};font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:#888;margin-bottom:14px">Note de cadrage</div>
+      ${p.code ? `<div style="font-family:${SERIF};font-size:11px;color:#aaa;margin-bottom:6px">${esc(p.code)}</div>` : ''}
+      <div style="font-family:${SERIF};font-size:26px;font-weight:700;color:#111;line-height:1.3">${esc(p.nom || '—')}</div>
+      <div style="height:1px;background:#111;margin-top:22px"></div>
     </div>
 
-    ${keyActors.length ? section('Portage du projet',
-      `<div style="display:flex;flex-wrap:wrap;gap:8px">${keyActors.map(actorCard).join('')}</div>`) : ''}
+    ${section(1, 'Contexte',                          p.contexte)}
+    ${section(2, 'Objectifs',                         p.objectifs)}
+    ${section(3, 'Livrables',                         p.livrables)}
+    ${section(4, 'Périmètre du projet',                p.perimetre)}
+    ${section(5, 'Risques et impacts du projet',       p.risques)}
+    ${section(6, 'Leviers à réaliser le projet',       p.opportunites)}
+    ${section(7, 'Moyens mis à disposition',           p.moyens)}
 
-    ${teamActors.length ? section("Composition de l'équipe projet",
-      `<div style="display:flex;flex-wrap:wrap;gap:6px">${teamActors.map(teamCard).join('')}</div>`) : ''}
-
-    <div style="height:1px;background:#e5e5e5;margin:22px 0"></div>
-
-    ${section('Contexte du projet',          textBlock(p.contexte))}
-    ${section('Objectifs visés',             textBlock(p.objectifs))}
-    ${section('Périmètre du projet',         textBlock(p.cadrage))}
-    ${section('Risques et opportunités',     textBlock(p.risques))}
-    ${section('Moyens mis à disposition',    textBlock(p.moyens))}
-    ${section('Bénéfices qualitatifs attendus',  textBlock(p.qualitatif))}
-    ${section('Bénéfices quantitatifs attendus', textBlock(p.quantitatif))}
-
-    ${instList.length ? section('Instances du projet',
-      `<div>${instHtml}</div>`) : ''}
-
-    <div style="margin-top:32px;font-size:10px;color:#bbb;text-align:right;border-top:1px solid #e5e5e5;padding-top:10px">
-      Édité le ${today}
+    <div style="margin-top:44px;padding-top:10px;border-top:1px solid #eee;text-align:right">
+      <span style="font-family:${SERIF};font-size:10px;color:#bbb">Édité le ${today}</span>
     </div>`;
 
   if (forPrint) {
-    return `<div style="max-width:680px;margin:0 auto;padding:32px 40px 48px;font-family:'Inter',sans-serif;color:#111">${body}</div>`;
+    return `<div style="max-width:680px;margin:0 auto;padding:36px 44px 48px;font-family:${SERIF};color:#111">${body}</div>`;
   }
-  return `<div style="max-width:680px;margin:0 auto;padding:24px 36px 40px;font-size:12.5px">${body}</div>`;
+  return `<div style="max-width:680px;margin:0 auto;padding:28px 40px 40px">${body}</div>`;
 }
   
 // ══ RENDER SOUS-PROJETS ══
@@ -6634,7 +6479,7 @@ function renderSousProjets() {
   // Chercher dans TOUS les champs, pas juste nom + code
 const matchingIds = search
   ? new Set(allSubs.filter(p => {
-      const searchText = (p.nom + (p.code||'') + (p.cadrage||'') + (p.contexte||'') + (p.objectifs||'') + (p.livrables||'') + (p.risques||'') + (p.moyens||'')).toLowerCase();
+      const searchText = (p.nom + (p.code||'') + (p.perimetre||'') + (p.contexte||'') + (p.objectifs||'') + (p.livrables||'') + (p.risques||'') + (p.moyens||'')).toLowerCase();
       return searchText.includes(search);
     }).map(p => p.id))
   : null;
@@ -6808,13 +6653,14 @@ function openSpDetail(id) {
   // Blocks
   const svgIcon = paths => `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${paths}</svg>`;
   const blockDefs = [
-    ['cadrage',     'Cadrage',     svgIcon('<path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>')],
+    ['perimetre',   'Périmètre',   svgIcon('<path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>')],
     ['contexte',    'Contexte',    svgIcon('<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>')],
     ['objectifs',   'Objectifs',   svgIcon('<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>')],
     ['livrables',   'Livrables',   svgIcon('<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>')],
     ['moyens',      'Moyens',      svgIcon('<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>')],
     ['risques',     'Risques',     svgIcon('<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>')],
-    ['qualitatif',  'Qualitatif',  svgIcon('<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>')],
+['opportunites','Opportunités', svgIcon('<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 1 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>')],
+['qualitatif',  'Qualitatif',  svgIcon('<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>')],
     ['quantitatif', 'Quantitatif', svgIcon('<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>')]
   ];
 
@@ -7085,12 +6931,13 @@ async function saveProjet() {
     code:        document.getElementById('p_code').value.trim() || null,
     nom,
     ref:         refVal,
-    cadrage:     existingP?.cadrage     || null,
+    perimetre:  existingP?.perimetre  || null,
     contexte:    existingP?.contexte    || null,
     objectifs:   existingP?.objectifs   || null,
     livrables:   existingP?.livrables   || null,
     risques:     existingP?.risques     || null,
-    moyens:      existingP?.moyens      || null,
+opportunites: existingP?.opportunites || null,
+moyens:      existingP?.moyens      || null,
     qualitatif:  existingP?.qualitatif  || null,
     quantitatif: existingP?.quantitatif || null,
     debut:       fromDateInput(document.getElementById('p_debut').value),
