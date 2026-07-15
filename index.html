@@ -4667,15 +4667,18 @@ if (iSel) {
 function exportGanttPng() {
   const svg = document.getElementById('ganttProjetSvg');
   if (!svg) return;
+  const vb = svg.viewBox.baseVal;
+  const clone = svg.cloneNode(true);
+  clone.setAttribute('width', vb.width);
+  clone.setAttribute('height', vb.height);
   const serializer = new XMLSerializer();
-  const svgStr = serializer.serializeToString(svg);
+  const svgStr = serializer.serializeToString(clone);
   const svgBlob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
   const url = URL.createObjectURL(svgBlob);
   const img = new Image();
   img.onload = () => {
     const canvas = document.createElement('canvas');
-    canvas.width  = svg.viewBox.baseVal.width  * 2;  // x2 pour la résolution
-    canvas.height = svg.viewBox.baseVal.height * 2;
+    
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
