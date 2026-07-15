@@ -4678,7 +4678,8 @@ function exportGanttPng() {
   const img = new Image();
   img.onload = () => {
     const canvas = document.createElement('canvas');
-    
+    canvas.width  = vb.width  * 2;
+    canvas.height = vb.height * 2;
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
