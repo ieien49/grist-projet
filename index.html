@@ -120,6 +120,14 @@ body { font-family: var(--font); background: var(--bg); color: var(--text-primar
 .frt-table-wrap table { table-layout: auto; width: 100%; }
 .frt-table-wrap th, .frt-table-wrap td { padding: 5px 8px; }
 .frt-table-wrap td:first-child, .frt-table-wrap th:first-child { padding-left: 2px; }
+
+.frt-drag-handle { cursor: grab; opacity: 0; color: var(--text-muted); flex-shrink: 0; transition: opacity 0.1s; }
+tr:hover .frt-drag-handle { opacity: 1; }
+.frt-drag-handle:active { cursor: grabbing; }
+.frt-dragging { opacity: 0.4; }
+.frt-drop-before td:first-child > div { box-shadow: inset 0 2px 0 0 #3B5BDB; }
+.frt-drop-after td:first-child > div { box-shadow: inset 0 -2px 0 0 #3B5BDB; }
+  
 #frtTable { max-width: none !important; margin: 0 !important; width: 100% !important; }
 .table-wrap   { flex: 1; overflow: auto; background: var(--bg); padding: 0; }
 table { width: 100%; border-collapse: collapse; }
@@ -2600,6 +2608,63 @@ function buildFrtHierarchy() {
   return flat;
 }
 
+let frtDragId  = null;
+let frtDragRef = null;
+
+function frtDragStart(e, id, ref) {
+  frtDragId  = id;
+  frtDragRef = ref;
+  e.dataTransfer.effectAllowed = 'move';
+  e.currentTarget.classList.add('frt-dragging');
+}
+
+function frtDragOver(e, id, ref) {
+  if (frtDragId === null || ref !== frtDragRef || id === frtDragId) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  const row  = e.currentTarget;
+  const rect = row.getBoundingClientRect();
+  const before = (e.clientY - rect.top) < rect.height / 2;
+  row.classList.toggle('frt-drop-before', before);
+  row.classList.toggle('frt-drop-after', !before);
+}
+
+function frtDragLeave(e) {
+  e.currentTarget.classList.remove('frt-drop-before', 'frt-drop-after');
+}
+
+async function frtDrop(e, targetId, targetRef) {
+  e.preventDefault();
+  const row    = e.currentTarget;
+  const before = row.classList.contains('frt-drop-before');
+  row.classList.remove('frt-drop-before', 'frt-drop-after');
+  if (frtDragId === null || targetRef !== frtDragRef || targetId === frtDragId) { frtDragId = null; return; }
+
+  const siblings = allProjets.filter(p => p.ref === targetRef).sort((a,b) => (a.ordre??9999)-(b.ordre??9999));
+  const draggedIdx = siblings.findIndex(p => p.id === frtDragId);
+  if (draggedIdx === -1) { frtDragId = null; return; }
+  const [dragged] = siblings.splice(draggedIdx, 1);
+  let targetIdx = siblings.findIndex(p => p.id === targetId);
+  if (targetIdx === -1) { frtDragId = null; return; }
+  if (!before) targetIdx += 1;
+  siblings.splice(targetIdx, 0, dragged);
+
+  const actions = siblings.map((p, i) => ['UpdateRecord', 'Projet', p.id, { ordre: (i + 1) * 10 }]);
+  try {
+    await grist.docApi.applyUserActions(actions);
+    siblings.forEach((p, i) => { p.ordre = (i + 1) * 10; });
+    showToast('Ordre mis à jour');
+    renderSuiviFeuilleRoute();
+  } catch(err) { showToast(err.message, 'error'); }
+  frtDragId  = null;
+  frtDragRef = null;
+}
+
+function frtDragEnd(e) {
+  e.currentTarget.classList.remove('frt-dragging');
+  document.querySelectorAll('.frt-drop-before,.frt-drop-after').forEach(el => el.classList.remove('frt-drop-before','frt-drop-after'));
+}
+
 function toggleFrtNode(id) {
   if (frtCollapsed.has(id)) frtCollapsed.delete(id); else frtCollapsed.add(id);
   renderSuiviFeuilleRoute();
@@ -2754,8 +2819,16 @@ const markerColor = termine ? '#888888' : (projetHex(p) || '#1A7A4F');
       ? `<svg onclick="event.stopPropagation();toggleFrtNode(${p.id})" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="cursor:pointer;flex-shrink:0;color:var(--text-muted);transform:rotate(${frtCollapsed.has(p.id)?'0':'90'}deg);transition:transform .15s"><path d="M9 18l6-6-6-6"/></svg>`
       : `<span style="width:9px;flex-shrink:0;display:inline-block"></span>`;
 
-    return `<tr onclick="openSpDetail(${p.id})" style="cursor:pointer">
-      <td style="padding-left:10px"><div style="display:flex;align-items:center;gap:6px;margin-left:${p._depth*18}px;border-left:4px solid ${markerColor};padding-left:8px">${toggleHtml}${p.code?`<span class="sp-code" style="font-size:10.5px">${esc(p.code)}</span>`:''}<span style="font-weight:${p._depth===0?'600':'500'}">${esc(p.nom || 'Sans nom')}</span></div></td>
+    return `<tr draggable="true"
+      ondragstart="frtDragStart(event,${p.id},${p.ref})"
+      ondragover="frtDragOver(event,${p.id},${p.ref})"
+      ondragleave="frtDragLeave(event)"
+      ondrop="frtDrop(event,${p.id},${p.ref})"
+      ondragend="frtDragEnd(event)"
+      onclick="openSpDetail(${p.id})" style="cursor:pointer">
+      <td style="padding-left:10px"><div style="display:flex;align-items:center;gap:6px;margin-left:${p._depth*18}px;border-left:4px solid ${markerColor};padding-left:8px">
+        <svg class="frt-drag-handle" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" onclick="event.stopPropagation()"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>
+        ${toggleHtml}${p.code?`<span class="sp-code" style="font-size:10.5px">${esc(p.code)}</span>`:''}<span style="font-weight:${p._depth===0?'600':'500'}">${esc(p.nom || 'Sans nom')}</span></div></td>
       <td>${piloteHtml}</td>
       <td>${statusTag}</td>
       <td class="suivi-date" style="white-space:nowrap">${dates}</td>
