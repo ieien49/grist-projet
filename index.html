@@ -3943,6 +3943,13 @@ document.getElementById('acteurFilterType').addEventListener('change', renderAct
 document.getElementById('acteurFilterInstance').addEventListener('change', renderActeurs);
 document.getElementById('instanceSearch').addEventListener('input', renderInstances);
 
+  document.addEventListener('paste', function(e) {
+  if (e.target && e.target.isContentEditable) {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+    document.execCommand('insertText', false, text);
+  }
+});
 document.addEventListener('keydown', e => { if(e.key==='Escape'){closeActeurModal();closeInstanceModal();closeProjetModal();closeSpDetail();closeSubCanvas();closeDecEdit();} });
 
 // Init compte rendu rows + initial data load on ready
