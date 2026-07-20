@@ -5059,14 +5059,14 @@ while (cur2.getTime() < dEnd.getTime()) {
         const fsPhase = Math.round(9.5 * ganttScale);
         const instHexPhase = instHexFor(p);
         const instTitlePhase = p.instance ? instances[p.instance] : null;
-        const instDotPhaseX = x1 + 10 + labelUp.toUpperCase().length * fsPhase * 0.64 + 9;
+        const dotOffsetPhase = instHexPhase ? 12 : 0;
         const instDotPhase = instHexPhase
-          ? `<circle cx="${instDotPhaseX.toFixed(1)}" cy="${(by + BAR_H / 2).toFixed(1)}" r="3.5" fill="${instHexPhase}" stroke="rgba(255,255,255,0.7)" stroke-width="1"><title>${esc(instTitlePhase.sigle||instTitlePhase.nom)}</title></circle>`
+          ? `<circle cx="${(x1 + 14).toFixed(1)}" cy="${(by + BAR_H / 2).toFixed(1)}" r="3.5" fill="none" stroke="${instHexPhase}" stroke-width="1.5"><title>${esc(instTitlePhase.sigle||instTitlePhase.nom)}</title></circle>`
           : '';
         svgBody += `<g style="cursor:pointer" onclick="showGanttInfo(event, ${p.id})">
   <rect x="${x1.toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(1)}" height="${BAR_H}" rx="${BAR_R}" fill="${barColor}" opacity="${termine ? 0.7 : 0.95}"/>
-  <text x="${(x1 + 10).toFixed(1)}" y="${(by + BAR_H / 2).toFixed(1)}" dominant-baseline="central" font-size="${fsPhase}" font-weight="700" fill="#fff" font-family="system-ui,sans-serif" letter-spacing="0.02em">${esc(labelUp.toUpperCase())}</text>
   ${instDotPhase}
+  <text x="${(x1 + 10 + dotOffsetPhase).toFixed(1)}" y="${(by + BAR_H / 2).toFixed(1)}" dominant-baseline="central" font-size="${fsPhase}" font-weight="700" fill="#fff" font-family="system-ui,sans-serif" letter-spacing="0.02em">${esc(labelUp.toUpperCase())}</text>
 </g>`;
       } else {
         svgBody += `<text x="${CHART_PAD_L}" y="${(l.y + l.h / 2).toFixed(1)}" dominant-baseline="central" font-size="10.5" fill="#bbb" font-family="system-ui,sans-serif">${esc(label)} — dates manquantes</text>`;
@@ -5077,22 +5077,22 @@ while (cur2.getTime() < dEnd.getTime()) {
       if (sMs && eMs) {
         const x1 = msX(sMs), x2 = msX(eMs);
         const cy = l.y + l.h - 5;
-       const codeLabelSub = p.code || label;
+      const codeLabelSub = p.code || label;
         const maxCharsSub = Math.max(5, Math.floor((TOTAL_W - x1 - 14) / (5.4 * ganttScale)));
         const labelSub = codeLabelSub.length > maxCharsSub ? codeLabelSub.slice(0, maxCharsSub - 1) + '…' : codeLabelSub;
         const fsSub = Math.round(9 * ganttScale);
         const instHexSub = instHexFor(p);
         const instTitleSub = p.instance ? instances[p.instance] : null;
-        const instDotSubX = x1 + labelSub.length * fsSub * 0.58 + 9;
+        const dotOffsetSub = instHexSub ? 11 : 0;
         const instDotSub = instHexSub
-          ? `<circle cx="${instDotSubX.toFixed(1)}" cy="${(cy - 8 - fsSub/3).toFixed(1)}" r="3" fill="${instHexSub}"><title>${esc(instTitleSub.sigle||instTitleSub.nom)}</title></circle>`
+          ? `<circle cx="${(x1 + 3.5).toFixed(1)}" cy="${(cy - 8 - fsSub/3).toFixed(1)}" r="3.5" fill="none" stroke="${instHexSub}" stroke-width="1.5"><title>${esc(instTitleSub.sigle||instTitleSub.nom)}</title></circle>`
           : '';
         svgBody += `<g style="cursor:pointer" onclick="showGanttInfo(event, ${p.id})">
   <line x1="${x1.toFixed(1)}" y1="${cy.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${cy.toFixed(1)}" stroke="${barColor}" stroke-width="2"/>
   <circle cx="${x1.toFixed(1)}" cy="${cy.toFixed(1)}" r="3.2" fill="${barColor}"/>
   <circle cx="${x2.toFixed(1)}" cy="${cy.toFixed(1)}" r="3.2" fill="${barColor}"/>
-  <text x="${x1.toFixed(1)}" y="${(cy - 8).toFixed(1)}" font-size="${fsSub}" font-weight="600" fill="#1a1a1a" font-family="system-ui,sans-serif">${esc(labelSub)}</text>
   ${instDotSub}
+  <text x="${(x1 + dotOffsetSub).toFixed(1)}" y="${(cy - 8).toFixed(1)}" font-size="${fsSub}" font-weight="600" fill="#1a1a1a" font-family="system-ui,sans-serif">${esc(labelSub)}</text>
 </g>`;
         if (showDep && p.antecedent && rowCenterY[p.antecedent] !== undefined) {
           const predY = rowCenterY[p.antecedent];
