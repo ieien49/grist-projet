@@ -6750,12 +6750,12 @@ function buildNoteCadrageHtml(forPrint) {
     if (!val || !val.trim()) {
       return `<p style="font-family:${SERIF};font-size:12.5px;color:#aaa;font-style:italic;margin:0">Non renseigné</p>`;
     }
-    return `<p style="font-family:${SERIF};font-size:12.5px;color:#222;line-height:1.85;text-align:justify;white-space:pre-wrap;margin:0">${esc(val.trim()).split('\n').join('<br>')}</p>`;
+    return `<p style="font-family:${SERIF};font-size:12.5px;color:#222;line-height:1.85;text-align:justify;white-space:pre-wrap;margin:0;orphans:3;widows:3">${esc(val.trim()).split('\n').join('<br>')}</p>`;
   };
 
   const section = (num, title, val) => `
-    <div style="margin-bottom:26px;page-break-inside:avoid">
-      <div style="display:flex;align-items:baseline;gap:10px;border-bottom:1px solid #ccc;padding-bottom:6px;margin-bottom:10px">
+    <div style="margin-bottom:26px">
+      <div style="display:flex;align-items:baseline;gap:10px;border-bottom:1px solid #ccc;padding-bottom:6px;margin-bottom:10px;page-break-after:avoid;break-after:avoid">
         <span style="font-family:${SERIF};font-size:13px;font-weight:700;color:#111">${num}.</span>
         <span style="font-family:${SERIF};font-size:13px;font-weight:700;letter-spacing:.02em;color:#111;text-transform:uppercase">${title}</span>
       </div>
