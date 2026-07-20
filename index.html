@@ -116,6 +116,11 @@ body { font-family: var(--font); background: var(--bg); color: var(--text-primar
 .table-scroll { flex: 1; overflow: auto; padding: 0; background: var(--bg); }
 .table-scroll > table, .table-scroll > div { max-width: var(--content-max); margin: 0 auto; padding: 0; }
 .table-inner { max-width: var(--content-max); margin: 0 auto; padding: var(--content-pad); }
+.frt-table-wrap { width: 100%; padding: 10px 14px; box-sizing: border-box; }
+.frt-table-wrap table { table-layout: auto; width: 100%; }
+.frt-table-wrap th, .frt-table-wrap td { padding: 5px 8px; }
+.frt-table-wrap td:first-child, .frt-table-wrap th:first-child { padding-left: 2px; }
+#frtTable { max-width: none !important; margin: 0 !important; width: 100% !important; }
 .table-wrap   { flex: 1; overflow: auto; background: var(--bg); padding: 0; }
 table { width: 100%; border-collapse: collapse; }
 thead th { text-align: left; padding: 5px 10px; font-size: 10.5px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); white-space: nowrap; cursor: pointer; user-select: none; }
@@ -555,6 +560,7 @@ tr:hover .cr-del-btn { opacity: 1; }
 .sp-status-tag { display: inline-flex; align-items: center; gap: 3px; font-size: 10.5px; font-weight: 500; padding: 1px 7px; border-radius: 3px; flex-shrink: 0; white-space: nowrap; }
 .sp-status-ec { background: #f0fdf4; color: #15803d; }
 .sp-status-te { background: #f3f3f3; color: #666666; }
+.sp-status-al { background: #fffbeb; color: #92400e; }
 .sp-acc-props { border-bottom: 1px solid var(--border); }
 .sp-acc-prop-row { display: flex; align-items: flex-start; border-bottom: 1px solid var(--border); min-height: 30px; }
 .sp-acc-prop-row:last-child { border-bottom: none; }
@@ -569,6 +575,10 @@ tr:hover .cr-del-btn { opacity: 1; }
 .sp-acc-block-label { font-size: 12px; font-weight: 500; color: var(--text-primary); flex: 1; }
 .sp-acc-block-body { display: none; padding: 9px 11px; font-size: 12.5px; color: var(--text-secondary); line-height: 1.7; border-top: 1px solid var(--border); }
 .sp-acc-block-body.open { display: block; }
+.sp-acc-block-body[contenteditable] { outline: none; cursor: text; }
+.sp-acc-block-body[contenteditable]:focus { background: rgba(0,0,0,0.02); }
+.sp-acc-block-body[contenteditable]:empty::before { content: attr(data-placeholder); color: #bbb; font-style: italic; font-size: 12px; }
+.sp-acc-block-save-btn { margin-left: auto; flex-shrink: 0; }
 /* Detail modal */
 .detail-modal { max-width: 640px; }
 .detail-modal-head { padding: 18px 22px 0; display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 4px; }
@@ -762,14 +772,6 @@ tr:hover .cr-del-btn { opacity: 1; }
           Présentation
         </div>
         
-        <div class="cadre-subtab" data-sub="def-cadrage" onclick="switchDefTab('def-cadrage')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-          Note de cadrage
-        </div>
-        <div class="cadre-subtab" data-sub="def-kpi" onclick="switchDefTab('def-kpi')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-          Chiffres clés
-        </div>
         <div class="cadre-subtab" data-sub="def-acteurs" onclick="switchDefTab('def-acteurs')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></svg>
           Acteurs
@@ -782,6 +784,10 @@ tr:hover .cr-del-btn { opacity: 1; }
         <!-- Boutons contextuels Définition -->
         <div class="subnav-spacer"></div>
         <div class="subnav-controls" id="defSubnavControls">
+          <button class="btn-add-ghost" id="defCadrageBtn" onclick="openNoteCadrageModal()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            Note de cadrage
+          </button>
           <button class="btn-add-ghost" id="defEditBtn" onclick="editMasterProjet()" style="display:none">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             Modifier
@@ -795,31 +801,15 @@ tr:hover .cr-del-btn { opacity: 1; }
       <div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
         <!-- Sous-panel Définition -->
         <div class="cadre-subpanel active" id="def-definition">
-          <div class="def-scroll">
-            <div id="defContainer"><div class="loading"><div class="spinner"></div> Chargement…</div></div>
-          </div>
-        </div>
-        <!-- Sous-panel Chiffres clés -->
-        <div class="cadre-subpanel" id="def-kpi">
-          <div class="kpi-scroll">
-            <div class="kpi-inner" id="kpiContainer">
-              <div class="loading"><div class="spinner"></div> Chargement…</div>
+          <div style="display:flex;flex:1;overflow:hidden">
+            <div class="def-scroll" style="flex:1;min-width:0">
+              <div id="defContainer"><div class="loading"><div class="spinner"></div> Chargement…</div></div>
             </div>
-          </div>
-        </div>
-        
-        <!-- Sous-panel Note de cadrage -->
-        <div class="cadre-subpanel" id="def-cadrage" style="overflow:auto;background:var(--bg)">
-          <div style="display:flex;align-items:center;gap:8px;padding:8px 20px;border-bottom:1px solid var(--border);background:var(--surface2);flex-shrink:0;flex-wrap:wrap">
-            <span style="font-size:12px;font-weight:600;color:var(--text-secondary);letter-spacing:.04em">NOTE DE CADRAGE</span>
-            <span style="flex:1"></span>
-            <button class="btn-add" onclick="printNoteCadrage()">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-              Imprimer
-            </button>
-          </div>
-          <div style="flex:1;overflow-y:auto;background:var(--bg)" id="noteCadrageContainer">
-            <div class="loading"><div class="spinner"></div> Chargement…</div>
+            <div class="kpi-scroll" style="width:340px;flex-shrink:0;border-left:1px solid var(--border);overflow-y:auto">
+              <div class="kpi-inner" id="kpiContainer" style="max-width:none;padding:24px 20px;gap:22px">
+                <div class="loading"><div class="spinner"></div> Chargement…</div>
+              </div>
+            </div>
           </div>
         </div>
         <!-- Sous-panel Acteurs -->
@@ -888,49 +878,27 @@ tr:hover .cr-del-btn { opacity: 1; }
     <!-- ── OBJECTIFS ── -->
     <div class="panel" id="panel-objectifs">
       <nav class="cadre-subnav">
-        <div class="cadre-subtab active" id="spModeGantt" data-sub="sp-gantt" onclick="switchSpMode('gantt')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="15" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="12" y2="18"/></svg>
-          Gantt
-        </div>
-        <div class="cadre-subtab" id="spModeListe" data-sub="sp-liste" onclick="switchSpMode('liste')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-          Liste
-        </div>
-        
-        <div class="cadre-subtab" id="spModeFeuilleDeroute" data-sub="sp-feuilleroute" onclick="switchSpMode('feuilleroute')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="6" height="10" rx="1"/><rect x="9" y="4" width="6" height="13" rx="1"/><rect x="16" y="9" width="6" height="8" rx="1"/></svg>
-          Feuille de route
-        </div>
+        <div class="cadre-subtab active" id="spModeSuivi" data-sub="sp-suivi" onclick="switchSpMode('suivi')">
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+  Feuille de route
+</div>
+<div class="cadre-subtab" id="spModeGantt" data-sub="sp-gantt" onclick="switchSpMode('gantt')">
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="15" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="12" y2="18"/></svg>
+  Gantt
+</div>
+<div class="cadre-subtab" id="spModeFeuilleDeroute" data-sub="sp-feuilleroute" onclick="switchSpMode('feuilleroute')">
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="6" height="10" rx="1"/><rect x="9" y="4" width="6" height="13" rx="1"/><rect x="16" y="9" width="6" height="8" rx="1"/></svg>
+  Dessin
+</div>
         
         
         <div class="subnav-spacer"></div>
-        <div class="subnav-controls" id="spListeControls" style="display:none">
-          <div class="search-wrap" style="min-width:130px;max-width:190px">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-            <input type="text" class="search-input" id="spSearch" placeholder="Rechercher…">
-          </div>
-          <button class="btn-add-ghost" onclick="spExpandAll()" title="Tout déplier" style="padding:3px 9px">
-  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/><path d="M6 3l6 6 6-6" opacity=".4"/></svg>
-</button>
-<button class="btn-add-ghost" onclick="spCollapseAll()" title="Tout replier" style="padding:3px 9px">
-  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 15l-6-6-6 6"/><path d="M18 21l-6-6-6 6" opacity=".4"/></svg>
-</button>
-          <span class="count-badge" id="spCount">—</span>
-          <button class="btn-add" id="spAddBtn" onclick="openSousProjetModal()" style="display:none">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Ajouter
-          </button>
-        </div>
+        
       </nav>
       <div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
-        <!-- Vue liste -->
-        <div id="sp-liste" style="flex:1;overflow:auto;display:none">
-          <div class="table-scroll">
-            <div id="spTable"><div class="loading"><div class="spinner"></div> Chargement…</div></div>
-          </div>
-        </div>
+        
         <!-- Vue Gantt sous-projets -->
-        <div id="sp-gantt" style="flex:1;flex-direction:column;overflow:hidden;display:flex">
+        <div id="sp-gantt" style="flex:1;flex-direction:column;overflow:hidden;display:none">
           <div id="ganttProjetFilters" style="padding:8px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;background:var(--bg)">
             <select class="filter-select" id="gpFilterProjet" onchange="renderGanttProjet()">
   <option value="">Tous les projets</option>
@@ -943,6 +911,7 @@ tr:hover .cr-del-btn { opacity: 1; }
 </select>
             <select class="filter-select" id="gpFilterEtat" onchange="renderGanttProjet()">
               <option value="">Tous les états</option>
+              <option value="alancer">À lancer</option>
               <option value="encours">En cours</option>
               <option value="realise">Réalisé</option>
             </select>
@@ -991,6 +960,7 @@ tr:hover .cr-del-btn { opacity: 1; }
            
             <select class="filter-select" id="frFilterEtat" onchange="renderFeuilleDeroute()">
               <option value="">Tous les états</option>
+              <option value="alancer">À lancer</option>
               <option value="encours">En cours</option>
               <option value="realise">Réalisé</option>
             </select>
@@ -1014,6 +984,51 @@ tr:hover .cr-del-btn { opacity: 1; }
           <div style="background:var(--bg)">
   <div id="feuillerouteContainer" style="padding:12px 14px;min-width:700px"></div>
 </div>
+        </div>
+        <!-- Vue Suivi feuille de route -->
+        <div id="sp-suivi" style="flex:1;flex-direction:column;overflow:hidden;display:flex">
+          <div id="frtFilters" style="padding:8px 14px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:8px;flex-shrink:0;background:var(--bg)">
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    <div class="search-wrap" style="min-width:130px;max-width:190px">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" class="search-input" id="frtSearch" placeholder="Rechercher…" oninput="renderSuiviFeuilleRoute()">
+    </div>
+    <button class="btn-add-ghost" onclick="populateSuiviFrtFilters();renderSuiviFeuilleRoute()" title="Rafraîchir">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+    </button>
+    <span class="count-badge" id="frtCount" style="margin-left:auto">—</span>
+    <button class="btn-add" onclick="openSousProjetModal()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Ajouter
+    </button>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    <select class="filter-select" id="frtFilterSousProjet" onchange="renderSuiviFeuilleRoute()">
+      <option value="">Tous les sous-projets</option>
+    </select>
+    <select class="filter-select" id="frtFilterPilote" onchange="renderSuiviFeuilleRoute()">
+      <option value="">Tous les pilotes</option>
+    </select>
+    <select class="filter-select" id="frtFilterEtat" onchange="renderSuiviFeuilleRoute()">
+      <option value="">Tous les états</option>
+      <option value="alancer">À lancer</option>
+      <option value="encours">En cours</option>
+      <option value="realise">Terminé</option>
+    </select>
+    <select class="filter-select" id="frtFilterInstance" onchange="renderSuiviFeuilleRoute()">
+      <option value="">Toutes les instances</option>
+    </select>
+    <select class="filter-select" id="frtFilterTheme" onchange="renderSuiviFeuilleRoute()">
+      <option value="">Tous les thèmes</option>
+    </select>
+  </div>
+  <datalist id="frtThemeList"></datalist>
+</div>
+          <div style="flex:1;overflow:auto">
+          <div class="table-scroll">
+              <div id="frtTable" style="max-width:none;margin:0"><div class="loading"><div class="spinner"></div> Chargement…</div></div>
+            </div>
+          </div>
         </div>
       </div>
     </div><!-- /panel-objectifs -->
@@ -1471,6 +1486,28 @@ tr:hover .cr-del-btn { opacity: 1; }
   </div>
 </div>
 
+<!-- ══ MODAL NOTE DE CADRAGE ══ -->
+<div class="modal-overlay" id="noteCadrageModalOverlay" onclick="if(event.target.id==='noteCadrageModalOverlay')closeNoteCadrageModal()">
+  <div class="modal" style="max-width:900px;width:94vw;max-height:92vh;display:flex;flex-direction:column">
+    <div class="modal-head">
+      <h2>Note de cadrage</h2>
+      <button class="modal-close" onclick="closeNoteCadrageModal()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 20px;border-bottom:1px solid var(--border);background:var(--surface2);flex-shrink:0;flex-wrap:wrap">
+      <span style="flex:1"></span>
+      <button class="btn-add" onclick="printNoteCadrage()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Imprimer
+      </button>
+    </div>
+    <div style="flex:1;overflow-y:auto;background:var(--bg)" id="noteCadrageContainer">
+      <div class="loading"><div class="spinner"></div> Chargement…</div>
+    </div>
+  </div>
+</div>
+
 <!-- ══ MODAL PROJET (définition + sous-projet) ══ -->
 <div class="modal-overlay" id="projetModalOverlay" onclick="handleProjetOverlay(event)">
   <div class="modal modal-wide">
@@ -1482,53 +1519,75 @@ tr:hover .cr-del-btn { opacity: 1; }
     </div>
     <div class="modal-body">
   <div class="form-grid">
-    <div class="form-group">
-      <label class="field-label">Code</label>
-      <input type="text" class="form-control" id="p_code" placeholder="Ex: PRJ-2024">
+    <div class="form-group full" style="display:grid;grid-template-columns:0.6fr 1.4fr;gap:10px">
+      <div class="form-group">
+        <label class="field-label">Code</label>
+        <input type="text" class="form-control" id="p_code" placeholder="Ex: PRJ-2024">
+      </div>
+      <div class="form-group">
+        <label class="field-label">Nom</label>
+        <input type="text" class="form-control" id="p_nom" placeholder="Intitulé du projet">
+      </div>
     </div>
-    <div class="form-group">
-      <label class="field-label">Nom</label>
-      <input type="text" class="form-control" id="p_nom" placeholder="Intitulé du projet">
+    <div class="form-group full" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px">
+      <div class="form-group">
+        <label class="field-label">Date de début</label>
+        <input type="date" class="form-control" id="p_debut">
+      </div>
+      <div class="form-group">
+        <label class="field-label">Date de fin prévue</label>
+        <input type="date" class="form-control" id="p_fin">
+      </div>
+      <div class="form-group">
+        <label class="field-label">Couleur</label>
+        <div class="ms-wrap" id="p_coulWrap">
+          <div class="ms-tags" id="p_coulTags" onclick="toggleMsDropdown('p_coulWrap','p_coulDrop')">
+            <span class="ms-placeholder" id="p_coulPlaceholder">— Aucune —</span>
+          </div>
+          <div class="ms-dropdown" id="p_coulDrop"></div>
+        </div>
+        <input type="hidden" id="p_couleur">
+      </div>
+      <div class="form-group">
+        <label class="field-label">Date de fin réelle</label>
+        <input type="date" class="form-control" id="p_finreelle">
+      </div>
     </div>
     <div class="form-group full" id="p_refGroup" style="display:none">
   <label class="field-label">Projet parent</label>
-  <div id="p_ref_picker" style="border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);max-height:220px;overflow-y:auto"></div>
+  <div class="ms-wrap" id="p_refWrap">
+    <div class="ms-tags" id="p_refTags" onclick="toggleMsDropdown('p_refWrap','p_ref_picker')">
+      <span class="ms-placeholder" id="p_refPlaceholder">— Sélectionner —</span>
+    </div>
+    <div class="ms-dropdown" id="p_ref_picker"></div>
+  </div>
   <input type="hidden" id="p_ref">
 </div>
     <div class="form-group full" id="p_antecedentGroup" style="display:none">
       <label class="field-label">Antécédent (dépendance)</label>
-      <select class="form-control" id="p_antecedent"><option value="">— Aucun antécédent —</option></select>
+      <div class="ms-wrap" id="p_antWrap">
+        <div class="ms-tags" id="p_antTags" onclick="toggleMsDropdown('p_antWrap','p_antDrop')">
+          <span class="ms-placeholder" id="p_antPlaceholder">— Aucun antécédent —</span>
+        </div>
+        <div class="ms-dropdown" id="p_antDrop"></div>
+      </div>
+      <input type="hidden" id="p_antecedent">
     </div>
-    <div class="form-group full" id="p_piloteGroup" style="display:none">
-      <label class="field-label">Pilote</label>
-      <select class="form-control" id="p_pilote"><option value="">— Sélectionner un acteur —</option></select>
-    </div>
-    <div class="form-group full">
-      <label class="field-label">Instance / groupe de travail</label>
-      <select class="form-control" id="p_instance"><option value="">— Aucune instance —</option></select>
-    </div>
-    <div class="form-group full">
-      <label class="field-label">Thème(s)</label>
-      <input type="text" class="form-control" id="p_theme" list="p_themeList" placeholder="Ex: Communication, RH" oninput="updateThemeHint()">
-      <datalist id="p_themeList"></datalist>
-      <div id="p_themeHint" style="font-size:11px;margin-top:4px;color:var(--text-muted)"></div>
-    </div>
-    <div class="form-group">
-      <label class="field-label">Date de début</label>
-      <input type="date" class="form-control" id="p_debut">
-    </div>
-    <div class="form-group">
-      <label class="field-label">Date de fin prévue</label>
-      <input type="date" class="form-control" id="p_fin">
-    </div>
-    <div class="form-group full">
-      <label class="field-label">Couleur</label>
-      <div id="p_couleurPicker" style="display:flex;flex-wrap:wrap;gap:7px;padding:6px 0"></div>
-      <input type="hidden" id="p_couleur">
-    </div>
-    <div class="form-group full">
-      <label class="field-label">Date de fin réelle</label>
-      <input type="date" class="form-control" id="p_finreelle">
+    <div class="form-group full" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+      <div class="form-group" id="p_piloteGroup" style="display:none">
+        <label class="field-label">Pilote</label>
+        <select class="form-control" id="p_pilote"><option value="">— Sélectionner un acteur —</option></select>
+      </div>
+      <div class="form-group">
+        <label class="field-label">Instance / groupe de travail</label>
+        <select class="form-control" id="p_instance"><option value="">— Aucune instance —</option></select>
+      </div>
+      <div class="form-group">
+        <label class="field-label">Thème(s)</label>
+        <input type="text" class="form-control" id="p_theme" list="p_themeList" placeholder="Ex: Communication, RH" oninput="updateThemeHint()">
+        <datalist id="p_themeList"></datalist>
+        <div id="p_themeHint" style="font-size:11px;margin-top:4px;color:var(--text-muted)"></div>
+      </div>
     </div>
   </div>
 </div>    <div class="modal-foot">
@@ -1684,6 +1743,7 @@ let directions  = {};
 let instances   = {};
 let couleurs    = {};
 let acteurSortCol = 'nom', acteurSortDir = 1;
+let frtSortCol = 'nom', frtSortDir = 1;
 let instSortCol   = 'ordre', instSortDir   = 1;
 let editingActeurId   = null;
 let editingInstanceId = null;
@@ -1710,6 +1770,7 @@ grist.onRecords(async (records, mappings) => {
   renderActeurs();
   renderInstances();
   renderDefinition();
+  renderKpi();
   populateDecisionSelects();
   populateActionSelects();
   if (decMode === 'suivi') renderSuivi();
@@ -1731,13 +1792,11 @@ grist.onRecords(async (records, mappings) => {
   if (_fe)  _fe.style.display  = 'none';
   if (_sr)  _sr.style.display  = 'none';
   if (_add) _add.style.display = 'none';
-  // Re-rendre KPI si visible
-  const activeDefSub = document.querySelector('#panel-definition .cadre-subtab.active');
-  if (activeDefSub?.dataset.sub === 'def-kpi') renderKpi();
   // Re-rendre objectifs si visible
   if (document.getElementById('panel-objectifs')?.classList.contains('active')) {
-      renderSousProjets();
+      if (spMode === 'gantt')        { populateGanttProjetFilters(); renderGanttProjet(); }
       if (spMode === 'feuilleroute') { populateFeuillerouteFilters(); renderFeuilleDeroute(); }
+      if (spMode === 'suivi')        { populateSuiviFrtFilters(); renderSuiviFeuilleRoute(); }
     }
 });
 
@@ -1888,21 +1947,167 @@ function renderColorClosed(id) {
 }
 
 
+var _antPickerOpen = new Set();
+
+function renderAntecedentPicker(selectedVal) {
+  const picker = document.getElementById('p_antDrop');
+  if (!picker) return;
+
+  const _byId = {};
+  allProjets.forEach(p => { _byId[p.id] = { ...p, children: [] }; });
+  allProjets.forEach(p => {
+    if (p.ref && p.ref !== 0 && _byId[p.ref]) _byId[p.ref].children.push(_byId[p.id]);
+  });
+
+  const buildHtml = (node, depth) => {
+    if (node.id === editingProjetId) return '';
+    const hasChildren = node.children.length > 0;
+    const isOpen = _antPickerOpen.has(node.id);
+    const isRoot = !node.ref || node.ref === 0;
+    const isSelectable = !isRoot; // seuls les sous-projets peuvent être antécédent
+    const isSelected = selectedVal && String(node.id) === String(selectedVal);
+    const indent = depth * 16 + 10;
+    const label = (node.code ? node.code + ' – ' : '') + (node.nom || '—');
+    const hex = projetHex(node) || '#9B9B9B';
+    const bg = isSelected ? 'var(--surface3)' : 'transparent';
+    const borderLeft = isSelected ? `2px solid ${hex}` : '2px solid transparent';
+    const fw = isSelected ? '600' : '400';
+    const color = !isSelectable ? 'var(--text-muted)' : (isSelected ? 'var(--text-primary)' : 'var(--text-secondary)');
+
+    const chevron = hasChildren
+      ? `<span onclick="event.stopPropagation();antPickerToggle(${node.id})"
+           style="cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;color:var(--text-muted);
+                  transform:rotate(${isOpen ? '90' : '0'}deg);transition:transform 0.15s">
+           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+             <path d="M9 18l6-6-6-6"/>
+           </svg>
+         </span>`
+      : `<span style="width:10px;flex-shrink:0;display:inline-block"></span>`;
+
+    let html = `<div ${isSelectable ? `onclick="antPickerSelect(${node.id})"` : ''}
+      style="display:flex;align-items:center;gap:6px;padding:4px 10px 4px ${indent}px;
+             cursor:${isSelectable ? 'pointer' : 'default'};background:${bg};border-left:${borderLeft};user-select:none"
+      ${isSelectable ? `onmouseover="if('${isSelected}'!=='true')this.style.background='var(--surface2)'" onmouseout="this.style.background='${bg}'"` : ''}>
+      ${chevron}
+      <span style="width:8px;height:8px;border-radius:50%;background:${hex};
+                   flex-shrink:0;display:inline-block;opacity:${isSelectable ? 1 : 0.5}"></span>
+      <span style="font-size:12.5px;color:${color};font-weight:${fw};flex:1">${esc(label)}</span>
+      ${isSelected
+        ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0"><polyline points="20 6 9 17 4 12"/></svg>'
+        : ''}
+    </div>`;
+
+    if (hasChildren && isOpen) {
+      html += node.children
+        .sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999))
+        .map(c => buildHtml(_byId[c.id], depth + 1))
+        .join('');
+    }
+    return html;
+  };
+
+  const roots = allProjets.filter(p => !p.ref || p.ref === 0);
+  picker.innerHTML = roots.map(p => _byId[p.id] ? buildHtml(_byId[p.id], 0) : '').join('');
+}
+
+function antPickerToggle(nodeId) {
+  if (_antPickerOpen.has(nodeId)) _antPickerOpen.delete(nodeId);
+  else _antPickerOpen.add(nodeId);
+  const hidden = document.getElementById('p_antecedent');
+  renderAntecedentPicker(hidden ? hidden.value : '');
+}
+
+function antPickerSelect(nodeId) {
+  const hidden = document.getElementById('p_antecedent');
+  if (hidden) hidden.value = String(nodeId);
+  renderAntecedentPicker(String(nodeId));
+  renderAntecedentClosed(String(nodeId));
+  closeMsDropdown('p_antWrap','p_antDrop');
+}
+
+function renderAntecedentClosed(selectedVal) {
+  const tagsEl = document.getElementById('p_antTags');
+  const ph     = document.getElementById('p_antPlaceholder');
+  if (!tagsEl) return;
+  tagsEl.querySelectorAll('.ms-tag').forEach(el => el.remove());
+  const node = selectedVal ? allProjets.find(p => String(p.id) === String(selectedVal)) : null;
+  if (!node) { if (ph) ph.style.display = ''; }
+  else {
+    if (ph) ph.style.display = 'none';
+    const hex = projetHex(node) || '#9B9B9B';
+    const label = (node.code ? node.code + ' – ' : '') + (node.nom || '—');
+    const tag = document.createElement('span');
+    tag.className = 'ms-tag';
+    tag.innerHTML = `<span class="cdot" style="width:9px;height:9px;background:${hex}"></span>${esc(label)}`;
+    tagsEl.appendChild(tag);
+  }
+}
+
+function populateProjetColorPicker() {
+  const drop = document.getElementById('p_coulDrop');
+  if (!drop) return;
+  drop.innerHTML = '';
+
+  const noneItem = document.createElement('div');
+  noneItem.className = 'ms-item';
+  noneItem.dataset.id = '';
+  noneItem.innerHTML = `<span class="cdot" style="width:9px;height:9px;background:transparent;border:1.5px dashed var(--border-strong)"></span><span>— Aucune —</span><span class="ms-check">✓</span>`;
+  noneItem.addEventListener('click', e => { e.stopPropagation(); selectProjetColor(''); });
+  drop.appendChild(noneItem);
+
+  const seen = new Set();
+  Object.values(couleurs)
+    .filter(c => { if (seen.has(c.id) || typeof c.id !== 'number') return false; seen.add(c.id); return true; })
+    .forEach(c => {
+      const el = document.createElement('div');
+      el.className = 'ms-item';
+      el.dataset.id = c.id;
+      el.innerHTML = `<span class="cdot" style="width:9px;height:9px;background:${c.hex||'#ccc'}"></span><span>${esc(c.nom)}${c.hex?' — '+esc(c.hex):''}</span><span class="ms-check">✓</span>`;
+      el.addEventListener('click', e => { e.stopPropagation(); selectProjetColor(c.id); });
+      drop.appendChild(el);
+    });
+}
+
+function selectProjetColor(id) {
+  document.getElementById('p_couleur').value = id;
+  renderProjetColorClosed(id);
+  closeMsDropdown('p_coulWrap','p_coulDrop');
+}
+
+function renderProjetColorClosed(id) {
+  const tagsEl = document.getElementById('p_coulTags');
+  const ph     = document.getElementById('p_coulPlaceholder');
+  const drop   = document.getElementById('p_coulDrop');
+  if (!tagsEl) return;
+  tagsEl.querySelectorAll('.ms-tag').forEach(el => el.remove());
+  const co = id ? couleurs[id] : null;
+  if (!co) { ph.style.display = ''; }
+  else {
+    ph.style.display = 'none';
+    const tag = document.createElement('span');
+    tag.className = 'ms-tag';
+    tag.innerHTML = `<span class="cdot" style="width:9px;height:9px;background:${co.hex||'#ccc'}"></span>${esc(co.nom)}`;
+    tagsEl.appendChild(tag);
+  }
+  if (drop) drop.querySelectorAll('.ms-item').forEach(item => {
+    item.classList.toggle('sel', String(item.dataset.id) === String(id||''));
+  });
+}
+
+
 // ══ TAB NAVIGATION ══
 function switchTab(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
   document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + name));
   if (name === 'definition') {
     renderDefinition();
-    const activeDefSub = document.querySelector('#panel-definition .cadre-subtab.active');
-    if (activeDefSub?.dataset.sub === 'def-kpi') renderKpi();
+    renderKpi();
   }
   if (name === 'objectifs') {
     const activeSub = document.querySelector('#panel-objectifs .cadre-subtab.active');
-    if (activeSub?.id === 'spModeListe') renderSousProjets();
-    else if (activeSub?.id === 'spModeGantt') { populateGanttProjetFilters(); renderGanttProjet(); }
+    if (activeSub?.id === 'spModeGantt') { populateGanttProjetFilters(); renderGanttProjet(); }
     else if (activeSub?.id === 'spModeFeuilleDeroute') { populateFeuillerouteFilters(); renderFeuilleDeroute(); }
-    else renderSousProjets();
+    else { populateSuiviFrtFilters(); renderSuiviFeuilleRoute(); }
   }
   if (name === 'decisions') {
     switchDecMode('suivi');
@@ -1913,7 +2118,7 @@ function switchTab(name) {
   }
 }
 
-let spMode = 'gantt';
+let spMode = 'suivi';
 
 function openSousProjetModal(projet = null) {
   openProjetModal(projet, 'sousprojet');
@@ -2076,22 +2281,31 @@ function printOdj() {
   win.onload = () => { win.focus(); win.print(); };
 }
   
+function refreshObjectifsView() {
+  if (spMode === 'gantt')        { populateGanttProjetFilters(); renderGanttProjet(); }
+  else if (spMode === 'feuilleroute') { populateFeuillerouteFilters(); renderFeuilleDeroute(); }
+  else { populateSuiviFrtFilters(); renderSuiviFeuilleRoute(); }
+}
+
 function switchSpMode(mode) {
   spMode = mode;
-  document.getElementById('spModeListe').classList.toggle('active',   mode === 'liste');
+  
   document.getElementById('spModeGantt').classList.toggle('active',   mode === 'gantt');
   document.getElementById('spModeFeuilleDeroute').classList.toggle('active', mode === 'feuilleroute');
+  document.getElementById('spModeSuivi').classList.toggle('active', mode === 'suivi');
   
   
-  document.getElementById('sp-liste').style.display        = mode === 'liste'        ? 'flex' : 'none';
+  
   document.getElementById('sp-gantt').style.display        = mode === 'gantt'        ? 'flex' : 'none';
   document.getElementById('sp-feuilleroute').style.display = mode === 'feuilleroute' ? 'flex' : 'none';
+  document.getElementById('sp-suivi').style.display         = mode === 'suivi'        ? 'flex' : 'none';
   
   
-  document.getElementById('spListeControls').style.display = mode === 'liste' ? '' : 'none';
-  if (mode === 'liste')        renderSousProjets();
+  
+  
   if (mode === 'gantt')        { populateGanttProjetFilters(); renderGanttProjet(); }
   if (mode === 'feuilleroute') { populateFeuillerouteFilters(); renderFeuilleDeroute(); }
+  if (mode === 'suivi')        { populateSuiviFrtFilters(); renderSuiviFeuilleRoute(); }
   
   
 }
@@ -2319,6 +2533,249 @@ function populateFeuillerouteFilters() {
   if (cur && [...sel.options].some(o => o.value === cur)) sel.value = cur;
 }
 
+// ══ SUIVI FEUILLE DE ROUTE (tableau des sous-sous-projets, triable/filtrable) ══
+function populateSuiviFrtFilters() {
+  const masterId = masterProjet ? masterProjet.id : null;
+
+  const spSel = document.getElementById('frtFilterSousProjet');
+  if (spSel) {
+    const cur = spSel.value;
+    while (spSel.options.length > 1) spSel.remove(1);
+    allProjets
+      .filter(p => p.ref === masterId && masterId !== null)
+      .sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999))
+      .forEach(p => spSel.appendChild(new Option((p.code ? p.code + ' – ' : '') + p.nom, p.id)));
+    if (cur && [...spSel.options].some(o => o.value === cur)) spSel.value = cur;
+  }
+
+  const thSel = document.getElementById('frtFilterTheme');
+  if (thSel) {
+    const cur = thSel.value;
+    while (thSel.options.length > 1) thSel.remove(1);
+    getAllThemes().forEach(t => thSel.appendChild(new Option(t, t)));
+    const frtThemeList = document.getElementById('frtThemeList');
+if (frtThemeList) {
+  frtThemeList.innerHTML = getAllThemes().map(t => `<option value="${esc(t)}">`).join('');
+}
+    if (cur && [...thSel.options].some(o => o.value === cur)) thSel.value = cur;
+  }
+
+  const iSel = document.getElementById('frtFilterInstance');
+  if (iSel) {
+    const cur = iSel.value;
+    while (iSel.options.length > 1) iSel.remove(1);
+    allInstances
+      .sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999))
+      .forEach(inst => iSel.appendChild(new Option(inst.sigle || inst.nom, inst.id)));
+    if (cur && [...iSel.options].some(o => o.value === cur)) iSel.value = cur;
+  }
+
+  const pSel = document.getElementById('frtFilterPilote');
+  if (pSel) {
+    const cur = pSel.value;
+    while (pSel.options.length > 1) pSel.remove(1);
+    const seen = new Set();
+    allActors.filter(a => typeof a.id === 'number')
+      .sort((a, b) => (a.nom || '').localeCompare(b.nom || '', 'fr'))
+      .forEach(a => { if (!seen.has(a.id)) { seen.add(a.id); pSel.appendChild(new Option(a.nom, a.id)); } });
+    if (cur && [...pSel.options].some(o => o.value === cur)) pSel.value = cur;
+  }
+}
+
+let frtCollapsed = new Set();
+
+function buildFrtHierarchy() {
+  if (!masterProjet) return [];
+  let flat = [];
+  const walk = (parentId, depth) => {
+    allProjets
+      .filter(p => p.ref === parentId)
+      .sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999))
+      .forEach(p => {
+        const hasChildren = allProjets.some(c => c.ref === p.id);
+        flat.push({ ...p, _depth: depth, _hasChildren: hasChildren });
+        walk(p.id, depth + 1);
+      });
+  };
+  walk(masterProjet.id, 0);
+  return flat;
+}
+
+function toggleFrtNode(id) {
+  if (frtCollapsed.has(id)) frtCollapsed.delete(id); else frtCollapsed.add(id);
+  renderSuiviFeuilleRoute();
+}
+
+async function updateFrtField(projetId, field, value) {
+  try {
+    await grist.docApi.applyUserActions([['UpdateRecord', 'Projet', projetId, { [field]: value }]]);
+    const p = allProjets.find(x => x.id === projetId);
+    if (p) p[field] = value;
+    showToast('Mis à jour');
+    if (field === 'theme') populateSuiviFrtFilters();
+    renderSuiviFeuilleRoute();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+function updateFrtInstance(projetId, selectEl) {
+  const opt = selectEl.options[selectEl.selectedIndex];
+  const hex = opt.getAttribute('data-hex') || 'transparent';
+  const dot = document.getElementById('frtInstDot_' + projetId);
+  if (dot) dot.style.background = hex;
+  updateFrtField(projetId, 'instance', parseInt(selectEl.value) || 0);
+}
+
+function sortFrt(col) {
+  if (frtSortCol === col) frtSortDir *= -1; else { frtSortCol = col; frtSortDir = 1; }
+  renderSuiviFeuilleRoute();
+}
+
+function renderSuiviFeuilleRoute() {
+  const cont = document.getElementById('frtTable');
+  if (!cont) return;
+
+  const masterId  = masterProjet ? masterProjet.id : null;
+  const search    = document.getElementById('frtSearch')?.value.toLowerCase() || '';
+  const fSp       = document.getElementById('frtFilterSousProjet')?.value || '';
+  const fTheme    = document.getElementById('frtFilterTheme')?.value || '';
+  const fInstance = document.getElementById('frtFilterInstance')?.value || '';
+  const fEtat     = document.getElementById('frtFilterEtat')?.value || '';
+  const fPilote   = document.getElementById('frtFilterPilote')?.value || '';
+
+  // Sous-sous-projets = tous les projets dont le parent n'est pas le maître
+  let rows = buildFrtHierarchy();
+
+  if (!rows.length) {
+    document.getElementById('frtCount').textContent = '—';
+    cont.innerHTML = emptyState('Aucun sous-projet', "Ajoutez des sous-projets pour les retrouver ici.", 'folder');
+    return;
+  }
+
+  rows = rows.map(p => ({ ...p, _parent: allProjets.find(x => x.id === p.ref) || null }));
+
+  
+  if (fSp) {
+    const rootId = parseInt(fSp);
+    const inSubtree = (p) => {
+      let cur = p;
+      while (cur) { if (cur.id === rootId) return true; cur = allProjets.find(x => x.id === cur.ref); }
+      return false;
+    };
+    rows = rows.filter(inSubtree);
+  }
+
+  const scopedRows = rows;
+  const matchesOtherFilters = (p) => {
+    if (search) {
+      const pilote = p.pilote ? allActors.find(a => a.id === p.pilote) : null;
+      const text = (p.nom || '') + (p._parent?.nom || '') + (pilote?.nom || '') + (p.theme || '');
+      if (!text.toLowerCase().includes(search)) return false;
+    }
+    if (fTheme && !parseThemes(p.theme).includes(fTheme)) return false;
+    if (fInstance && String(p.instance) !== fInstance) return false;
+    if (fEtat && projetStatut(p) !== fEtat) return false;
+    if (fPilote && String(p.pilote) !== fPilote) return false;
+    return true;
+  };
+
+  const matchingIds = new Set(scopedRows.filter(matchesOtherFilters).map(p => p.id));
+  const keepIds = new Set(matchingIds);
+  matchingIds.forEach(id => {
+    let cur = scopedRows.find(x => x.id === id);
+    while (cur && cur.ref) {
+      keepIds.add(cur.ref);
+      cur = scopedRows.find(x => x.id === cur.ref);
+    }
+  });
+  rows = scopedRows.filter(p => keepIds.has(p.id));
+
+  document.getElementById('frtCount').textContent = `${rows.length} élément${rows.length !== 1 ? 's' : ''}`;
+
+  if (!rows.length) {
+    cont.innerHTML = emptyState('Aucun résultat', 'Modifiez vos filtres.', 'folder');
+    return;
+  }
+
+  const piloteOf   = p => p.pilote ? allActors.find(a => a.id === p.pilote) : null;
+  const instanceOf = p => p.instance ? instances[p.instance] : null;
+
+  
+
+  const isVisible = (p) => {
+    let cur = p;
+    while (cur.ref) {
+      if (frtCollapsed.has(cur.ref)) return false;
+      cur = allProjets.find(x => x.id === cur.ref) || {};
+      if (!cur.id) break;
+    }
+    return true;
+  };
+  const visibleRows = rows.filter(isVisible);
+
+const actorOptionsBase = allActors
+    .filter((a,i,arr) => typeof a.id === 'number' && arr.findIndex(x=>x.id===a.id)===i)
+    .sort((a,b) => (a.nom||'').localeCompare(b.nom||'', 'fr'));
+  const instOptionsBase = Object.values(instances)
+    .filter((v,i,arr) => typeof v.id === 'number' && arr.findIndex(x=>x.id===v.id)===i)
+    .sort((a,b) => (a.ordre??9999) - (b.ordre??9999));
+
+  const tbody = visibleRows.map(p => {
+    const pilote  = piloteOf(p);
+    const inst    = instanceOf(p);
+    const statut  = projetStatut(p);
+    const termine = statut === 'realise';
+    const aLancer = statut === 'alancer';
+    const dDebut  = fmtMonthYear(p.debut) || '—';
+    const dFin    = fmtMonthYear(p.fin) || '—';
+    const dates   = `<div style="display:flex;flex-direction:column;line-height:1.5;font-size:11.5px;color:var(--text-secondary)"><span>${esc(dDebut)}</span><span style="color:var(--text-muted)">${esc(dFin)}</span></div>`;
+
+    const piloteHtml = `<select class="cr-cell cr-cell-select" style="font-size:11.5px;min-width:120px"
+      onclick="event.stopPropagation()"
+      onchange="event.stopPropagation();updateFrtField(${p.id},'pilote',parseInt(this.value)||0)">
+      <option value="">— Aucun —</option>
+      ${actorOptionsBase.map(a => `<option value="${a.id}"${p.pilote===a.id?' selected':''}>${esc(a.nom)}</option>`).join('')}
+    </select>`;
+
+const instColorHex = inst ? (couleurs[inst.couleur]?.hex || inst.couleur || '#9C9691') : 'transparent';
+    const instHtml = `<span style="display:inline-flex;align-items:center;gap:5px">
+  <span id="frtInstDot_${p.id}" style="width:8px;height:8px;border-radius:50%;background:${instColorHex};flex-shrink:0;display:inline-block"></span>
+  <select class="cr-cell cr-cell-select" style="font-size:11.5px;min-width:120px"
+    onclick="event.stopPropagation()"
+    onchange="event.stopPropagation();updateFrtInstance(${p.id},this)">
+    <option value="">— Aucune —</option>
+    ${instOptionsBase.map(i => `<option value="${i.id}" data-hex="${esc(couleurs[i.couleur]?.hex || i.couleur || '#9C9691')}"${p.instance===i.id?' selected':''}>${esc(i.nom || i.sigle)}</option>`).join('')}
+  </select>
+</span>`;
+
+const markerColor = termine ? '#888888' : (projetHex(p) || '#1A7A4F');
+
+   const statusTag = `<span class="sp-status-tag ${termine?'sp-status-te':aLancer?'sp-status-al':'sp-status-ec'}"><span style="width:4px;height:4px;border-radius:50%;background:${markerColor};display:inline-block"></span>${termine?'Réalisé':aLancer?'À lancer':'En cours'}</span>`;
+
+    const toggleHtml = p._hasChildren
+      ? `<svg onclick="event.stopPropagation();toggleFrtNode(${p.id})" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="cursor:pointer;flex-shrink:0;color:var(--text-muted);transform:rotate(${frtCollapsed.has(p.id)?'0':'90'}deg);transition:transform .15s"><path d="M9 18l6-6-6-6"/></svg>`
+      : `<span style="width:9px;flex-shrink:0;display:inline-block"></span>`;
+
+    return `<tr onclick="openSpDetail(${p.id})" style="cursor:pointer">
+      <td style="padding-left:10px"><div style="display:flex;align-items:center;gap:6px;margin-left:${p._depth*18}px;border-left:4px solid ${markerColor};padding-left:8px">${toggleHtml}${p.code?`<span class="sp-code" style="font-size:10.5px">${esc(p.code)}</span>`:''}<span style="font-weight:${p._depth===0?'600':'500'}">${esc(p.nom || 'Sans nom')}</span></div></td>
+      <td>${piloteHtml}</td>
+      <td>${statusTag}</td>
+      <td class="suivi-date" style="white-space:nowrap">${dates}</td>
+      <td>${instHtml}</td>
+      <td><input type="text" class="cr-cell" style="font-size:11.5px;min-width:120px" value="${esc(p.theme||'')}"
+      list="frtThemeList"
+      placeholder="thème1, thème2…"
+      onclick="event.stopPropagation()"
+      onblur="event.stopPropagation();updateFrtField(${p.id},'theme',this.value.trim()||null)"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
+    </td>
+    </tr>`;
+  }).join('');
+
+  cont.innerHTML = `<div class="frt-table-wrap"><table><thead><tr>
+    <th>Projet</th><th>Pilote</th><th>État</th><th>Début / Fin</th><th>Instance / GT</th><th>Thème</th>
+  </tr></thead><tbody>${tbody}</tbody></table></div>`;
+}
+
 function collectDescendants(parentId, allSubs, depth, maxDepth) {
   if (depth > maxDepth) return [];
   const children = allSubs
@@ -2376,8 +2833,9 @@ function renderFeuilleDeroute() {
     collectMilestones(p1.id, 2, hex1);
   });
 
-  if (fEtat === 'encours')  milestones = milestones.filter(p => !p.finreelle || p.finreelle === 0);
-  if (fEtat === 'realise')  milestones = milestones.filter(p =>  p.finreelle && p.finreelle > 0);
+  if (fEtat === 'alancer')  milestones = milestones.filter(p => projetStatut(p) === 'alancer');
+  if (fEtat === 'encours')  milestones = milestones.filter(p => projetStatut(p) === 'encours');
+  if (fEtat === 'realise')  milestones = milestones.filter(p => projetStatut(p) === 'realise');
 
   if (!milestones.length) {
     cont.innerHTML = `<div style="padding:48px;text-align:center;color:var(--text-muted);font-size:13px">Aucun sous-projet à afficher.</div>`;
@@ -3125,8 +3583,6 @@ function switchDefTab(sub) {
   document.querySelectorAll('#panel-definition .cadre-subpanel').forEach(p => p.classList.toggle('active', p.id === sub));
   const ctrl = document.getElementById('defSubnavControls');
   if (ctrl) ctrl.style.display = sub === 'def-definition' ? '' : 'none';
-  if (sub === 'def-kpi')      renderKpi();
-  if (sub === 'def-cadrage')  renderNoteCadrage();
   if (sub === 'def-acteurs')  renderActeurs();
   if (sub === 'def-instances') renderInstances();
 }
@@ -3486,7 +3942,7 @@ document.getElementById('acteurFilterRole').addEventListener('change', renderAct
 document.getElementById('acteurFilterType').addEventListener('change', renderActeurs);
 document.getElementById('acteurFilterInstance').addEventListener('change', renderActeurs);
 document.getElementById('instanceSearch').addEventListener('input', renderInstances);
-document.getElementById('spSearch').addEventListener('input', renderSousProjets);
+
 document.addEventListener('keydown', e => { if(e.key==='Escape'){closeActeurModal();closeInstanceModal();closeProjetModal();closeSpDetail();closeSubCanvas();closeDecEdit();} });
 
 // Init compte rendu rows + initial data load on ready
@@ -3500,7 +3956,7 @@ document.addEventListener('DOMContentLoaded', () => {
       await fetchProjets();
       await fetchDecisions();
       renderDefinition();
-      renderSousProjets();
+      renderKpi();
       renderInstances();
       populateDecisionSelects();
       if (decMode === 'suivi') renderSuivi();
@@ -4314,7 +4770,7 @@ function showGanttInfo(evt, id) {
   const d1 = p.debut > 0 ? new Date(p.debut * 86400000).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : null;
   const endMs = p.finreelle > 0 ? p.finreelle : p.fin;
   const d2 = endMs > 0 ? new Date(endMs * 86400000).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : null;
-  const closedTag = p.finreelle > 0 ? ' <span style="color:#DC2626">(clôturé)</span>' : '';
+  const closedTag = p.finreelle > 0 ? ' <span style="color:#DC2626">(clôturé)</span>' : (projetStatut(p) === 'alancer' ? ' <span style="color:#B45309">(à lancer)</span>' : '');
 
   tip.innerHTML = `<strong style="display:block;margin-bottom:4px">${esc(label)}</strong>
     <span style="font-size:11px;color:var(--text-muted)">${pilote ? esc(pilote.nom) : 'Pilote non défini'}</span><br>
@@ -4397,8 +4853,9 @@ function renderGanttProjet() {
     rows = rows.filter(r => keepIds.has(r.id));
   }
   
-  if (fEtat === 'encours')  rows = rows.filter(r => !r.finreelle || r.finreelle === 0);
-  if (fEtat === 'realise')  rows = rows.filter(r =>  r.finreelle && r.finreelle !== 0);
+if (fEtat === 'alancer')  rows = rows.filter(r => projetStatut(r) === 'alancer');
+  if (fEtat === 'encours')  rows = rows.filter(r => projetStatut(r) === 'encours');
+  if (fEtat === 'realise')  rows = rows.filter(r => projetStatut(r) === 'realise');
   if (fPilote) rows = rows.filter(r => r.pilote === parseInt(fPilote));
   if (fThemeGantt) rows = rows.filter(r => parseThemes(r.theme).includes(fThemeGantt));
   if (fInstanceGantt) rows = rows.filter(r => String(r.instance) === fInstanceGantt);
@@ -4499,7 +4956,9 @@ while (cur2.getTime() < dEnd.getTime()) {
 
   layout.forEach(l => {
     const p = l.p;
-    const termine = p.finreelle && p.finreelle > 0;
+    const statut   = projetStatut(p);
+    const termine  = statut === 'realise';
+    const aLancer  = statut === 'alancer';
     const barColor = termine ? '#888888' : (projetHex(p) || (l.type === 'phase' ? '#374151' : '#1A7A4F'));
     const sMs = p.debut > 0 ? p.debut * 86400000 : null;
     const eMs = p.finreelle > 0 ? p.finreelle * 86400000 : (p.fin > 0 ? p.fin * 86400000 : null);
@@ -5328,10 +5787,21 @@ function projetHex(p) {
   if (!p) return null;
   const co = couleurs[p.couleur];
   if (co && co.hex) return co.hex;
-  // fallback selon profondeur
+  // Pas de couleur assignée : hériter de celle de l'ancêtre le plus proche qui en a une
+  if (p.ref && p.ref !== 0) {
+    const parent = allProjets.find(x => x.id === p.ref);
+    if (parent && parent.id !== p.id) return projetHex(parent);
+  }
+  // fallback selon profondeur (aucun ancêtre coloré trouvé)
   const isSub = p.ref && p.ref !== 0;
   return isSub ? '#1A7A4F' : '#1A1A1A';
 }  
+
+function projetStatut(p) {
+  if (p.finreelle) return 'realise';
+  if (!p.debut || p.debut * 86400000 > Date.now()) return 'alancer';
+  return 'encours';
+}
 
 let defBlockDirty = {};
 
@@ -5362,6 +5832,41 @@ async function saveDefBlock(field, id) {
     await grist.docApi.applyUserActions([['UpdateRecord', 'Projet', masterProjet.id, { [field]: val || null }]]);
     masterProjet[field] = val;
     defBlockDirty[id] = false;
+    const btn = document.getElementById(id + '_save');
+    if (btn) btn.style.display = 'none';
+    showToast('Enregistré');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+let spBlockDirty = {};
+
+function spBlockMarkDirty(id) {
+  if (!spBlockDirty[id]) {
+    spBlockDirty[id] = true;
+    const btn = document.getElementById(id + '_save');
+    if (btn) btn.style.display = '';
+  }
+}
+
+async function saveSpBlock(field, id, projetId) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const val = el.innerHTML
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<div><br\s*\/?><\/div>/gi, '\n')
+    .replace(/<div>/gi, '\n')
+    .replace(/<\/div>/gi, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+  try {
+    await grist.docApi.applyUserActions([['UpdateRecord', 'Projet', projetId, { [field]: val || null }]]);
+    const p = allProjets.find(x => x.id === projetId);
+    if (p) p[field] = val;
+    spBlockDirty[id] = false;
     const btn = document.getElementById(id + '_save');
     if (btn) btn.style.display = 'none';
     showToast('Enregistré');
@@ -6367,6 +6872,13 @@ function renderKpi() {
 }
 
 // ══ NOTE DE CADRAGE ══
+function openNoteCadrageModal() {
+  document.getElementById('noteCadrageModalOverlay').classList.add('open');
+  renderNoteCadrage();
+}
+function closeNoteCadrageModal() {
+  document.getElementById('noteCadrageModalOverlay').classList.remove('open');
+}
 function renderNoteCadrage() {
   const cont = document.getElementById('noteCadrageContainer');
   if (!cont) return;
@@ -6510,7 +7022,9 @@ const matchingIds = search
   
   if (!nodeMatches && !hasMatchingChild) return '';
   
-    const termine     = !!p.finreelle;
+    const statut        = projetStatut(p);
+    const termine       = statut === 'realise';
+    const aLancer       = statut === 'alancer';
     const hasChildren = p.children.length > 0;
     const childCount  = countAll(p);
     const cid         = 'spc_' + p.id;
@@ -6553,9 +7067,9 @@ ${childCount > 0 ? `<span class="tl-count">${childCount}</span>` : ''}
           <!-- Zone méta droite -->
           <div style="display:flex;align-items:center;gap:7px;flex-shrink:0;padding-left:8px;border-left:1px solid var(--border);min-width:0;max-width:220px;">
             ${dates ? `<span class="tl-dates-meta">${dates}</span>` : ''}
-            <span class="sp-status-tag ${termine?'sp-status-te':'sp-status-ec'}">
+            <span class="sp-status-tag ${termine?'sp-status-te':aLancer?'sp-status-al':'sp-status-ec'}">
               <span style="width:4px;height:4px;border-radius:50%;background:${markerColor};display:inline-block"></span>
-              ${termine ? 'R\u00e9alis\u00e9' : 'En cours'}
+              ${termine ? 'R\u00e9alis\u00e9' : aLancer ? 'À lancer' : 'En cours'}
             </span>
             <div class="tl-hbtns" style="opacity:0">
               <button class="btn-icon" title="Canvas" onclick="openSubCanvas(${p.id})"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="18" rx="2"/><line x1="2" y1="9" x2="22" y2="9"/><line x1="12" y1="9" x2="12" y2="21"/><line x1="2" y1="15" x2="12" y2="15"/></svg></button>
@@ -6627,13 +7141,19 @@ function openSpDetail(id) {
   const p = allProjets.find(x => x.id === id);
   if (!p) return;
 
-  const termine = !!p.finreelle;
+  const statut  = projetStatut(p);
+  const termine = statut === 'realise';
+  const aLancer = statut === 'alancer';
 
   document.getElementById('spDetailCode').textContent  = p.code || '';
   document.getElementById('spDetailTitle').textContent = p.nom  || 'Sans nom';
-  document.getElementById('spDetailStatus').innerHTML  = `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:3px;font-size:12px;font-weight:500;background:${termine?'#f3f3f3':'#ECFDF5'};color:${termine?'#666666':'#065F46'}">
-    <span style="width:6px;height:6px;border-radius:50%;background:${termine?'#888888':'#1A7A4F'};display:inline-block"></span>
-    ${termine ? 'Réalisé' : 'En cours'}
+  const badgeBg    = termine ? '#f3f3f3' : aLancer ? '#FFFBEB' : '#ECFDF5';
+  const badgeText  = termine ? '#666666' : aLancer ? '#92400E' : '#065F46';
+  const badgeDot   = termine ? '#888888' : aLancer ? '#B45309' : '#1A7A4F';
+  const badgeLabel = termine ? 'Réalisé' : aLancer ? 'À lancer' : 'En cours';
+  document.getElementById('spDetailStatus').innerHTML  = `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:3px;font-size:12px;font-weight:500;background:${badgeBg};color:${badgeText}">
+    <span style="width:6px;height:6px;border-radius:50%;background:${badgeDot};display:inline-block"></span>
+    ${badgeLabel}
   </span>`;
 
   // Calendrier
@@ -6669,19 +7189,18 @@ function openSpDetail(id) {
   ];
 
   document.getElementById('spDetailBlocks').innerHTML = blockDefs.map(([slug, label, icon]) => {
-    const value = p[slug];
-    const empty = !value || !value.trim();
+    const value = p[slug] || '';
     const bid   = 'sdblock_' + slug;
     return `<div class="sp-acc-block">
       <div class="sp-acc-block-header" onclick="toggleSpBlock('${bid}')">
         <svg class="sp-acc-block-toggle" id="${bid}_t" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
         <span style="color:var(--text-muted);display:flex;align-items:center">${icon}</span>
         <span class="sp-acc-block-label">${label}</span>
-        ${!empty ? '<span style="font-size:11px;color:var(--text-muted);background:var(--surface3);padding:0 6px;border-radius:20px">✓</span>' : ''}
+        <span class="sp-acc-block-save-btn" id="${bid}_save" style="display:none">
+          <button class="btn-add-ghost" style="padding:2px 8px;font-size:11px" onclick="event.stopPropagation();saveSpBlock('${slug}','${bid}',${p.id})">Enregistrer</button>
+        </span>
       </div>
-      <div class="sp-acc-block-body" id="${bid}">
-        ${empty ? '<span style="font-style:italic;color:var(--text-muted)">Non renseigné</span>' : esc(value.trim()).split('\n').join('<br>')}
-      </div>
+      <div class="sp-acc-block-body open" id="${bid}" contenteditable="true" data-field="${slug}" data-placeholder="Cliquez pour renseigner…" oninput="spBlockMarkDirty('${bid}')">${value.trim() ? esc(value.trim()).split('\n').join('<br>') : ''}</div>
     </div>`;
   }).join('');
 
@@ -6741,23 +7260,27 @@ if (currentRefVal) {
   _refPickerOpen.add(targetId); // déplier aussi le nœud lui-même s'il a des enfants
 }
 renderRefPicker(currentRefVal);
-  
-  renderRefPicker(currentRefVal);
+  renderRefClosed(currentRefVal);
 
   // Show pilote field only for sous-projets
   document.getElementById('p_piloteGroup').style.display     = isSub ? '' : 'none';
   document.getElementById('p_antecedentGroup').style.display = isSub ? '' : 'none';
 
-  // Populate antecedent select (tous les sous-projets sauf soi-même)
-  const antSel = document.getElementById('p_antecedent');
-  while (antSel.options.length > 1) antSel.remove(1);
-  allProjets
-    .filter(p => p.ref && p.ref !== 0 && p.id !== editingProjetId)
-    .sort((a,b) => (a.ordre??9999)-(b.ordre??9999) || (a._pos-b._pos))
-    .forEach(p => {
-      const label = (p.code ? p.code + ' – ' : '') + p.nom;
-      antSel.appendChild(new Option(label, p.id));
-    });
+  // Populate antecedent picker (arbre indenté, tous sous-projets sauf soi-même)
+  _antPickerOpen.clear();
+  const currentAntVal = String(projet?.antecedent || '');
+  if (currentAntVal) {
+    const antTargetId = parseInt(currentAntVal);
+    const findAntAncestors = (id) => {
+      const node = allProjets.find(p => p.id === id);
+      if (!node || !node.ref || node.ref === 0) return;
+      _antPickerOpen.add(node.ref);
+      findAntAncestors(node.ref);
+    };
+    findAntAncestors(antTargetId);
+    _antPickerOpen.add(antTargetId);
+  }
+  renderAntecedentPicker(currentAntVal);
 
   // Populate pilote select
   const pilSel = document.getElementById('p_pilote');
@@ -6789,49 +7312,17 @@ renderRefPicker(currentRefVal);
   document.getElementById('p_theme').value    = projet?.theme    || '';
   updateThemeHint();
 
-  // Peupler le select couleur
-  const picker = document.getElementById('p_couleurPicker');
-  const hiddenCoul = document.getElementById('p_couleur');
-  if (picker) {
-    picker.innerHTML = '';
-    const selectedVal = String(projet?.couleur || '');
-    // Option "aucune"
-    const noneEl = document.createElement('div');
-    noneEl.title = 'Aucune';
-    noneEl.style.cssText = `width:22px;height:22px;border-radius:50%;border:2px solid var(--border-strong);background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-muted);flex-shrink:0;transition:box-shadow 0.1s;`;
-    noneEl.textContent = '∅';
-    if (!selectedVal) noneEl.style.boxShadow = '0 0 0 3px var(--text-primary)';
-    noneEl.onclick = () => {
-      hiddenCoul.value = '';
-      picker.querySelectorAll('[data-coul-item]').forEach(el => el.style.boxShadow = 'none');
-      noneEl.style.boxShadow = '0 0 0 3px var(--text-primary)';
-    };
-    noneEl.dataset.coulItem = '';
-    picker.appendChild(noneEl);
-
-    const seenC = new Set();
-    Object.values(couleurs)
-      .filter(c => { if (seenC.has(c.id) || typeof c.id !== 'number') return false; seenC.add(c.id); return true; })
-      .forEach(c => {
-        const el = document.createElement('div');
-        el.title = c.nom + (c.hex ? '  ' + c.hex : '');
-        el.dataset.coulItem = c.id;
-        const isSelected = String(c.id) === selectedVal;
-        el.style.cssText = `width:22px;height:22px;border-radius:50%;background:${c.hex||'#ccc'};cursor:pointer;flex-shrink:0;transition:box-shadow 0.1s;box-shadow:${isSelected ? '0 0 0 3px '+c.hex+', 0 0 0 5px white, 0 0 0 7px '+c.hex : 'none'};`;
-        el.onclick = () => {
-          hiddenCoul.value = c.id;
-          picker.querySelectorAll('[data-coul-item]').forEach(e => e.style.boxShadow = 'none');
-          el.style.boxShadow = `0 0 0 3px ${c.hex}, 0 0 0 5px white, 0 0 0 7px ${c.hex}`;
-        };
-        picker.appendChild(el);
-      });
-    hiddenCoul.value = projet?.couleur || '';
-  }
+  // Peupler le select couleur (dropdown + swatch, même modèle que la modale Instance)
+  const selectedCoulVal = String(projet?.couleur || '');
+  populateProjetColorPicker();
+  document.getElementById('p_couleur').value = projet?.couleur || '';
+  renderProjetColorClosed(selectedCoulVal);
   document.getElementById('p_debut').value      = toDateInput(projet?.debut);
   document.getElementById('p_fin').value        = toDateInput(projet?.fin);
   document.getElementById('p_finreelle').value  = toDateInput(projet?.finreelle);
   document.getElementById('p_pilote').value     = projet?.pilote || '';
   document.getElementById('p_antecedent').value = projet?.antecedent || '';
+  renderAntecedentClosed(currentAntVal);
 
   
 
@@ -6876,7 +7367,7 @@ function renderRefPicker(selectedVal) {
       : `<span style="width:10px;flex-shrink:0;display:inline-block"></span>`;
 
     let html = `<div onclick="refPickerSelect(${node.id})"
-      style="display:flex;align-items:center;gap:6px;padding:6px 10px 6px ${indent}px;
+      style="display:flex;align-items:center;gap:6px;padding:4px 10px 4px ${indent}px;
              cursor:pointer;background:${bg};border-left:${borderLeft};user-select:none"
       onmouseover="if('${isSelected}'!=='true')this.style.background='var(--surface2)'"
       onmouseout="this.style.background='${bg}'">
@@ -6913,6 +7404,24 @@ function refPickerSelect(nodeId) {
   const hidden = document.getElementById('p_ref');
   if (hidden) hidden.value = String(nodeId);  // Convertir en string pour cohérence
   renderRefPicker(String(nodeId));
+  renderRefClosed(String(nodeId));
+  closeMsDropdown('p_refWrap','p_ref_picker');
+}
+
+function renderRefClosed(selectedVal) {
+  const tagsEl = document.getElementById('p_refTags');
+  const ph     = document.getElementById('p_refPlaceholder');
+  if (!tagsEl) return;
+  tagsEl.querySelectorAll('.ms-tag').forEach(el => el.remove());
+  const node = selectedVal ? allProjets.find(p => String(p.id) === String(selectedVal)) : null;
+  if (!node) { if (ph) ph.style.display = ''; return; }
+  if (ph) ph.style.display = 'none';
+  const hex = projetHex(node) || '#9B9B9B';
+  const label = (node.code ? node.code + ' – ' : '') + (node.nom || '—');
+  const tag = document.createElement('span');
+  tag.className = 'ms-tag';
+  tag.innerHTML = `<span class="cdot" style="width:9px;height:9px;background:${hex}"></span>${esc(label)}`;
+  tagsEl.appendChild(tag);
 }
   
   function closeProjetModal() {
@@ -6965,7 +7474,9 @@ moyens:      existingP?.moyens      || null,
     closeProjetModal();
     await fetchProjets();
     renderDefinition();
-    renderSousProjets();
+    renderKpi();
+    refreshObjectifsView();
+    if (spMode === 'suivi') { populateSuiviFrtFilters(); renderSuiviFeuilleRoute(); }
   } catch(e) { showToast(e.message, 'error'); }
 }
 
@@ -6980,7 +7491,8 @@ async function deleteProjet(id) {
     showToast('Projet supprimé');
     await fetchProjets();
     renderDefinition();
-    renderSousProjets();
+    renderKpi();
+    refreshObjectifsView();
   } catch(e) { showToast(e.message,'error'); }
 }
 
