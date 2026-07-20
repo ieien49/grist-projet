@@ -5057,15 +5057,16 @@ while (cur2.getTime() < dEnd.getTime()) {
         const maxCharsPhase = Math.max(4, Math.floor((bw - 16) / (5.6 * ganttScale)));
         const labelUp = codeLabelPhase.length > maxCharsPhase ? codeLabelPhase.slice(0, maxCharsPhase - 1) + '…' : codeLabelPhase;
         const fsPhase = Math.round(9.5 * ganttScale);
+        const iconSizePhase = Math.round(10 * ganttScale);
         const instHexPhase = instHexFor(p);
         const instTitlePhase = p.instance ? instances[p.instance] : null;
-        const dotOffsetPhase = instHexPhase ? 12 : 0;
-        const instDotPhase = instHexPhase
-          ? `<circle cx="${(x1 + 14).toFixed(1)}" cy="${(by + BAR_H / 2).toFixed(1)}" r="3.5" fill="none" stroke="${instHexPhase}" stroke-width="1.5"><title>${esc(instTitlePhase.sigle||instTitlePhase.nom)}</title></circle>`
+        const dotOffsetPhase = instHexPhase ? (iconSizePhase + 5) : 0;
+        const instIconPhase = instHexPhase
+          ? `<svg x="${(x1 + 8).toFixed(1)}" y="${(by + BAR_H / 2 - iconSizePhase / 2).toFixed(1)}" width="${iconSizePhase}" height="${iconSizePhase}" viewBox="0 0 24 24" fill="${instHexPhase}"><title>${esc(instTitlePhase.sigle||instTitlePhase.nom)}</title><path d="M12 10C14.2091 10 16 8.20914 16 6 16 3.79086 14.2091 2 12 2 9.79086 2 8 3.79086 8 6 8 8.20914 9.79086 10 12 10ZM5.5 13C6.88071 13 8 11.8807 8 10.5 8 9.11929 6.88071 8 5.5 8 4.11929 8 3 9.11929 3 10.5 3 11.8807 4.11929 13 5.5 13ZM21 10.5C21 11.8807 19.8807 13 18.5 13 17.1193 13 16 11.8807 16 10.5 16 9.11929 17.1193 8 18.5 8 19.8807 8 21 9.11929 21 10.5ZM12 11C14.7614 11 17 13.2386 17 16V22H7V16C7 13.2386 9.23858 11 12 11ZM5 15.9999C5 15.307 5.10067 14.6376 5.28818 14.0056L5.11864 14.0204C3.36503 14.2104 2 15.6958 2 17.4999V21.9999H5V15.9999ZM22 21.9999V17.4999C22 15.6378 20.5459 14.1153 18.7118 14.0056 18.8993 14.6376 19 15.307 19 15.9999V21.9999H22Z"/></svg>`
           : '';
         svgBody += `<g style="cursor:pointer" onclick="showGanttInfo(event, ${p.id})">
   <rect x="${x1.toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(1)}" height="${BAR_H}" rx="${BAR_R}" fill="${barColor}" opacity="${termine ? 0.7 : 0.95}"/>
-  ${instDotPhase}
+  ${instIconPhase}
   <text x="${(x1 + 10 + dotOffsetPhase).toFixed(1)}" y="${(by + BAR_H / 2).toFixed(1)}" dominant-baseline="central" font-size="${fsPhase}" font-weight="700" fill="#fff" font-family="system-ui,sans-serif" letter-spacing="0.02em">${esc(labelUp.toUpperCase())}</text>
 </g>`;
       } else {
@@ -5077,21 +5078,22 @@ while (cur2.getTime() < dEnd.getTime()) {
       if (sMs && eMs) {
         const x1 = msX(sMs), x2 = msX(eMs);
         const cy = l.y + l.h - 5;
-      const codeLabelSub = p.code || label;
+     const codeLabelSub = p.code || label;
         const maxCharsSub = Math.max(5, Math.floor((TOTAL_W - x1 - 14) / (5.4 * ganttScale)));
         const labelSub = codeLabelSub.length > maxCharsSub ? codeLabelSub.slice(0, maxCharsSub - 1) + '…' : codeLabelSub;
         const fsSub = Math.round(9 * ganttScale);
+        const iconSizeSub = Math.round(9 * ganttScale);
         const instHexSub = instHexFor(p);
         const instTitleSub = p.instance ? instances[p.instance] : null;
-        const dotOffsetSub = instHexSub ? 11 : 0;
-        const instDotSub = instHexSub
-          ? `<circle cx="${(x1 + 3.5).toFixed(1)}" cy="${(cy - 8 - fsSub/3).toFixed(1)}" r="3.5" fill="none" stroke="${instHexSub}" stroke-width="1.5"><title>${esc(instTitleSub.sigle||instTitleSub.nom)}</title></circle>`
+        const dotOffsetSub = instHexSub ? (iconSizeSub + 4) : 0;
+        const instIconSub = instHexSub
+          ? `<svg x="${x1.toFixed(1)}" y="${(cy - 8 - fsSub/1.3).toFixed(1)}" width="${iconSizeSub}" height="${iconSizeSub}" viewBox="0 0 24 24" fill="${instHexSub}"><title>${esc(instTitleSub.sigle||instTitleSub.nom)}</title><path d="M12 10C14.2091 10 16 8.20914 16 6 16 3.79086 14.2091 2 12 2 9.79086 2 8 3.79086 8 6 8 8.20914 9.79086 10 12 10ZM5.5 13C6.88071 13 8 11.8807 8 10.5 8 9.11929 6.88071 8 5.5 8 4.11929 8 3 9.11929 3 10.5 3 11.8807 4.11929 13 5.5 13ZM21 10.5C21 11.8807 19.8807 13 18.5 13 17.1193 13 16 11.8807 16 10.5 16 9.11929 17.1193 8 18.5 8 19.8807 8 21 9.11929 21 10.5ZM12 11C14.7614 11 17 13.2386 17 16V22H7V16C7 13.2386 9.23858 11 12 11ZM5 15.9999C5 15.307 5.10067 14.6376 5.28818 14.0056L5.11864 14.0204C3.36503 14.2104 2 15.6958 2 17.4999V21.9999H5V15.9999ZM22 21.9999V17.4999C22 15.6378 20.5459 14.1153 18.7118 14.0056 18.8993 14.6376 19 15.307 19 15.9999V21.9999H22Z"/></svg>`
           : '';
         svgBody += `<g style="cursor:pointer" onclick="showGanttInfo(event, ${p.id})">
   <line x1="${x1.toFixed(1)}" y1="${cy.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${cy.toFixed(1)}" stroke="${barColor}" stroke-width="2"/>
   <circle cx="${x1.toFixed(1)}" cy="${cy.toFixed(1)}" r="3.2" fill="${barColor}"/>
   <circle cx="${x2.toFixed(1)}" cy="${cy.toFixed(1)}" r="3.2" fill="${barColor}"/>
-  ${instDotSub}
+  ${instIconSub}
   <text x="${(x1 + dotOffsetSub).toFixed(1)}" y="${(cy - 8).toFixed(1)}" font-size="${fsSub}" font-weight="600" fill="#1a1a1a" font-family="system-ui,sans-serif">${esc(labelSub)}</text>
 </g>`;
         if (showDep && p.antecedent && rowCenterY[p.antecedent] !== undefined) {
