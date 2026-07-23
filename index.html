@@ -6208,7 +6208,7 @@ moyens:      t.moyens?.[i]      || '',
 
 // ══ THEMES / TAGS (Projet) ══
 function parseThemes(str) {
-  return (str || '').split(',').map(s => s.trim()).filter(Boolean);
+  return String(str || '').split(',').map(s => s.trim()).filter(Boolean);
 }
 function getAllThemes() {
   // Ordre défini par la table Themes (colonne "ordre"), plus les thèmes libres
