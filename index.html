@@ -2652,7 +2652,12 @@ function populateSuiviFrtFilters() {
   if (thSel) {
     const cur = thSel.value;
     while (thSel.options.length > 1) thSel.remove(1);
-    getAllThemes().forEach(t => thSel.appendChild(new Option(t, t)));
+    getAllThemes().forEach(t => {
+      const m = themeMeta(t);
+      const opt = new Option((m?.code ? m.code + ' – ' : '') + t, t);
+      opt.style.borderLeft = '3px solid ' + themeHex(t);
+      thSel.appendChild(opt);
+    });
     const frtThemeList = document.getElementById('frtThemeList');
 if (frtThemeList) {
   frtThemeList.innerHTML = getAllThemes().map(t => `<option value="${esc(t)}">`).join('');
@@ -4705,7 +4710,12 @@ if (pSel) {
   if (tSel) {
     const cur = tSel.value;
     while (tSel.options.length > 1) tSel.remove(1);
-    getAllThemes().forEach(t => tSel.appendChild(new Option(t, t)));
+    getAllThemes().forEach(t => {
+      const m = themeMeta(t);
+      const opt = new Option((m?.code ? m.code + ' – ' : '') + t, t);
+      opt.style.borderLeft = '3px solid ' + themeHex(t);
+      tSel.appendChild(opt);
+    });
     tSel.value = cur;
   }
 }
@@ -5548,7 +5558,12 @@ while (cur2.getTime() < dEnd.getTime()) {
   if (tSel) {
     const cur = tSel.value;
     while (tSel.options.length > 1) tSel.remove(1);
-    getAllThemes().forEach(t => tSel.appendChild(new Option(t, t)));
+    getAllThemes().forEach(t => {
+      const m = themeMeta(t);
+      const opt = new Option((m?.code ? m.code + ' – ' : '') + t, t);
+      opt.style.borderLeft = '3px solid ' + themeHex(t);
+      tSel.appendChild(opt);
+    });
     tSel.value = cur;
   }
   const iSel = document.getElementById('gpFilterInstance');
