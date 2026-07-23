@@ -3282,6 +3282,14 @@ function exportRoadmapPdf() {
   win.onload = () => { win.focus(); win.print(); };
 }
 
+// Personnalise ici le sous-titre affiché sous chaque "Engagement" du PDF.
+// Clé = valeur exacte du tag Thème saisi sur les sous-sous-projets.
+// Un thème absent de cette liste s'affiche avec son nom brut, sans sous-titre.
+const FR_THEME_META = {
+  // 'Engagement 1': 'Piloter la relation du Département avec ses usagers et ses usagères',
+  // 'Engagement 2': 'Simplifier les démarches et l’accès aux droits',
+};
+
 function exportFeuilleRouteReportPdf() {
   if (!masterProjet) { showToast('Aucun projet maître défini', 'error'); return; }
   const rows = buildFrtHierarchy();
@@ -3303,9 +3311,19 @@ function exportFeuilleRouteReportPdf() {
     return cur;
   };
 
-  let bodyHtml = '';
+  const statutMeta = {
+    encours: { label: 'En cours',  cls: 'pill-encours' },
+    alancer: { label: 'À lancer',  cls: 'pill-alancer' },
+    realise: { label: 'Réalisé',   cls: 'pill-realise' },
+  };
 
-  themes.forEach(theme => {
+  const flagIcon = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#E17F3D" stroke-width="1.8">
+    <path d="M4 22V4"/><path d="M4 4h13l-2.5 4L17 12H4"/>
+  </svg>`;
+
+  let sectionsHtml = '';
+
+  themes.forEach((theme, tIdx) => {
     const themeRows = rows.filter(p => p._depth > 0 && parseThemes(p.theme).includes(theme));
     if (!themeRows.length) return;
 
@@ -3318,60 +3336,118 @@ function exportFeuilleRouteReportPdf() {
     });
     if (!byPhase.size) return;
 
-    bodyHtml += `<h1>${esc(theme)}</h1>`;
+    const subtitle = FR_THEME_META[theme] || '';
+
+    let bodyRows = '';
+    let phaseNum = 0;
 
     [...byPhase.values()]
       .sort((a, b) => (a.phase.ordre ?? 9999) - (b.phase.ordre ?? 9999))
       .forEach(({ phase, items }) => {
-        bodyHtml += `<h2>${esc(phase.nom || 'Sans nom')}</h2>`;
-        const tRows = items.map(p => {
+        phaseNum++;
+        bodyRows += `<tr class="phase-row"><td colspan="5">Phase ${phaseNum} – ${esc(phase.nom || 'Sans nom')}</td></tr>`;
+
+        items.forEach(p => {
           const pilote = piloteOf(p);
           const inst   = instanceOf(p);
-          const statut = projetStatut(p);
-          const statutLabel = statut === 'realise' ? 'Réalisé' : statut === 'alancer' ? 'À lancer' : 'En cours';
+          const statut = statutMeta[projetStatut(p)];
           const dDebut = fmtMonthYear(p.debut) || '—';
           const dFin   = fmtMonthYear(p.fin) || '—';
-          return `<tr>
-            <td>${esc(p.nom || 'Sans nom')}</td>
-            <td>${esc(pilote?.nom || '—')}</td>
-            <td>${esc(statutLabel)}</td>
-            <td>${esc(dDebut)} → ${esc(dFin)}</td>
-            <td>${esc(inst?.nom || inst?.sigle || '—')}</td>
+          const instHex   = inst ? (couleurs[inst.couleur]?.hex || inst.couleur) : null;
+          const instLabel = inst ? (inst.nom || inst.sigle) : '';
+          const desc = (p.objectifs || '').trim();
+
+          bodyRows += `<tr>
+            <td class="chantier-cell">
+              <div class="chantier-nom">${esc(p.nom || 'Sans nom')}</div>
+              ${desc ? `<div class="chantier-desc">${esc(desc.split('\n')[0])}</div>` : ''}
+            </td>
+            <td class="pilote-cell">${pilote ? esc(pilote.nom) : ''}</td>
+            <td><span class="pill ${statut.cls}">${statut.label}</span></td>
+            <td class="echeance-cell"><span>${esc(dDebut)}</span><span>${esc(dFin)}</span></td>
+            <td class="instance-cell" ${instHex ? `style="color:${instHex}"` : ''}>${instLabel ? esc(instLabel) : '—'}</td>
           </tr>`;
-        }).join('');
-        bodyHtml += `<table>
-          <thead><tr><th>Sous-sous-projet</th><th>Pilote</th><th>Statut</th><th>Échéance</th><th>Instance</th></tr></thead>
-          <tbody>${tRows}</tbody>
-        </table>`;
+        });
       });
+
+    sectionsHtml += `<div class="engagement-section">
+      <div class="engagement-header">
+        ${flagIcon}
+        <div class="engagement-eyebrow">${esc(theme)}</div>
+        ${subtitle ? `<div class="engagement-title">${esc(subtitle)}</div>` : ''}
+      </div>
+      <table class="fr-table">
+        <thead><tr><th>Chantier</th><th>Pilotage</th><th>Statut</th><th>Échéance</th><th>Instance</th></tr></thead>
+        <tbody>${bodyRows}</tbody>
+      </table>
+    </div>`;
   });
 
-  if (!bodyHtml) { showToast('Aucune donnée à exporter', 'error'); return; }
+  if (!sectionsHtml) { showToast('Aucune donnée à exporter', 'error'); return; }
 
-  const title = masterProjet?.nom || 'Feuille de route';
   const today = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
     <style>
-      @page { size: A4 portrait; margin: 16mm 14mm; }
+      @page { size: A4 portrait; margin: 16mm 14mm 14mm; }
       * { box-sizing: border-box; }
-      body { margin: 0; font-family: Arial, sans-serif; color:#111; }
-      .header { display:flex; align-items:baseline; justify-content:space-between; border-bottom:1.5px solid #111; padding-bottom:6px; margin-bottom:16px; }
-      .header h2 { font-size:13px; font-weight:700; margin:0; }
-      .header span { font-size:10px; color:#999; }
-      h1 { font-size:17px; margin:24px 0 8px; padding-top:12px; border-top:2px solid #111; }
-      h1:first-of-type { border-top:none; padding-top:0; margin-top:0; }
-      h2 { font-size:13px; margin:14px 0 6px; color:#333; }
-      table { width:100%; border-collapse:collapse; margin-bottom:10px; }
-      tr { page-break-inside:avoid; }
-      th, td { border:1px solid #ddd; padding:5px 7px; font-size:10.5px; text-align:left; vertical-align:top; }
-      th { background:#f4f4f2; font-weight:600; }
+      body { margin: 0; font-family: Arial, sans-serif; color: #222;
+             -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+      .engagement-section { page-break-before: always; padding-top: 4px; }
+      .engagement-section:first-child { page-break-before: auto; }
+
+      .engagement-header { text-align: center; margin-bottom: 22px; }
+      .engagement-eyebrow {
+        font-family: Georgia, 'Times New Roman', serif;
+        font-size: 15px; font-weight: 600; color: #E17F3D;
+        margin-top: 6px;
+      }
+      .engagement-title {
+        font-family: Georgia, 'Times New Roman', serif;
+        font-size: 19px; font-weight: 700; color: #1F2937;
+        line-height: 1.35; margin-top: 4px; max-width: 480px;
+        margin-left: auto; margin-right: auto;
+      }
+
+      table.fr-table { width: 100%; border-collapse: collapse; }
+      .fr-table thead th {
+        background: #33697F; color: #fff; font-size: 10.5px; font-weight: 600;
+        text-align: left; padding: 7px 9px; text-transform: uppercase; letter-spacing: .02em;
+      }
+      .fr-table tbody tr:not(.phase-row) { border-bottom: 1px solid #E5E7EB; }
+      .fr-table td { padding: 8px 9px; font-size: 10.5px; vertical-align: top; }
+
+      tr.phase-row td {
+        background: #E7ECEE; color: #33474F; font-weight: 700; font-size: 10px;
+        text-transform: uppercase; letter-spacing: .03em; padding: 5px 9px;
+      }
+
+      .chantier-cell { width: 40%; }
+      .chantier-nom { font-weight: 700; color: #1F2937; margin-bottom: 2px; }
+      .chantier-desc { color: #6B7280; font-size: 9.5px; line-height: 1.35; }
+      .pilote-cell { color: #374151; white-space: nowrap; }
+
+      .echeance-cell { white-space: nowrap; color: #374151; }
+      .echeance-cell span { display: block; text-transform: capitalize; }
+      .echeance-cell span:last-child { color: #9CA3AF; }
+
+      .instance-cell { font-weight: 700; white-space: nowrap; color: #1F2937; }
+
+      .pill {
+        display: inline-block; padding: 2px 9px; border-radius: 10px;
+        font-size: 9.5px; font-weight: 600; border: 1px solid; white-space: nowrap;
+      }
+      .pill-encours { color: #1F9254; border-color: #1F9254; background: #EAFBF1; }
+      .pill-alancer { color: #C2740A; border-color: #E5A94E; background: #FFF6E7; }
+      .pill-realise { color: #6B7280; border-color: #D1D5DB; background: #F3F4F6; }
+
+      .fr-footer {
+        text-align: right; font-size: 9px; color: #9CA3AF; margin-top: 10px;
+      }
     </style>
   </head><body>
-    <div class="header">
-      <h2>${esc(title)} — Feuille de route</h2>
-      <span>Édité le ${today}</span>
-    </div>
-    ${bodyHtml}
+    ${sectionsHtml}
+    <div class="fr-footer">Édité le ${today}</div>
   </body></html>`;
 
   const win = window.open('', '_blank');
@@ -3379,7 +3455,6 @@ function exportFeuilleRouteReportPdf() {
   win.document.close();
   win.onload = () => { win.focus(); win.print(); };
 }
-
 function renderMindmap() {
   const svgEl = document.getElementById('mindmapSvg');
   if (!svgEl || typeof d3 === 'undefined') return;
