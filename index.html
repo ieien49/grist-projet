@@ -1785,9 +1785,7 @@ let selectedInstances = [];
 let allDocuments  = [];
 let docSortCol = 'titre', docSortDir = 1;
 let attachToken   = null; // cache du token d'accès aux pièces jointes Grist
-// URL de secours si la table Parametres est absente ou incomplète
-const DOC_FORM_URL_DEFAULT = 'https://grist.maine-et-loire.fr/o/sru/forms/aRLDL3s4JGRmpED5gF3CZS/32';
-let docFormUrl = DOC_FORM_URL_DEFAULT;
+let docFormUrl = null; // chargé depuis la table Parametres, pas de valeur codée en dur
 
 // ══ GRIST INIT ══
 grist.ready({
@@ -1876,13 +1874,13 @@ async function fetchDocuments() {
 async function fetchDocFormUrl() {
   try {
     const t = await grist.docApi.fetchTable('Parametres');
-    docFormUrl = DOC_FORM_URL_DEFAULT;
+    docFormUrl = null;
     if (t && t.cle) {
       const idx = t.cle.findIndex(c => c === 'lien_formulaire_documents');
       if (idx !== -1 && t.valeur?.[idx]) docFormUrl = t.valeur[idx];
     }
   } catch(e) {
-    docFormUrl = DOC_FORM_URL_DEFAULT; // table absente : on garde la valeur par défaut
+    docFormUrl = null; // table Parametres absente
   }
 }
 
@@ -3848,6 +3846,10 @@ function renderInstances() {
 
 // ══ DOCUMENTS ══
 function openDocumentForm() {
+  if (!docFormUrl) {
+    showToast("Complète l'URL du formulaire dans la table Parametres (cle = lien_formulaire_documents)", 'error');
+    return;
+  }
   window.open(docFormUrl, '_blank');
 }
 
