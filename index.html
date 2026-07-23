@@ -1888,6 +1888,50 @@ async function fetchDocFormUrl() {
   }
 }
 
+async function migrateThemesOnce() {
+  if (!confirm('Crée une ligne Themes par tag existant et remplit Projet.theme_ref. À lancer une seule fois. Continuer ?')) return;
+
+  const t = await grist.docApi.fetchTable('Projet');
+  const rawThemes = t.theme || [];
+  const ids = t.id || [];
+
+  const distinct = [];
+  rawThemes.forEach(v => {
+    const val = (v || '').trim();
+    if (val && !distinct.includes(val)) distinct.push(val);
+  });
+
+  if (!distinct.length) { alert('Aucun theme trouvé, rien à migrer.'); return; }
+
+  const addResult = await grist.docApi.applyUserActions([
+    ['BulkAddRecord', 'Themes', distinct.map(() => null), {
+      nom:   distinct,
+      code:  distinct,
+      ordre: distinct.map((_, i) => (i + 1) * 10),
+    }]
+  ]);
+  const newIds = addResult.retValues[0];
+
+  const themeIdByLabel = {};
+  distinct.forEach((label, i) => { themeIdByLabel[label] = newIds[i]; });
+
+  const updateIds = [];
+  const updateVals = [];
+  ids.forEach((id, i) => {
+    const val = (rawThemes[i] || '').trim();
+    if (val && themeIdByLabel[val]) {
+      updateIds.push(id);
+      updateVals.push(themeIdByLabel[val]);
+    }
+  });
+
+  await grist.docApi.applyUserActions([
+    ['BulkUpdateRecord', 'Projet', updateIds, { theme_ref: updateVals }]
+  ]);
+
+  alert(`Migration terminée : ${distinct.length} thème(s) créé(s), ${updateIds.length} projet(s) mis à jour.`);
+}
+  
 async function fetchRefData() {
   try {
     const t = await grist.docApi.fetchTable('Directions');
