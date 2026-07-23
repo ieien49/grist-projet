@@ -1030,6 +1030,10 @@ tr:hover .cr-del-btn { opacity: 1; }
     <button class="btn-add-ghost" onclick="populateSuiviFrtFilters();renderSuiviFeuilleRoute()" title="Rafraîchir">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
     </button>
+    <button class="btn-add-ghost" onclick="exportFeuilleRouteReportPdf()" title="Exporter en PDF (par thème)">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      PDF
+    </button>
     <span class="count-badge" id="frtCount" style="margin-left:auto">—</span>
     <button class="btn-add" onclick="openSousProjetModal()">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -3278,6 +3282,103 @@ function exportRoadmapPdf() {
   win.onload = () => { win.focus(); win.print(); };
 }
 
+function exportFeuilleRouteReportPdf() {
+  if (!masterProjet) { showToast('Aucun projet maître défini', 'error'); return; }
+  const rows = buildFrtHierarchy();
+  if (!rows.length) { showToast('Aucun sous-projet à exporter', 'error'); return; }
+
+  const themes = getAllThemes();
+  if (!themes.length) { showToast('Aucun thème renseigné sur les sous-sous-projets', 'error'); return; }
+
+  const piloteOf   = p => p.pilote ? allActors.find(a => a.id === p.pilote) : null;
+  const instanceOf = p => p.instance ? instances[p.instance] : null;
+
+  const rootOf = (p) => {
+    let cur = p;
+    while (cur && cur.ref !== masterProjet.id) {
+      const parent = rows.find(x => x.id === cur.ref);
+      if (!parent) break;
+      cur = parent;
+    }
+    return cur;
+  };
+
+  let bodyHtml = '';
+
+  themes.forEach(theme => {
+    const themeRows = rows.filter(p => p._depth > 0 && parseThemes(p.theme).includes(theme));
+    if (!themeRows.length) return;
+
+    const byPhase = new Map();
+    themeRows.forEach(p => {
+      const phase = rootOf(p);
+      if (!phase) return;
+      if (!byPhase.has(phase.id)) byPhase.set(phase.id, { phase, items: [] });
+      byPhase.get(phase.id).items.push(p);
+    });
+    if (!byPhase.size) return;
+
+    bodyHtml += `<h1>${esc(theme)}</h1>`;
+
+    [...byPhase.values()]
+      .sort((a, b) => (a.phase.ordre ?? 9999) - (b.phase.ordre ?? 9999))
+      .forEach(({ phase, items }) => {
+        bodyHtml += `<h2>${esc(phase.nom || 'Sans nom')}</h2>`;
+        const tRows = items.map(p => {
+          const pilote = piloteOf(p);
+          const inst   = instanceOf(p);
+          const statut = projetStatut(p);
+          const statutLabel = statut === 'realise' ? 'Réalisé' : statut === 'alancer' ? 'À lancer' : 'En cours';
+          const dDebut = fmtMonthYear(p.debut) || '—';
+          const dFin   = fmtMonthYear(p.fin) || '—';
+          return `<tr>
+            <td>${esc(p.nom || 'Sans nom')}</td>
+            <td>${esc(pilote?.nom || '—')}</td>
+            <td>${esc(statutLabel)}</td>
+            <td>${esc(dDebut)} → ${esc(dFin)}</td>
+            <td>${esc(inst?.nom || inst?.sigle || '—')}</td>
+          </tr>`;
+        }).join('');
+        bodyHtml += `<table>
+          <thead><tr><th>Sous-sous-projet</th><th>Pilote</th><th>Statut</th><th>Échéance</th><th>Instance</th></tr></thead>
+          <tbody>${tRows}</tbody>
+        </table>`;
+      });
+  });
+
+  if (!bodyHtml) { showToast('Aucune donnée à exporter', 'error'); return; }
+
+  const title = masterProjet?.nom || 'Feuille de route';
+  const today = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <style>
+      @page { size: A4 portrait; margin: 16mm 14mm; }
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: Arial, sans-serif; color:#111; }
+      .header { display:flex; align-items:baseline; justify-content:space-between; border-bottom:1.5px solid #111; padding-bottom:6px; margin-bottom:16px; }
+      .header h2 { font-size:13px; font-weight:700; margin:0; }
+      .header span { font-size:10px; color:#999; }
+      h1 { font-size:17px; margin:24px 0 8px; padding-top:12px; border-top:2px solid #111; }
+      h1:first-of-type { border-top:none; padding-top:0; margin-top:0; }
+      h2 { font-size:13px; margin:14px 0 6px; color:#333; }
+      table { width:100%; border-collapse:collapse; margin-bottom:10px; }
+      tr { page-break-inside:avoid; }
+      th, td { border:1px solid #ddd; padding:5px 7px; font-size:10.5px; text-align:left; vertical-align:top; }
+      th { background:#f4f4f2; font-weight:600; }
+    </style>
+  </head><body>
+    <div class="header">
+      <h2>${esc(title)} — Feuille de route</h2>
+      <span>Édité le ${today}</span>
+    </div>
+    ${bodyHtml}
+  </body></html>`;
+
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+  win.onload = () => { win.focus(); win.print(); };
+}
 
 function renderMindmap() {
   const svgEl = document.getElementById('mindmapSvg');
