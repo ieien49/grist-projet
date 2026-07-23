@@ -1787,6 +1787,7 @@ let editingActeurId   = null;
 let editingInstanceId = null;
 let selectedInstances = [];
 let allDocuments  = [];
+let allThemesList = [];  
 let docSortCol = 'titre', docSortDir = 1;
 let attachToken   = null; // cache du token d'accès aux pièces jointes Grist
 let docFormUrl = null; // chargé depuis la table Parametres, pas de valeur codée en dur
@@ -1860,6 +1861,31 @@ async function fetchInstances() {
   } catch(e) {}
 }
 
+  let themes = {}; // clé = id ET nom, valeur = {id, nom, code, picto, couleur, ordre, hex}
+
+async function fetchThemes() {
+  try {
+    const t = await grist.docApi.fetchTable('Themes');
+    themes = {};
+    allThemesList = [];
+    if (t && t.id) t.id.forEach((id, i) => {
+      const nom = t.nom?.[i] || '';
+      const obj = {
+        id,
+        nom,
+        code:   t.code?.[i]   || '',
+        picto:  t.picto?.[i]  || '',
+        couleur: t.couleur?.[i] || '',
+        ordre:  t.ordre?.[i] ?? 9999
+      };
+      themes[id] = obj;
+      if (nom) themes[nom] = obj;
+      allThemesList.push(obj);
+    });
+    allThemesList.sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999));
+  } catch(e) {}
+}
+
 async function fetchDocuments() {
   try {
     const t = await grist.docApi.fetchTable('Documents');
@@ -1902,6 +1928,7 @@ async function fetchRefData() {
   } catch(e) {}
 
   await fetchInstances();
+  await fetchThemes();
   await fetchDocuments();
   await fetchDocFormUrl();
 
@@ -3283,14 +3310,6 @@ function exportRoadmapPdf() {
   win.onload = () => { win.focus(); win.print(); };
 }
 
-// Personnalise ici le sous-titre affiché sous chaque "Engagement" du PDF.
-// Clé = valeur exacte du tag Thème saisi sur les sous-sous-projets.
-// Un thème absent de cette liste s'affiche avec son nom brut, sans sous-titre.
-const FR_THEME_META = {
-  // 'Engagement 1': 'Piloter la relation du Département avec ses usagers et ses usagères',
-  // 'Engagement 2': 'Simplifier les démarches et l’accès aux droits',
-};
-
 function exportFeuilleRouteReportPdf() {
   if (!masterProjet) { showToast('Aucun projet maître défini', 'error'); return; }
   const rows = buildFrtHierarchy();
@@ -3337,7 +3356,8 @@ function exportFeuilleRouteReportPdf() {
     });
     if (!byPhase.size) return;
 
-    const subtitle = FR_THEME_META[theme] || '';
+    const meta = themeMeta(theme);
+
 
     let bodyRows = '';
     let phaseNum = 0;
@@ -3371,12 +3391,16 @@ function exportFeuilleRouteReportPdf() {
         });
       });
 
-    sectionsHtml += `<div class="engagement-section">
-      <div class="engagement-header">
-        ${flagIcon}
-        <div class="engagement-eyebrow">${esc(theme)}</div>
-        ${subtitle ? `<div class="engagement-title">${esc(subtitle)}</div>` : ''}
-      </div>
+    const themeColor = themeHex(theme);
+const pictoHtml = meta?.picto
+  ? `<span style="font-size:26px;line-height:1">${esc(meta.picto)}</span>`
+  : flagIcon;
+sectionsHtml += `<div class="engagement-section">
+  <div class="engagement-header">
+    ${pictoHtml}
+    <div class="engagement-eyebrow" style="color:${themeColor}">${esc(meta?.code || theme)}</div>
+    <div class="engagement-title">${esc(meta?.nom || theme)}</div>
+  </div>
       <table class="fr-table">
         <thead><tr><th>Chantier</th><th>Pilotage</th><th>Statut</th><th>Échéance</th><th>Instance</th></tr></thead>
         <tbody>${bodyRows}</tbody>
@@ -6172,19 +6196,29 @@ function parseThemes(str) {
   return (str || '').split(',').map(s => s.trim()).filter(Boolean);
 }
 function getAllThemes() {
-  const set = new Set();
-  allProjets.forEach(p => parseThemes(p.theme).forEach(t => set.add(t)));
-  return [...set].sort((a, b) => a.localeCompare(b, 'fr'));
+  // Ordre défini par la table Themes (colonne "ordre"), plus les thèmes libres
+  // saisis sur des projets mais absents de la table (fallback, triés après).
+  const known = allThemesList.map(t => t.nom);
+  const knownSet = new Set(known);
+  const orphans = new Set();
+  allProjets.forEach(p => parseThemes(p.theme).forEach(t => { if (!knownSet.has(t)) orphans.add(t); }));
+  return [...known, ...[...orphans].sort((a,b) => a.localeCompare(b,'fr'))];
 }
-function themeHexColor(tag) {
-  let h = 0;
-  for (let i = 0; i < tag.length; i++) h = tag.charCodeAt(i) + ((h << 5) - h);
-  return `hsl(${h % 360}, 55%, 88%)`;
+function themeMeta(tag) {
+  return themes[tag] || null;
+}
+function themeHex(tag) {
+  const m = themeMeta(tag);
+  if (m && m.couleur) return couleurs[m.couleur]?.hex || '#CCCCCC';
+  return '#CCCCCC'; // thème hors table Themes : pas de couleur définie
 }
 function themeBadgesHtml(themeStr) {
-  return parseThemes(themeStr).map(t =>
-    `<span class="badge" style="background:${themeHexColor(t)};color:#333">${esc(t)}</span>`
-  ).join('');
+  return parseThemes(themeStr).map(t => {
+    const m = themeMeta(t);
+    const hex = themeHex(t);
+    const picto = m?.picto ? esc(m.picto) + ' ' : '';
+    return `<span class="badge" style="background:${hex};color:#333">${picto}${esc(t)}</span>`;
+  }).join('');
 }
 
 function updateThemeHint() {
@@ -6194,10 +6228,10 @@ function updateThemeHint() {
   const parts = input.value.split(',');
   const current = parts[parts.length - 1].trim().toLowerCase();
   if (!current) { hint.textContent = ''; return; }
-  const existing = getAllThemes().map(t => t.toLowerCase());
+  const existing = allThemesList.map(t => t.nom.toLowerCase());
   hint.innerHTML = existing.includes(current)
-    ? `<span style="color:var(--success)">✓ tag existant</span>`
-    : `<span style="color:var(--warning)">+ nouveau tag</span>`;
+    ? `<span style="color:var(--success)">✓ thème existant</span>`
+    : `<span style="color:var(--warning)">⚠ absent de la table Themes</span>`;
 }
 
   
