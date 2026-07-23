@@ -165,6 +165,7 @@ td { padding: 7px 10px; vertical-align: middle; font-size: 12.5px; }
 /* ══ ROW ACTIONS ══ */
 .row-actions { display: flex; gap: 2px; justify-content: flex-end; opacity: 0; transition: opacity 0.1s; }
 tr:hover .row-actions { opacity: 1; }
+.row-actions-visible { display: flex; gap: 4px; justify-content: flex-start; }
 .btn-icon { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; color: var(--text-muted); cursor: pointer; transition: all 0.1s; }
 .btn-icon:hover { background: var(--surface3); border-color: var(--border); color: var(--text-primary); }
 .btn-icon.del:hover { background: #fef2f2; border-color: #fecaca; color: var(--danger); }
@@ -1784,7 +1785,9 @@ let selectedInstances = [];
 let allDocuments  = [];
 let docSortCol = 'titre', docSortDir = 1;
 let attachToken   = null; // cache du token d'accès aux pièces jointes Grist
-const DOC_FORM_URL = 'https://grist.maine-et-loire.fr/o/sru/forms/aRLDL3s4JGRmpED5gF3CZS/32';
+// URL de secours si la table Parametres est absente ou incomplète
+const DOC_FORM_URL_DEFAULT = 'https://grist.maine-et-loire.fr/o/sru/forms/aRLDL3s4JGRmpED5gF3CZS/32';
+let docFormUrl = DOC_FORM_URL_DEFAULT;
 
 // ══ GRIST INIT ══
 grist.ready({
@@ -1870,6 +1873,19 @@ async function fetchDocuments() {
   } catch(e) {}
 }
 
+async function fetchDocFormUrl() {
+  try {
+    const t = await grist.docApi.fetchTable('Parametres');
+    docFormUrl = DOC_FORM_URL_DEFAULT;
+    if (t && t.cle) {
+      const idx = t.cle.findIndex(c => c === 'lien_formulaire_documents');
+      if (idx !== -1 && t.valeur?.[idx]) docFormUrl = t.valeur[idx];
+    }
+  } catch(e) {
+    docFormUrl = DOC_FORM_URL_DEFAULT; // table absente : on garde la valeur par défaut
+  }
+}
+
 async function fetchRefData() {
   try {
     const t = await grist.docApi.fetchTable('Directions');
@@ -1884,6 +1900,7 @@ async function fetchRefData() {
 
   await fetchInstances();
   await fetchDocuments();
+  await fetchDocFormUrl();
 
   try {
     const t = await grist.docApi.fetchTable('Couleurs');
@@ -3831,7 +3848,7 @@ function renderInstances() {
 
 // ══ DOCUMENTS ══
 function openDocumentForm() {
-  window.open(DOC_FORM_URL, '_blank');
+  window.open(docFormUrl, '_blank');
 }
 
 function populateDocumentFilters() {
@@ -3895,7 +3912,7 @@ async function renderDocuments() {
     return `<tr>
       <td>${esc(d.titre||'—')}</td>
       <td>${d.theme?`<span class="badge">${esc(d.theme)}</span>`:'—'}</td>
-      <td><div class="row-actions">${links || '—'}</div></td>
+      <td><div class="row-actions-visible">${links || '—'}</div></td>
     </tr>`;
   }).join('');
 
