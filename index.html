@@ -2932,11 +2932,13 @@ const markerColor = termine ? '#888888' : (projetHex(p) || '#1A7A4F');
       <td class="suivi-date" style="white-space:nowrap">${dates}</td>
       <td>${instHtml}</td>
       <td><input type="text" class="cr-cell" style="font-size:11.5px;min-width:120px" value="${esc(p.theme||'')}"
-      list="frtThemeList"
-      placeholder="thème1, thème2…"
-      onclick="event.stopPropagation()"
-      onblur="event.stopPropagation();updateFrtField(${p.id},'theme',this.value.trim()||null)"
-      onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
+list="frtThemeList"
+placeholder="thème1, thème2…"
+onclick="event.stopPropagation()"
+onfocus="event.stopPropagation();this.dataset.orig=this.value;this.dataset.touched='0';this.value='';"
+oninput="this.dataset.touched='1';"
+onblur="event.stopPropagation();if(this.dataset.touched!=='1'){this.value=this.dataset.orig||'';}updateFrtField(${p.id},'theme',this.value.trim()||null)"
+onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
     </td>
     </tr>`;
   }).join('');
