@@ -3398,7 +3398,7 @@ function exportFeuilleRouteReportPdf() {
 
     const themeColor = themeHex(theme);
 const pictoHtml = meta?.picto
-  ? `<span style="font-size:26px;line-height:1">${esc(meta.picto)}</span>`
+  ? `<span style="display:inline-block;width:26px;height:26px;line-height:1">${meta.picto}</span>`
   : flagIcon;
 sectionsHtml += `<div class="engagement-section">
   <div class="engagement-header">
@@ -6231,7 +6231,7 @@ function themeBadgesHtml(themeStr) {
   return parseThemes(themeStr).map(t => {
     const m = themeMeta(t);
     const hex = themeHex(t);
-    const picto = m?.picto ? esc(m.picto) + ' ' : '';
+    const picto = m?.picto ? `<span style="display:inline-flex;width:12px;height:12px;vertical-align:-1px">${m.picto}</span> ` : '';
     return `<span class="badge" style="background:${hex};color:#333">${picto}${esc(t)}</span>`;
   }).join('');
 }
