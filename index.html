@@ -2935,7 +2935,7 @@ const markerColor = termine ? '#888888' : (projetHex(p) || '#1A7A4F');
 list="frtThemeList"
 placeholder="thème1, thème2…"
 onclick="event.stopPropagation()"
-onfocus="event.stopPropagation();this.dataset.orig=this.value;this.dataset.touched='0';this.value='';"
+onfocus="event.stopPropagation();this.dataset.orig=this.value;this.dataset.touched='0';this.value='';this.dispatchEvent(new Event('input'));"
 oninput="this.dataset.touched='1';"
 onblur="event.stopPropagation();if(this.dataset.touched!=='1'){this.value=this.dataset.orig||'';}updateFrtField(${p.id},'theme',this.value.trim()||null)"
 onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
