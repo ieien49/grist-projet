@@ -19,6 +19,7 @@
   --text-primary:   #111111;
   --text-secondary: #555555;
   --text-muted:     #999999;
+  --text-faint:     #C7CBD1;
   --accent:         #1A1A1A;
   --accent-light:   #F0F0EE;
   --danger:         #DC2626;
@@ -2967,29 +2968,29 @@ const actorOptionsBase = allActors
     const dFin    = fmtMonthYear(p.fin) || '—';
     const dates   = `<div style="display:flex;flex-direction:column;line-height:1.5;font-size:11.5px;color:var(--text-secondary)"><span>${esc(dDebut)}</span><span style="color:var(--text-muted)">${esc(dFin)}</span></div>`;
 
-    const piloteHtml = `<select class="cr-cell cr-cell-select" style="font-size:11.5px;min-width:120px"
+    const piloteHtml = `<select class="cr-cell cr-cell-select" style="font-size:11.5px;min-width:120px;${p.pilote?'':'color:var(--text-faint)'}"
       onclick="event.stopPropagation()"
       onchange="event.stopPropagation();updateFrtField(${p.id},'pilote',parseInt(this.value)||0)">
-      <option value="">— Aucun —</option>
+      <option value="" style="color:var(--text-faint)">— Aucun —</option>
       ${actorOptionsBase.map(a => `<option value="${a.id}"${p.pilote===a.id?' selected':''}>${esc(a.nom)}</option>`).join('')}
     </select>`;
 
 const instColorHex = inst ? (couleurs[inst.couleur]?.hex || inst.couleur || '#9C9691') : 'transparent';
     const instHtml = `<span style="display:inline-flex;align-items:center;gap:5px">
   <span id="frtInstDot_${p.id}" style="width:8px;height:8px;border-radius:50%;background:${instColorHex};flex-shrink:0;display:inline-block"></span>
-  <select class="cr-cell cr-cell-select" style="font-size:11.5px;min-width:120px"
+  <select class="cr-cell cr-cell-select" style="font-size:11.5px;min-width:120px;${p.instance?'':'color:var(--text-faint)'}"
     onclick="event.stopPropagation()"
     onchange="event.stopPropagation();updateFrtInstance(${p.id},this)">
-    <option value="">— Aucune —</option>
+    <option value="" style="color:var(--text-faint)">— Aucune —</option>
     ${instOptionsBase.map(i => `<option value="${i.id}" data-hex="${esc(couleurs[i.couleur]?.hex || i.couleur || '#9C9691')}"${p.instance===i.id?' selected':''}>${esc(i.nom || i.sigle)}</option>`).join('')}
   </select>
 </span>`;
 
 const themeConnu = p.theme && themeOptionsBase.some(t => t.nom === p.theme);
-const themeHtml = `<select class="cr-cell cr-cell-select" style="font-size:11.5px;min-width:120px"
+const themeHtml = `<select class="cr-cell cr-cell-select" style="font-size:11.5px;min-width:120px;${p.theme?'':'color:var(--text-faint)'}"
   onclick="event.stopPropagation()"
   onchange="event.stopPropagation();updateFrtField(${p.id},'theme',this.value||null)">
-  <option value="">— Aucun —</option>
+  <option value="" style="color:var(--text-faint)">— Aucun —</option>
   ${themeOptionsBase.map(t => `<option value="${esc(t.nom)}"${p.theme===t.nom?' selected':''}>${esc(t.nom)}</option>`).join('')}
   ${p.theme && !themeConnu ? `<option value="${esc(p.theme)}" selected>${esc(p.theme)} (hors table)</option>` : ''}
 </select>`;
