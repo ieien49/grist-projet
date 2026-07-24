@@ -1058,7 +1058,7 @@ tr:hover .cr-del-btn { opacity: 1; }
     </button>
     <button class="btn-add-ghost" onclick="exportFeuilleRouteReportPdf()" title="Exporter en PDF (par thème)">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-      PDF
+      PDF (Thèmes)
     </button>
     <button class="btn-add-ghost" onclick="exportFeuilleRouteReportPdfParInstance()" title="Exporter en PDF (par instance / GT)">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
@@ -3475,7 +3475,7 @@ function exportFeuilleRouteReportPdf() {
               ${desc ? `<div class="chantier-desc">${esc(desc.split('\n')[0])}</div>` : ''}
             </td>
             <td class="pilote-cell">${pilote ? esc(pilote.nom) : ''}</td>
-            <td><span class="pill ${statut.cls}">${statut.label}</span></td>
+            <td style="text-align:center"><span class="pill ${statut.cls}">${statut.label}</span></td>
             <td class="echeance-cell"><span>${esc(dDebut)}</span><span>${esc(dFin)}</span></td>
             <td class="instance-cell" ${instHex ? `style="color:${instHex}"` : ''}>${instLabel ? esc(instLabel) : '—'}</td>
           </tr>`;
@@ -3543,7 +3543,7 @@ sectionsHtml += `<div class="engagement-section">
       .chantier-desc { color: #6B7280; font-size: 9.5px; line-height: 1.35; }
       .pilote-cell { color: #374151; white-space: normal; overflow-wrap: break-word; text-align: center; }
 
-      .echeance-cell { white-space: nowrap; color: #374151; }
+      .echeance-cell { white-space: nowrap; color: #374151; text-align: center; }
       .echeance-cell span { display: block; text-transform: capitalize; }
       .echeance-cell span:last-child { color: #9CA3AF; }
 
@@ -3712,15 +3712,18 @@ function exportFeuilleRouteReportPdfParInstance() {
       .chantier-cell { width: 38%; }
       .chantier-nom { font-weight: 700; color: #1F2937; margin-bottom: 2px; }
       .chantier-desc { color: #6B7280; font-size: 9.5px; line-height: 1.35; }
-      .pilote-cell { color: #374151; white-space: normal; overflow-wrap: break-word; }
+      .pilote-cell { color: #374151; white-space: normal; overflow-wrap: break-word; text-align: center; }
 
       .echeance-cell { white-space: nowrap; color: #374151; }
       .echeance-cell span { display: block; text-transform: capitalize; }
       .echeance-cell span:last-child { color: #9CA3AF; }
 
-      .theme-cell { white-space: normal; overflow-wrap: break-word; hyphens: auto; }
+      .theme-cell {
+        white-space: normal; overflow-wrap: break-word; hyphens: auto;
+        display: flex; flex-direction: column; align-items: center;
+      }
       .theme-item {
-        display: flex; align-items: flex-start; gap: 5px;
+        display: inline-flex; align-items: center; gap: 5px;
         color: #374151; font-size: 10px; margin-bottom: 3px;
       }
       .theme-item:last-child { margin-bottom: 0; }
