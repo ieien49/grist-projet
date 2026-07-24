@@ -789,6 +789,10 @@ tr:hover .cr-del-btn { opacity: 1; }
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
           Instances
         </div>
+        <div class="cadre-subtab" data-sub="def-themes" onclick="switchDefTab('def-themes')">
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3H4a1 1 0 0 0-1 1v5.59a2 2 0 0 0 .59 1.41l9.58 9.58a2 2 0 0 0 2.83 0l5.59-5.59a2 2 0 0 0 0-2.83Z"/><circle cx="7.5" cy="7.5" r="1"/></svg>
+  Thèmes
+</div>
         <div class="cadre-subtab" data-sub="def-documents" onclick="switchDefTab('def-documents')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
           Documents
@@ -884,6 +888,27 @@ tr:hover .cr-del-btn { opacity: 1; }
             <div id="instanceTable"><div class="loading"><div class="spinner"></div> Chargement…</div></div>
           </div>
         </div>
+
+        <!-- Sous-panel Thèmes -->
+<div class="cadre-subpanel" id="def-themes">
+  <div class="panel-header">
+    <span class="panel-title">Thèmes</span>
+    <span class="count-badge" id="themeCount">—</span>
+    <div class="search-wrap">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" class="search-input" id="themeSearch" placeholder="Rechercher…">
+    </div>
+    <div class="spacer"></div>
+    <button class="btn-add" onclick="openThemeModal()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Ajouter
+    </button>
+  </div>
+  <div class="table-scroll">
+    <div id="themeTable"><div class="loading"><div class="spinner"></div> Chargement…</div></div>
+  </div>
+</div>
+        
         <!-- Sous-panel Documents -->
         <div class="cadre-subpanel" id="def-documents">
           <div class="panel-header">
@@ -1524,6 +1549,52 @@ tr:hover .cr-del-btn { opacity: 1; }
   </div>
 </div>
 
+<!-- ══ MODAL THÈME ══ -->
+<div class="modal-overlay" id="themeModalOverlay" onclick="handleThemeOverlay(event)">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="themeModalTitle">Nouveau thème</h2>
+      <button class="modal-close" onclick="closeThemeModal()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="field-label">Code</label>
+          <input type="text" class="form-control" id="t_code" placeholder="Ex: COM">
+        </div>
+        <div class="form-group">
+          <label class="field-label">Nom</label>
+          <input type="text" class="form-control" id="t_nom" placeholder="Nom complet">
+        </div>
+        <div class="form-group">
+          <label class="field-label">Pictogramme</label>
+          <input type="text" class="form-control" id="t_picto" placeholder="Ex: 🎯 ou balise SVG">
+        </div>
+        <div class="form-group">
+          <label class="field-label">Couleur</label>
+          <div class="ms-wrap" id="t_coulWrap">
+            <div class="ms-tags" id="t_coulTags" onclick="toggleMsDropdown('t_coulWrap','t_coulDrop')">
+              <span class="ms-placeholder" id="t_coulPlaceholder">— Sélectionner —</span>
+            </div>
+            <div class="ms-dropdown" id="t_coulDrop"></div>
+          </div>
+          <input type="hidden" id="t_couleur">
+        </div>
+        <div class="form-group">
+          <label class="field-label">Ordre</label>
+          <input type="number" class="form-control" id="t_ordre" placeholder="Ex: 1">
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" onclick="closeThemeModal()">Annuler</button>
+      <button class="btn-primary" onclick="saveTheme()"><span id="t_saveLabel">Créer</span></button>
+    </div>
+  </div>
+</div>
+  
 <!-- ══ MODAL NOTE DE CADRAGE ══ -->
 <div class="modal-overlay" id="noteCadrageModalOverlay" onclick="if(event.target.id==='noteCadrageModalOverlay')closeNoteCadrageModal()">
   <div class="modal" style="max-width:900px;width:94vw;max-height:92vh;display:flex;flex-direction:column">
@@ -1785,6 +1856,8 @@ let frtSortCol = 'nom', frtSortDir = 1;
 let instSortCol   = 'ordre', instSortDir   = 1;
 let editingActeurId   = null;
 let editingInstanceId = null;
+let editingThemeId = null;
+let themeSortCol = 'ordre', themeSortDir = 1;  
 let selectedInstances = [];
 let allDocuments  = [];
 let allThemesList = [];  
@@ -1995,6 +2068,8 @@ function populateSelects() {
     if (dVal) dSel.value = dVal;
   }
   populateColorPicker();
+  
+  populateColorPickerTheme();
 }
 
 function populateColorPicker() {
@@ -3926,6 +4001,7 @@ function switchDefTab(sub) {
   if (ctrl) ctrl.style.display = sub === 'def-definition' ? '' : 'none';
   if (sub === 'def-acteurs')  renderActeurs();
   if (sub === 'def-instances') renderInstances();
+  if (sub === 'def-themes') renderThemes();
   if (sub === 'def-documents') { populateDocumentFilters(); renderDocuments(); }
 }
 
@@ -4051,6 +4127,179 @@ function renderInstances() {
 
   cont.innerHTML = `<div class="table-inner"><table><thead><tr>${thead}</tr></thead><tbody>${tbody}</tbody></table></div>`;
 }
+
+// ══ RENDER THÈMES ══
+function renderThemes() {
+  const search = document.getElementById('themeSearch').value.toLowerCase();
+  let data = [...allThemesList];
+  if (search) data = data.filter(t => (t.code+t.nom).toLowerCase().includes(search));
+
+  data.sort((a, b) => {
+    let va = a[themeSortCol]??'', vb = b[themeSortCol]??'';
+    if (typeof va==='string') va=va.toLowerCase();
+    if (typeof vb==='string') vb=vb.toLowerCase();
+    const primary = va<vb?-themeSortDir:va>vb?themeSortDir:0;
+    return primary !== 0 ? primary : (a.ordre??9999) - (b.ordre??9999);
+  });
+
+  document.getElementById('themeCount').textContent = `${data.length} thème${data.length!==1?'s':''}`;
+  const cont = document.getElementById('themeTable');
+  if (!data.length) { cont.innerHTML = emptyState('Aucun thème', 'Ajoutez votre premier thème.', 'folder'); return; }
+
+  const cols = [
+    {key:'_dot',label:''},{key:'code',label:'Code'},{key:'nom',label:'Nom'},{key:'_picto',label:'Picto'},
+    {key:'_couleur',label:'Couleur'},{key:'_',label:''}
+  ];
+  const thead = cols.map(c => {
+    if (c.key==='_dot') return `<th style="width:22px"></th>`;
+    if (c.key==='nom') return `<th style="min-width:220px" class="${themeSortCol==='nom'?'sorted':''}" onclick="sortThemes('nom')">Nom<span class="si">${themeSortCol==='nom'?(themeSortDir===1?'↑':'↓'):'↕'}</span></th>`;
+    if (c.key==='_picto') return `<th>Picto</th>`;
+    if (c.key==='_couleur') return `<th>Couleur</th>`;
+    if (c.key==='_') return `<th style="width:72px"></th>`;
+    const s = themeSortCol===c.key;
+    return `<th class="${s?'sorted':''}" onclick="sortThemes('${c.key}')">${c.label}<span class="si">${s?(themeSortDir===1?'↑':'↓'):'↕'}</span></th>`;
+  }).join('');
+
+  const tbody = data.map(t => {
+    const co = couleurs[t.couleur];
+    const hex = co ? co.hex : (typeof t.couleur==='string' && t.couleur.startsWith('#') ? t.couleur : null);
+    const colorName = co ? co.nom : '';
+    const colorCell = hex
+      ? `<div class="inst-color-cell"><span class="inst-row-color" style="background:${hex}"></span><span class="inst-color-label">${esc(colorName || hex)}</span></div>`
+      : '—';
+    return `<tr>
+    <td style="padding:7px 8px"><span class="cdot" style="background:${hex||'#ccc'};width:7px;height:7px"></span></td>
+    <td><span class="inst-sigle" style="font-weight:600;font-size:12.5px">${esc(t.code||'—')}</span></td>
+    <td>${esc(t.nom||'—')}</td>
+    <td style="font-size:15px">${t.picto ? t.picto : '—'}</td>
+    <td>${colorCell}</td>
+    <td><div class="row-actions">
+      <button class="btn-icon" onclick="editTheme(${t.id})" title="Modifier"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+      <button class="btn-icon del" onclick="deleteTheme(${t.id})" title="Supprimer"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/></svg></button>
+    </div></td>
+  </tr>`;
+  }).join('');
+
+  cont.innerHTML = `<div class="table-inner"><table><thead><tr>${thead}</tr></thead><tbody>${tbody}</tbody></table></div>`;
+}
+
+function openThemeModal(t = null) {
+  editingThemeId = t?.id ?? null;
+  document.getElementById('themeModalTitle').textContent = t ? 'Modifier le thème' : 'Nouveau thème';
+  document.getElementById('t_saveLabel').textContent = t ? 'Enregistrer' : 'Créer';
+  document.getElementById('t_code').value    = t?.code    || '';
+  document.getElementById('t_nom').value     = t?.nom     || '';
+  document.getElementById('t_picto').value   = t?.picto   || '';
+  document.getElementById('t_ordre').value   = (t && t.ordre !== 9999) ? t.ordre : '';
+  document.getElementById('t_couleur').value = t?.couleur || '';
+  renderColorClosedTheme(t?.couleur || '');
+  document.getElementById('themeModalOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('t_code').focus(), 80);
+}
+function closeThemeModal() {
+  document.getElementById('themeModalOverlay').classList.remove('open');
+  closeMsDropdown('t_coulWrap','t_coulDrop');
+  editingThemeId = null;
+}
+function handleThemeOverlay(e) { if (e.target.id==='themeModalOverlay') closeThemeModal(); }
+function editTheme(id) { const t = themes[id]; if (t) openThemeModal(t); }
+function sortThemes(col) { if(themeSortCol===col) themeSortDir*=-1; else{themeSortCol=col;themeSortDir=1;} renderThemes(); }
+
+async function saveTheme() {
+  const code = document.getElementById('t_code').value.trim();
+  const nom  = document.getElementById('t_nom').value.trim();
+  if (!code && !nom) { showToast('Code ou nom requis', 'error'); return; }
+  const ordreVal = document.getElementById('t_ordre').value.trim();
+  const fields = {
+    code,
+    nom,
+    picto:   document.getElementById('t_picto').value.trim() || null,
+    couleur: parseInt(document.getElementById('t_couleur').value) || 0,
+    ordre:   ordreVal ? parseInt(ordreVal) : null,
+  };
+  try {
+    if (editingThemeId) {
+      await grist.docApi.applyUserActions([['UpdateRecord','Themes',editingThemeId,fields]]);
+      showToast('Thème mis à jour');
+    } else {
+      await grist.docApi.applyUserActions([['AddRecord','Themes',null,fields]]);
+      showToast('Thème créé');
+    }
+    closeThemeModal();
+    await fetchThemes();
+    renderThemes();
+    populateSuiviFrtFilters();
+    populateGanttProjetFilters();
+    populateKanbanFilters();
+    populateDocumentFilters();
+    if (typeof spMode !== 'undefined' && spMode === 'suivi') renderSuiviFeuilleRoute();
+  } catch(e) { showToast(e.message,'error'); }
+}
+
+async function deleteTheme(id) {
+  const t = themes[id];
+  if (!t || !confirm(`Supprimer le thème "${t.code||t.nom}" ?`)) return;
+  try {
+    await grist.docApi.applyUserActions([['RemoveRecord','Themes',id]]);
+    showToast('Thème supprimé');
+    await fetchThemes();
+    renderThemes();
+    populateSuiviFrtFilters();
+    populateGanttProjetFilters();
+    populateKanbanFilters();
+    populateDocumentFilters();
+    if (typeof spMode !== 'undefined' && spMode === 'suivi') renderSuiviFeuilleRoute();
+  } catch(e) { showToast(e.message,'error'); }
+}
+
+// ── Color picker dédié au thème ──
+function populateColorPickerTheme() {
+  const drop = document.getElementById('t_coulDrop');
+  if (!drop) return;
+  drop.innerHTML = '';
+  const noneItem = document.createElement('div');
+  noneItem.className = 'ms-item';
+  noneItem.dataset.id = '';
+  noneItem.innerHTML = `<span class="cdot" style="width:9px;height:9px;background:transparent;border:1.5px dashed var(--border-strong)"></span><span>— Aucune —</span><span class="ms-check">✓</span>`;
+  noneItem.addEventListener('click', e => { e.stopPropagation(); selectColorTheme(''); });
+  drop.appendChild(noneItem);
+
+  const seen = new Set();
+  Object.values(couleurs)
+    .filter(c => { if (seen.has(c.id) || typeof c.id !== 'number') return false; seen.add(c.id); return true; })
+    .forEach(c => {
+      const el = document.createElement('div');
+      el.className = 'ms-item';
+      el.dataset.id = c.id;
+      el.innerHTML = `<span class="cdot" style="width:9px;height:9px;background:${c.hex||'#ccc'}"></span><span>${esc(c.nom)}${c.hex?' — '+esc(c.hex):''}</span><span class="ms-check">✓</span>`;
+      el.addEventListener('click', e => { e.stopPropagation(); selectColorTheme(c.id); });
+      drop.appendChild(el);
+    });
+}
+function selectColorTheme(id) {
+  document.getElementById('t_couleur').value = id;
+  renderColorClosedTheme(id);
+  closeMsDropdown('t_coulWrap','t_coulDrop');
+}
+function renderColorClosedTheme(id) {
+  const tagsEl = document.getElementById('t_coulTags');
+  const ph     = document.getElementById('t_coulPlaceholder');
+  const drop   = document.getElementById('t_coulDrop');
+  if (!tagsEl) return;
+  tagsEl.querySelectorAll('.ms-tag').forEach(el => el.remove());
+  const co = id ? couleurs[id] : null;
+  if (!co) { ph.style.display = ''; }
+  else {
+    ph.style.display = 'none';
+    const tag = document.createElement('span');
+    tag.className = 'ms-tag';
+    tag.innerHTML = `<span class="cdot" style="width:9px;height:9px;background:${co.hex||'#ccc'}"></span>${esc(co.nom)}`;
+    tagsEl.appendChild(tag);
+  }
+  if (drop) drop.querySelectorAll('.ms-item').forEach(item => {
+    item.classList.toggle('sel', String(item.dataset.id) === String(id||''));
+  });
+}  
 
 // ══ DOCUMENTS ══
 function openDocumentForm() {
@@ -4361,6 +4610,7 @@ document.getElementById('acteurFilterRole').addEventListener('change', renderAct
 document.getElementById('acteurFilterType').addEventListener('change', renderActeurs);
 document.getElementById('acteurFilterInstance').addEventListener('change', renderActeurs);
 document.getElementById('instanceSearch').addEventListener('input', renderInstances);
+document.getElementById('themeSearch').addEventListener('input', renderThemes);  
 
   document.addEventListener('paste', function(e) {
   if (e.target && e.target.isContentEditable) {
