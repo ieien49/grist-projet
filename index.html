@@ -3390,8 +3390,7 @@ function renderDessin2() {
     return;
   }
 
-  milestones.forEach(p => { p._sortDate = (p.finreelle > 0 ? p.finreelle : p.fin > 0 ? p.fin : p.debut > 0 ? p.debut : 99999999); });
-  milestones.sort((a, b) => a._sortDate - b._sortDate);
+  
 
   // ── Grille "circuit" : perRow éléments par ligne, sens alterné ──
   const n = milestones.length;
@@ -3470,18 +3469,19 @@ function renderDessin2() {
     const termine = p.finreelle > 0;
     const enCours = !termine && p.debut > 0 && p.debut * 86400000 <= Date.now();
     const color = termine ? '#888888' : p.color;
+  const r = p.depth === 1 ? PIN_R : p.depth === 2 ? PIN_R * 0.75 : p.depth === 3 ? PIN_R * 0.6 : PIN_R * 0.5;
     const label = (p.code ? p.code + ' ' : '') + (p.nom || '—');
     const maxChars = 34;
     const labelTrunc = label.length > maxChars ? label.slice(0, maxChars - 1) + '…' : label;
-    const LABEL_Y = above ? y - PIN_R - 34 : y + PIN_R + 20;
+    const LABEL_Y = above ? y - r - 34 / y + r + 20;
 
     return `<g>
       <title>${esc(label)}</title>
-      <circle cx="${x}" cy="${y}" r="${PIN_R + 4}" fill="white"/>
-      <circle cx="${x}" cy="${y}" r="${PIN_R}" fill="none" stroke="${color}" stroke-width="3.5"/>
+      <circle cx="${x}" cy="${y}" r="${r + 4}" fill="white"/>
+      <circle cx="${x}" cy="${y}" r="${PIN_R}" fill="none" stroke="${color}" stroke-width="${p.depth === 1 ? 3.5 : 2.5}"/>
       ${termine
-        ? `<text x="${x}" y="${y + 5}" text-anchor="middle" font-size="16" font-weight="700" fill="${color}">✓</text>`
-        : `<text x="${x}" y="${y + 5}" text-anchor="middle" font-size="13" font-weight="800" fill="${color}"
+        ? `<text x="${x}" y="${y + 5}" text-anchor="middle" font-size="${p.depth === 1 ? 16 : 12}" font-weight="700" fill="${color}">✓</text>`
+        : `<text x="${x}" y="${y + 5}" text-anchor="middle" font-size="${p.depth === 1 ? 13 : 10}" font-weight="800" fill="${color}"
             font-family="system-ui,sans-serif">${esc(String(p.code || ''))}</text>`
       }
       <text x="${x}" y="${LABEL_Y}" text-anchor="middle" font-size="9" font-weight="600"
