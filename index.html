@@ -2955,6 +2955,7 @@ const actorOptionsBase = allActors
   const instOptionsBase = Object.values(instances)
     .filter((v,i,arr) => typeof v.id === 'number' && arr.findIndex(x=>x.id===v.id)===i)
     .sort((a,b) => (a.ordre??9999) - (b.ordre??9999));
+  const themeOptionsBase = allThemesList;
 
   const tbody = visibleRows.map(p => {
     const pilote  = piloteOf(p);
@@ -2984,6 +2985,17 @@ const instColorHex = inst ? (couleurs[inst.couleur]?.hex || inst.couleur || '#9C
   </select>
 </span>`;
 
+const themeConnu = p.theme && themeOptionsBase.some(t => t.nom === p.theme);
+const themeHtml = `<select class="cr-cell cr-cell-select" style="font-size:11.5px;min-width:120px"
+  onclick="event.stopPropagation()"
+  onchange="event.stopPropagation();updateFrtField(${p.id},'theme',this.value||null)">
+  <option value="">— Aucun —</option>
+  ${themeOptionsBase.map(t => `<option value="${esc(t.nom)}"${p.theme===t.nom?' selected':''}>${esc(t.nom)}</option>`).join('')}
+  ${p.theme && !themeConnu ? `<option value="${esc(p.theme)}" selected>${esc(p.theme)} (hors table)</option>` : ''}
+</select>`;
+
+
+
 const markerColor = termine ? '#888888' : (projetHex(p) || '#1A7A4F');
 
    const statusTag = `<span class="sp-status-tag ${termine?'sp-status-te':aLancer?'sp-status-al':'sp-status-ec'}"><span style="width:4px;height:4px;border-radius:50%;background:${markerColor};display:inline-block"></span>${termine?'Réalisé':aLancer?'À lancer':'En cours'}</span>`;
@@ -3006,15 +3018,7 @@ const markerColor = termine ? '#888888' : (projetHex(p) || '#1A7A4F');
       <td>${statusTag}</td>
       <td class="suivi-date" style="white-space:nowrap">${dates}</td>
       <td>${instHtml}</td>
-      <td><input type="text" class="cr-cell" style="font-size:11.5px;min-width:120px" value="${esc(p.theme||'')}"
-list="frtThemeList"
-placeholder="thème1, thème2…"
-onclick="event.stopPropagation()"
-onfocus="event.stopPropagation();this.dataset.orig=this.value;this.dataset.touched='0';const el=this;setTimeout(()=>{el.value='';el.dispatchEvent(new Event('input'));},0);"
-oninput="this.dataset.touched='1';"
-onblur="event.stopPropagation();if(this.dataset.touched!=='1'){this.value=this.dataset.orig||'';}updateFrtField(${p.id},'theme',this.value.trim()||null)"
-onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
-    </td>
+      <td>${themeHtml}</td>
     </tr>`;
   }).join('');
 
