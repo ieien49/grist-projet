@@ -3423,23 +3423,22 @@ function renderDessin2() {
   for (let r = 0; r < numRows; r++) {
     const y = TOP + r * ROW_H;
     const goRight = r % 2 === 0;
-    const x1 = goRight ? ROAD_L - (r === 0 ? START_STUB : 0) : ROAD_R;
-    const x2 = goRight ? ROAD_R : ROAD_L - (r === numRows - 1 ? START_STUB : 0);
+    const isLast  = r === numRows - 1;
+    const x1 = goRight ? (ROAD_L - (r === 0 ? START_STUB : 0)) : (ROAD_R + (r === 0 ? START_STUB : 0));
+    const x2 = goRight ? (ROAD_R + (isLast ? START_STUB : 0)) : (ROAD_L - (isLast ? START_STUB : 0));
     roadPath += (r === 0 ? `M ${x1} ${y} ` : `L ${x1} ${y} `) + `L ${x2} ${y} `;
     if (r < numRows - 1) {
       const yNext = y + ROW_H;
-      const sweep = goRight ? 1 : 0; // 1 = virage vers l'extérieur droit, 0 = extérieur gauche
+      const sweep = goRight ? 1 : 0;
       roadPath += `A ${R_TURN} ${R_TURN} 0 0 ${sweep} ${x2} ${yNext} `;
     }
   }
 
   // ── Pastilles START / FINISH ──
-  const firstRowRight = true; // ligne 0 va toujours vers la droite
   const lastGoRight = (numRows - 1) % 2 === 0;
   const startX = ROAD_L - START_STUB, startY = TOP;
-  const endX   = lastGoRight ? ROAD_R + START_STUB - START_STUB : ROAD_L - START_STUB; // ancré au bout du dernier stub
   const lastY  = TOP + (numRows - 1) * ROW_H;
-  const finishX = (lastGoRight ? ROAD_L : ROAD_R) - (lastGoRight ? START_STUB : -START_STUB);
+  const finishX = lastGoRight ? ROAD_R + START_STUB : ROAD_L - START_STUB;
 
   function pill(x, y, label, color) {
     return `<g transform="translate(${x},${y})">
@@ -3464,28 +3463,56 @@ function renderDessin2() {
     }
   }
 
-  // ── Jalons ──
+// ── Jalons ──
   const jalons = nodes.map(({ p, x, y, above }) => {
     const termine = p.finreelle > 0;
     const enCours = !termine && p.debut > 0 && p.debut * 86400000 <= Date.now();
     const color = termine ? '#888888' : p.color;
-  const r = p.depth === 1 ? PIN_R : p.depth === 2 ? PIN_R * 0.75 : p.depth === 3 ? PIN_R * 0.6 : PIN_R * 0.5;
-    const label = (p.code ? p.code + ' ' : '') + (p.nom || '—');
-    const maxChars = 34;
-    const labelTrunc = label.length > maxChars ? label.slice(0, maxChars - 1) + '…' : label;
-    const LABEL_Y = above ? y - r - 34 / y + r + 20;
+    const isTop = p.depth === 1;
+    const r = isTop ? PIN_R : PIN_R * 0.62;
+    const codeLabel = p.code || '';
+    const nomLabel  = p.nom || '—';
+    const maxNomChars = isTop ? 28 : 22;
+    const nomTrunc = nomLabel.length > maxNomChars ? nomLabel.slice(0, maxNomChars - 1) + '…' : nomLabel;
+
+    if (isTop) {
+      // Niveau 1 : gros cercle sur la route, statut à l'intérieur, texte en dessous/dessus
+      const LABEL_Y1 = above ? y - r - 30 : y + r + 16;
+      return `<g>
+        <title>${esc((codeLabel ? codeLabel + ' – ' : '') + nomLabel)}</title>
+        <circle cx="${x}" cy="${y}" r="${r + 4}" fill="white"/>
+        <circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="${color}" stroke-width="3.5"/>
+        ${termine
+          ? `<text x="${x}" y="${y + 6}" text-anchor="middle" font-size="17" font-weight="700" fill="${color}">✓</text>`
+          : enCours
+            ? `<circle cx="${x}" cy="${y}" r="6" fill="${color}"/>`
+            : `<circle cx="${x}" cy="${y}" r="6" fill="none" stroke="${color}" stroke-width="2"/>`
+        }
+        ${codeLabel ? `<text x="${x}" y="${LABEL_Y1}" text-anchor="middle" font-size="10.5" font-weight="800" letter-spacing="0.03em"
+          fill="${termine ? '#999' : color}" font-family="system-ui,sans-serif">${esc(codeLabel)}</text>` : ''}
+        <text x="${x}" y="${codeLabel ? LABEL_Y1 + 13 : LABEL_Y1}" text-anchor="middle" font-size="9.5" font-weight="600"
+          fill="${termine ? '#999' : '#222'}" font-family="system-ui,sans-serif">${esc(nomTrunc)}</text>
+      </g>`;
+    }
+
+    // Niveau 2+ : panneau rectangulaire accroché à la route
+    const panelW = Math.max(70, Math.min(110, nomTrunc.length * 5.4 + 14));
+    const panelH = codeLabel ? 30 : 22;
+    const stemLen = 16;
+    const panelY = above ? y - stemLen - panelH : y + stemLen;
+    const stemY1 = above ? y - 4 : y + 4;
+    const stemY2 = above ? panelY + panelH : panelY;
 
     return `<g>
-      <title>${esc(label)}</title>
-      <circle cx="${x}" cy="${y}" r="${r + 4}" fill="white"/>
-      <circle cx="${x}" cy="${y}" r="${PIN_R}" fill="none" stroke="${color}" stroke-width="${p.depth === 1 ? 3.5 : 2.5}"/>
-      ${termine
-        ? `<text x="${x}" y="${y + 5}" text-anchor="middle" font-size="${p.depth === 1 ? 16 : 12}" font-weight="700" fill="${color}">✓</text>`
-        : `<text x="${x}" y="${y + 5}" text-anchor="middle" font-size="${p.depth === 1 ? 13 : 10}" font-weight="800" fill="${color}"
-            font-family="system-ui,sans-serif">${esc(String(p.code || ''))}</text>`
-      }
-      <text x="${x}" y="${LABEL_Y}" text-anchor="middle" font-size="9" font-weight="600"
-        fill="${termine ? '#999' : '#222'}" font-family="system-ui,sans-serif">${esc(labelTrunc)}</text>
+      <title>${esc((codeLabel ? codeLabel + ' – ' : '') + nomLabel)}</title>
+      <circle cx="${x}" cy="${y}" r="4" fill="${color}"/>
+      <line x1="${x}" y1="${stemY1}" x2="${x}" y2="${stemY2}" stroke="${color}" stroke-width="1.5" stroke-dasharray="2 2"/>
+      <rect x="${(x - panelW/2).toFixed(1)}" y="${panelY.toFixed(1)}" width="${panelW}" height="${panelH}" rx="3"
+        fill="white" stroke="${color}" stroke-width="1.5"/>
+      ${codeLabel ? `<text x="${x}" y="${(panelY + 11).toFixed(1)}" text-anchor="middle" font-size="8.5" font-weight="800"
+        fill="${termine ? '#999' : color}" font-family="system-ui,sans-serif" letter-spacing="0.02em">${esc(codeLabel)}${termine ? ' ✓' : ''}</text>` : ''}
+      <text x="${x}" y="${(panelY + (codeLabel ? 22 : 14)).toFixed(1)}" text-anchor="middle" font-size="8" font-weight="500"
+        fill="${termine ? '#999' : '#333'}" font-family="system-ui,sans-serif">${esc(nomTrunc)}</text>
     </g>`;
   }).join('');
 
