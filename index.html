@@ -1060,6 +1060,10 @@ tr:hover .cr-del-btn { opacity: 1; }
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
       PDF
     </button>
+    <button class="btn-add-ghost" onclick="exportFeuilleRouteReportPdfParInstance()" title="Exporter en PDF (par instance / GT)">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      PDF (GT)
+    </button>
     <span class="count-badge" id="frtCount" style="margin-left:auto">—</span>
     <button class="btn-add" onclick="openSousProjetModal()">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -3567,6 +3571,182 @@ sectionsHtml += `<div class="engagement-section">
   win.document.close();
   win.onload = () => { win.focus(); win.print(); };
 }
+
+function exportFeuilleRouteReportPdfParInstance() {
+  if (!masterProjet) { showToast('Aucun projet maître défini', 'error'); return; }
+  const rows = buildFrtHierarchy();
+  if (!rows.length) { showToast('Aucun sous-projet à exporter', 'error'); return; }
+
+  const instList = Object.values(instances)
+    .filter((v,i,arr) => typeof v.id === 'number' && arr.findIndex(x=>x.id===v.id)===i)
+    .sort((a,b) => (a.ordre??9999) - (b.ordre??9999));
+  if (!instList.length) { showToast('Aucune instance / groupe de travail renseigné', 'error'); return; }
+
+  const piloteOf = p => p.pilote ? allActors.find(a => a.id === p.pilote) : null;
+
+  const rootOf = (p) => {
+    let cur = p;
+    while (cur && cur.ref !== masterProjet.id) {
+      const parent = rows.find(x => x.id === cur.ref);
+      if (!parent) break;
+      cur = parent;
+    }
+    return cur;
+  };
+
+  const statutMeta = {
+    encours: { label: 'En cours',  cls: 'pill-encours' },
+    alancer: { label: 'À lancer',  cls: 'pill-alancer' },
+    realise: { label: 'Réalisé',   cls: 'pill-realise' },
+  };
+
+  const gtIcon = `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#33697F" stroke-width="1.8">
+    <circle cx="9" cy="7" r="4"/><path d="M2.5 21v-2a4 4 0 0 1 4-4h5a4 4 0 0 1 4 4v2"/><path d="M17 3.13a4 4 0 0 1 0 7.75"/><path d="M21.5 21v-2a4 4 0 0 0-3-3.85"/>
+  </svg>`;
+
+  const themeBadgesPdf = (themeStr) => {
+    const badges = parseThemes(themeStr).map(t => {
+      const hex = themeHex(t);
+      return `<span class="theme-tag" style="border-color:${hex}">${esc(t)}</span>`;
+    }).join('');
+    return badges || '—';
+  };
+
+  let sectionsHtml = '';
+
+  instList.forEach((inst) => {
+    const instRows = rows.filter(p => p._depth > 0 && p.instance === inst.id);
+    if (!instRows.length) return;
+
+    const byPhase = new Map();
+    instRows.forEach(p => {
+      const phase = rootOf(p);
+      if (!phase) return;
+      if (!byPhase.has(phase.id)) byPhase.set(phase.id, { phase, items: [] });
+      byPhase.get(phase.id).items.push(p);
+    });
+    if (!byPhase.size) return;
+
+    let bodyRows = '';
+    let phaseNum = 0;
+
+    [...byPhase.values()]
+      .sort((a, b) => (a.phase.ordre ?? 9999) - (b.phase.ordre ?? 9999))
+      .forEach(({ phase, items }) => {
+        phaseNum++;
+        bodyRows += `<tr class="phase-row"><td colspan="5">Phase ${phaseNum} – ${esc(phase.nom || 'Sans nom')}</td></tr>`;
+
+        items.forEach(p => {
+          const pilote = piloteOf(p);
+          const statut = statutMeta[projetStatut(p)];
+          const dDebut = fmtMonthYear(p.debut) || '—';
+          const dFin   = fmtMonthYear(p.fin) || '—';
+          const desc = (p.objectifs || '').trim();
+
+          bodyRows += `<tr>
+            <td class="chantier-cell">
+              <div class="chantier-nom">${esc(p.nom || 'Sans nom')}</div>
+              ${desc ? `<div class="chantier-desc">${esc(desc.split('\n')[0])}</div>` : ''}
+            </td>
+            <td class="pilote-cell">${pilote ? esc(pilote.nom) : ''}</td>
+            <td><span class="pill ${statut.cls}">${statut.label}</span></td>
+            <td class="echeance-cell"><span>${esc(dDebut)}</span><span>${esc(dFin)}</span></td>
+            <td class="theme-cell">${themeBadgesPdf(p.theme)}</td>
+          </tr>`;
+        });
+      });
+
+    const instHex = couleurs[inst.couleur]?.hex || inst.couleur || '#33697F';
+    sectionsHtml += `<div class="engagement-section">
+  <div class="engagement-header">
+    ${gtIcon}
+    <div class="engagement-eyebrow" style="color:${instHex}">${esc(inst.sigle || '')}</div>
+    <div class="engagement-title">${esc(inst.nom || inst.sigle || 'Sans nom')}</div>
+  </div>
+      <table class="fr-table">
+        <thead><tr><th>Chantier</th><th>Pilotage</th><th>Statut</th><th>Échéance</th><th>Thème</th></tr></thead>
+        <tbody>${bodyRows}</tbody>
+      </table>
+    </div>`;
+  });
+
+  if (!sectionsHtml) { showToast('Aucune donnée à exporter', 'error'); return; }
+
+  const today = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <style>
+      @page { size: A4 portrait; margin: 16mm 14mm 14mm; }
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: Arial, sans-serif; color: #222;
+             -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+      .engagement-section { page-break-before: always; padding-top: 4px; }
+      .engagement-section:first-child { page-break-before: auto; }
+
+      .engagement-header { text-align: center; margin-bottom: 22px; }
+      .engagement-eyebrow {
+        font-family: Georgia, 'Times New Roman', serif;
+        font-size: 15px; font-weight: 600; color: #33697F;
+        margin-top: 6px;
+      }
+      .engagement-title {
+        font-family: Georgia, 'Times New Roman', serif;
+        font-size: 19px; font-weight: 700; color: #1F2937;
+        line-height: 1.35; margin-top: 4px; max-width: 480px;
+        margin-left: auto; margin-right: auto;
+      }
+
+      table.fr-table { width: 100%; border-collapse: collapse; }
+      .fr-table thead th {
+        background: #33697F; color: #fff; font-size: 10.5px; font-weight: 600;
+        text-align: left; padding: 7px 9px; text-transform: uppercase; letter-spacing: .02em;
+      }
+      .fr-table tbody tr:not(.phase-row) { border-bottom: 1px solid #E5E7EB; }
+      .fr-table td { padding: 8px 9px; font-size: 10.5px; vertical-align: top; }
+
+      tr.phase-row td {
+        background: #E7ECEE; color: #33474F; font-weight: 700; font-size: 10px;
+        text-transform: uppercase; letter-spacing: .03em; padding: 5px 9px;
+      }
+
+      .chantier-cell { width: 38%; }
+      .chantier-nom { font-weight: 700; color: #1F2937; margin-bottom: 2px; }
+      .chantier-desc { color: #6B7280; font-size: 9.5px; line-height: 1.35; }
+      .pilote-cell { color: #374151; white-space: normal; overflow-wrap: break-word; }
+
+      .echeance-cell { white-space: nowrap; color: #374151; }
+      .echeance-cell span { display: block; text-transform: capitalize; }
+      .echeance-cell span:last-child { color: #9CA3AF; }
+
+      .theme-cell { white-space: normal; }
+      .theme-tag {
+        display: inline-block; padding: 2px 8px; margin: 1px 3px 1px 0; border-radius: 10px;
+        font-size: 9px; font-weight: 600; border: 1px solid; color: #374151; white-space: nowrap;
+      }
+
+      .pill {
+        display: inline-block; padding: 2px 9px; border-radius: 10px;
+        font-size: 9.5px; font-weight: 600; border: 1px solid; white-space: nowrap;
+      }
+      .pill-encours { color: #1F9254; border-color: #1F9254; background: #EAFBF1; }
+      .pill-alancer { color: #C2740A; border-color: #E5A94E; background: #FFF6E7; }
+      .pill-realise { color: #6B7280; border-color: #D1D5DB; background: #F3F4F6; }
+
+      .fr-footer {
+        text-align: right; font-size: 9px; color: #9CA3AF; margin-top: 10px;
+      }
+    </style>
+  </head><body>
+    ${sectionsHtml}
+    <div class="fr-footer">Édité le ${today}</div>
+  </body></html>`;
+
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+  win.onload = () => { win.focus(); win.print(); };
+}
+  
 function renderMindmap() {
   const svgEl = document.getElementById('mindmapSvg');
   if (!svgEl || typeof d3 === 'undefined') return;
