@@ -1051,9 +1051,24 @@ tr:hover .cr-del-btn { opacity: 1; }
         </div>
         <!-- Vue Dessin2 (test route circuit) -->
         <div id="sp-dessin2" style="flex:1;flex-direction:column;overflow:auto;display:none">
-          <div style="padding:8px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;background:var(--bg)">
-            <span style="font-size:11px;color:var(--text-muted)">Utilise les mêmes filtres que l'onglet Dessin</span>
-            <button class="btn-add-ghost" onclick="exportDessin2Png()" style="margin-left:auto">
+  <div id="dessin2Filters" style="padding:8px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;background:var(--bg)">
+    <select class="filter-select" id="d2FilterProjet" onchange="renderDessin2()">
+      <option value="">Tous les projets</option>
+    </select>
+    <select class="filter-select" id="d2FilterEtat" onchange="renderDessin2()">
+      <option value="">Tous les états</option>
+      <option value="alancer">À lancer</option>
+      <option value="encours">En cours</option>
+      <option value="realise">Réalisé</option>
+    </select>
+    <select class="filter-select" id="d2FilterNiveau" onchange="renderDessin2()">
+      <option value="1">Jusqu'au niveau 1</option>
+      <option value="2">Jusqu'au niveau 2</option>
+      <option value="3">Jusqu'au niveau 3</option>
+      <option value="4">Jusqu'au niveau 4</option>
+      <option value="99">Tous les niveaux</option>
+    </select>
+    <button class="btn-add-ghost" onclick="exportDessin2Png()" style="margin-left:auto">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               PNG
             </button>
@@ -2508,7 +2523,7 @@ function switchSpMode(mode) {
   
   if (mode === 'gantt')        { populateGanttProjetFilters(); renderGanttProjet(); }
   if (mode === 'feuilleroute') { populateFeuillerouteFilters(); renderFeuilleDeroute(); }
-  if (mode === 'dessin2')      { populateFeuillerouteFilters(); renderDessin2(); }
+  if (mode === 'dessin2')      { populateDessin2Filters(); renderDessin2(); }
   if (mode === 'suivi')        { populateSuiviFrtFilters(); renderSuiviFeuilleRoute(); }
   
   
@@ -2736,6 +2751,25 @@ function populateFeuillerouteFilters() {
     });
   if (cur && [...sel.options].some(o => o.value === cur)) sel.value = cur;
 }
+
+function populateDessin2Filters() {
+  const sel = document.getElementById('d2FilterProjet');
+  if (!sel) return;
+  const cur = sel.value;
+  while (sel.options.length > 1) sel.remove(1);
+  const masterId = masterProjet ? masterProjet.id : null;
+  allProjets
+    .filter(p => p.ref === masterId && masterId !== null)
+    .sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999))
+    .forEach(p => {
+      const label = (p.code ? p.code + ' – ' : '') + p.nom;
+      const opt   = new Option(label, p.id);
+      const hex   = projetHex(p);
+      if (hex) opt.style.borderLeft = '3px solid ' + hex;
+      sel.appendChild(opt);
+    });
+  if (cur && [...sel.options].some(o => o.value === cur)) sel.value = cur;
+}  
 
 // ══ SUIVI FEUILLE DE ROUTE (tableau des sous-sous-projets, triable/filtrable) ══
 function populateSuiviFrtFilters() {
@@ -3353,14 +3387,34 @@ function renderFeuilleDeroute() {
       </svg>
     </div>`;
 }
+
+  function wrapTwoLines(text, maxCharsPerLine) {
+  const t = (text || '').trim();
+  if (t.length <= maxCharsPerLine) return [t];
+  const words = t.split(' ');
+  let line1 = '', rest = '';
+  for (let i = 0; i < words.length; i++) {
+    const test = (line1 ? line1 + ' ' : '') + words[i];
+    if (test.length <= maxCharsPerLine || !line1) {
+      line1 = test;
+    } else {
+      rest = words.slice(i).join(' ');
+      break;
+    }
+  }
+  if (!rest) return [line1];
+  let line2 = rest;
+  if (line2.length > maxCharsPerLine) line2 = line2.slice(0, maxCharsPerLine - 1) + '…';
+  return [line1, line2];
+}
+  
 function renderDessin2() {
   const cont = document.getElementById('dessin2Container');
   if (!cont) return;
-
-  const fEtat   = document.getElementById('frFilterEtat')?.value   || '';
-  const fProjet = document.getElementById('frFilterProjet')?.value || '';
+const fEtat   = document.getElementById('d2FilterEtat')?.value   || '';
+  const fProjet = document.getElementById('d2FilterProjet')?.value || '';
   const masterId = masterProjet ? masterProjet.id : null;
-  const maxDepth = parseInt(document.getElementById('frFilterNiveau')?.value || '2');
+  const maxDepth = parseInt(document.getElementById('d2FilterNiveau')?.value || '2');
 
   let lvl1 = allProjets
     .filter(p => p.ref === masterId && masterId !== null)
@@ -3470,14 +3524,14 @@ function renderDessin2() {
     const color = termine ? '#888888' : p.color;
     const isTop = p.depth === 1;
     const r = isTop ? PIN_R : PIN_R * 0.62;
-    const codeLabel = p.code || '';
+  const codeLabel = p.code || '';
     const nomLabel  = p.nom || '—';
-    const maxNomChars = isTop ? 28 : 22;
-    const nomTrunc = nomLabel.length > maxNomChars ? nomLabel.slice(0, maxNomChars - 1) + '…' : nomLabel;
+    const nomLines  = wrapTwoLines(nomLabel, isTop ? 18 : 15);
 
     if (isTop) {
       // Niveau 1 : gros cercle sur la route, statut à l'intérieur, texte en dessous/dessus
-      const LABEL_Y1 = above ? y - r - 30 : y + r + 16;
+      const extraLines = nomLines.length - 1;
+      const LABEL_Y1 = above ? y - r - 30 - extraLines * 11 : y + r + 16;
       return `<g>
         <title>${esc((codeLabel ? codeLabel + ' – ' : '') + nomLabel)}</title>
         <circle cx="${x}" cy="${y}" r="${r + 4}" fill="white"/>
@@ -3490,14 +3544,15 @@ function renderDessin2() {
         }
         ${codeLabel ? `<text x="${x}" y="${LABEL_Y1}" text-anchor="middle" font-size="10.5" font-weight="800" letter-spacing="0.03em"
           fill="${termine ? '#999' : color}" font-family="system-ui,sans-serif">${esc(codeLabel)}</text>` : ''}
-        <text x="${x}" y="${codeLabel ? LABEL_Y1 + 13 : LABEL_Y1}" text-anchor="middle" font-size="9.5" font-weight="600"
-          fill="${termine ? '#999' : '#222'}" font-family="system-ui,sans-serif">${esc(nomTrunc)}</text>
+      ${nomLines.map((line, li) => `<text x="${x}" y="${(codeLabel ? LABEL_Y1 + 13 : LABEL_Y1) + li * 11}" text-anchor="middle" font-size="9.5" font-weight="600"
+          fill="${termine ? '#999' : '#222'}" font-family="system-ui,sans-serif">${esc(line)}</text>`).join('')}
       </g>`;
     }
 
     // Niveau 2+ : panneau rectangulaire accroché à la route
-    const panelW = Math.max(70, Math.min(110, nomTrunc.length * 5.4 + 14));
-    const panelH = codeLabel ? 30 : 22;
+    const maxLineLen = Math.max(...nomLines.map(l => l.length));
+    const panelW = Math.max(70, Math.min(120, maxLineLen * 5.4 + 14));
+    const panelH = (codeLabel ? 20 : 12) + nomLines.length * 9;
     const stemLen = 16;
     const panelY = above ? y - stemLen - panelH : y + stemLen;
     const stemY1 = above ? y - 4 : y + 4;
@@ -3511,8 +3566,8 @@ function renderDessin2() {
         fill="white" stroke="${color}" stroke-width="1.5"/>
       ${codeLabel ? `<text x="${x}" y="${(panelY + 11).toFixed(1)}" text-anchor="middle" font-size="8.5" font-weight="800"
         fill="${termine ? '#999' : color}" font-family="system-ui,sans-serif" letter-spacing="0.02em">${esc(codeLabel)}${termine ? ' ✓' : ''}</text>` : ''}
-      <text x="${x}" y="${(panelY + (codeLabel ? 22 : 14)).toFixed(1)}" text-anchor="middle" font-size="8" font-weight="500"
-        fill="${termine ? '#999' : '#333'}" font-family="system-ui,sans-serif">${esc(nomTrunc)}</text>
+      ${nomLines.map((line, li) => `<text x="${x}" y="${(panelY + (codeLabel ? 22 : 14) + li * 9).toFixed(1)}" text-anchor="middle" font-size="8" font-weight="500"
+        fill="${termine ? '#999' : '#333'}" font-family="system-ui,sans-serif">${esc(line)}</text>`).join('')}
     </g>`;
   }).join('');
 
