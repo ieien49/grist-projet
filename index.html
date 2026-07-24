@@ -3589,29 +3589,44 @@ const fEtat   = document.getElementById('d2FilterEtat')?.value   || '';
 function exportDessin2Png() {
   const svg = document.querySelector('#dessin2Container svg');
   if (!svg) { showToast('Aucun dessin à exporter', 'error'); return; }
-  const serializer = new XMLSerializer();
-  const svgStr = serializer.serializeToString(svg);
-  const img = new Image();
+
   const vb = svg.viewBox.baseVal;
+  const clone = svg.cloneNode(true);
+  clone.setAttribute('width', vb.width);
+  clone.setAttribute('height', vb.height);
+
+  const serializer = new XMLSerializer();
+  const svgStr = serializer.serializeToString(clone);
   const scale = 2;
+
   const canvas = document.createElement('canvas');
-  canvas.width = vb.width * scale;
+  canvas.width  = vb.width  * scale;
   canvas.height = vb.height * scale;
   const ctx = canvas.getContext('2d');
+
+  const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const img  = new Image();
   img.onload = () => {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.scale(scale, scale);
     ctx.drawImage(img, 0, 0);
-    canvas.toBlob(blob => {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = 'dessin2.png';
-      a.click();
-      URL.revokeObjectURL(url);
+    URL.revokeObjectURL(url);
+    canvas.toBlob(blob2 => {
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob2);
+      link.download = 'dessin2.png';
+      link.click();
+      showToast('Export PNG généré');
     });
   };
-  img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgStr)));
-}
-function exportRoadmapPng() {
+  img.onerror = () => {
+    URL.revokeObjectURL(url);
+    showToast('Erreur lors de la génération du PNG', 'error');
+  };
+  img.src = url;
+}function exportRoadmapPng() {
   const svg = document.querySelector('#feuillerouteContainer svg');
   if (!svg) { showToast('Aucune roadmap à exporter', 'error'); return; }
   const serializer = new XMLSerializer();
