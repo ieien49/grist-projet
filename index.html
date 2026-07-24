@@ -5016,12 +5016,13 @@ async function renderDocuments() {
 
   if (!data.length) { cont.innerHTML = emptyState('Aucun document', 'Ajoutez un document via le formulaire.', 'file'); return; }
 
-  const cols = [{key:'titre',label:'Titre'},{key:'theme',label:'Thème'},{key:'_pdf',label:'PDF'}];
-  const thead = cols.map(c => {
-    if (c.key === '_pdf') return `<th style="width:90px">${c.label}</th>`;
-    const s = docSortCol === c.key;
-    return `<th class="${s?'sorted':''}" onclick="sortDocuments('${c.key}')">${c.label}<span class="si">${s?(docSortDir===1?'↑':'↓'):'↕'}</span></th>`;
-  }).join('');
+  const cols = [{key:'titre',label:'Titre'},{key:'theme',label:'Thème'},{key:'_pdf',label:'PDF'},{key:'_actions',label:''}];
+const thead = cols.map(c => {
+  if (c.key === '_pdf') return `<th style="width:90px">${c.label}</th>`;
+  if (c.key === '_actions') return `<th style="width:50px">${c.label}</th>`;
+  const s = docSortCol === c.key;
+  return `<th class="${s?'sorted':''}" onclick="sortDocuments('${c.key}')">${c.label}<span class="si">${s?(docSortDir===1?'↑':'↓'):'↕'}</span></th>`;
+}).join('');
 
   // Résout un token une seule fois pour toute la table, puis construit les liens
   let info = null;
@@ -5031,16 +5032,24 @@ async function renderDocuments() {
     const links = (info && d.pdf.length)
       ? d.pdf.map((aid,i) => `<a href="${attachmentUrl(aid, info)}" target="_blank" rel="noopener" class="btn-icon" title="Ouvrir le PDF ${d.pdf.length>1?('#'+(i+1)):''}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></a>`).join('')
       : (d.pdf.length ? '—' : '');
-    return `<tr>
-      <td>${esc(d.titre||'—')}</td>
-      <td>${d.theme?`<span class="badge">${esc(d.theme)}</span>`:'—'}</td>
-      <td><div class="row-actions-visible">${links || '—'}</div></td>
-    </tr>`;
+   return `<tr>
+  <td>${esc(d.titre||'—')}</td>
+  <td>${d.theme?`<span class="badge">${esc(d.theme)}</span>`:'—'}</td>
+  <td><div class="row-actions-visible">${links || '—'}</div></td>
+  <td><button class="btn-icon del" onclick="deleteDocument(${d.id})" title="Supprimer"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/></svg></button></td>
+</tr>`;
   }).join('');
 
   cont.innerHTML = `<div class="table-inner"><table><thead><tr>${thead}</tr></thead><tbody>${tbody}</tbody></table></div>`;
 }
 
+async function deleteDocument(id) {
+  const d = allDocuments.find(x=>x.id===id);
+  if (!d || !confirm(`Supprimer "${d.titre||'ce document'}" ?`)) return;
+  try { await grist.docApi.applyUserActions([['RemoveRecord','Documents',id]]); showToast('Document supprimé'); renderDocuments(); }
+  catch(e) { showToast(e.message,'error'); }
+}
+  
 // ══ ACTEUR MODAL ══
 function openActeurModal(actor = null) {
   editingActeurId = actor?.id ?? null;
