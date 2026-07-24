@@ -3376,7 +3376,7 @@ function exportRoadmapPdf() {
     .replace(/background:[^;"]*(;|")/g, 'background:white$1');
   const title = masterProjet?.nom || 'Roadmap';
   const today = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
     <style>
       @page { size: A3 landscape; margin: 12mm 10mm; }
       * { box-sizing: border-box; }
@@ -3502,7 +3502,7 @@ sectionsHtml += `<div class="engagement-section">
   if (!sectionsHtml) { showToast('Aucune donnée à exporter', 'error'); return; }
 
   const today = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
     <style>
       @page { size: A4 portrait; margin: 16mm 14mm 14mm; }
       * { box-sizing: border-box; }
@@ -3605,11 +3605,11 @@ function exportFeuilleRouteReportPdfParInstance() {
   </svg>`;
 
   const themeBadgesPdf = (themeStr) => {
-    const badges = parseThemes(themeStr).map(t => {
+    const items = parseThemes(themeStr).map(t => {
       const hex = themeHex(t);
-      return `<span class="theme-tag" style="border-color:${hex}">${esc(t)}</span>`;
+      return `<span class="theme-item"><span class="theme-dot" style="background:${hex}"></span>${esc(t)}</span>`;
     }).join('');
-    return badges || '—';
+    return items || '—';
   };
 
   let sectionsHtml = '';
@@ -3673,7 +3673,7 @@ function exportFeuilleRouteReportPdfParInstance() {
   if (!sectionsHtml) { showToast('Aucune donnée à exporter', 'error'); return; }
 
   const today = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
     <style>
       @page { size: A4 portrait; margin: 16mm 14mm 14mm; }
       * { box-sizing: border-box; }
@@ -3718,10 +3718,14 @@ function exportFeuilleRouteReportPdfParInstance() {
       .echeance-cell span { display: block; text-transform: capitalize; }
       .echeance-cell span:last-child { color: #9CA3AF; }
 
-      .theme-cell { white-space: normal; }
-      .theme-tag {
-        display: inline-block; padding: 2px 8px; margin: 1px 3px 1px 0; border-radius: 10px;
-        font-size: 9px; font-weight: 600; border: 1px solid; color: #374151; white-space: nowrap;
+      .theme-cell { white-space: normal; overflow-wrap: break-word; hyphens: auto; }
+      .theme-item {
+        display: flex; align-items: flex-start; gap: 5px;
+        color: #374151; font-size: 10px; margin-bottom: 3px;
+      }
+      .theme-item:last-child { margin-bottom: 0; }
+      .theme-dot {
+        width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-top: 3px;
       }
 
       .pill {
@@ -6055,7 +6059,7 @@ function exportGanttPdf() {
   const svgStr = serializer.serializeToString(svg);
   const title = masterProjet?.nom || 'Gantt';
   const today = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
     <style>
       @page { size: A3 landscape; margin: 12mm 10mm; }
       * { box-sizing: border-box; }
