@@ -1064,6 +1064,10 @@ tr:hover .cr-del-btn { opacity: 1; }
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
       PDF (GT)
     </button>
+    <button class="btn-add-ghost" onclick="exportFeuilleRouteReportPdfParPhase()" title="Exporter en PDF (par phase)">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      PDF (Phase)
+    </button>
     <span class="count-badge" id="frtCount" style="margin-left:auto">—</span>
     <button class="btn-add" onclick="openSousProjetModal()">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -3753,6 +3757,180 @@ function exportFeuilleRouteReportPdfParInstance() {
   win.document.close();
   win.onload = () => { win.focus(); win.print(); };
 }
+
+function exportFeuilleRouteReportPdfParPhase() {
+  if (!masterProjet) { showToast('Aucun projet maître défini', 'error'); return; }
+  const rows = buildFrtHierarchy();
+  if (!rows.length) { showToast('Aucun sous-projet à exporter', 'error'); return; }
+
+  const phases = rows.filter(p => p._depth === 0);
+  if (!phases.length) { showToast('Aucune phase définie sur le projet', 'error'); return; }
+
+  const piloteOf   = p => p.pilote ? allActors.find(a => a.id === p.pilote) : null;
+  const instanceOf = p => p.instance ? instances[p.instance] : null;
+
+  const rootOf = (p) => {
+    let cur = p;
+    while (cur && cur.ref !== masterProjet.id) {
+      const parent = rows.find(x => x.id === cur.ref);
+      if (!parent) break;
+      cur = parent;
+    }
+    return cur;
+  };
+
+  const statutMeta = {
+    encours: { label: 'En cours',  cls: 'pill-encours' },
+    alancer: { label: 'À lancer',  cls: 'pill-alancer' },
+    realise: { label: 'Réalisé',   cls: 'pill-realise' },
+  };
+
+  const phaseIcon = `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#33697F" stroke-width="1.8">
+    <path d="M4 22V4"/><path d="M4 4h13l-2.5 4L17 12H4"/>
+  </svg>`;
+
+  let sectionsHtml = '';
+
+  phases
+    .sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999))
+    .forEach((phase, pIdx) => {
+      const phaseRows = rows.filter(p => p._depth > 0 && rootOf(p)?.id === phase.id);
+      if (!phaseRows.length) return;
+
+      // Regroupement interne par thème (ordre canonique de la table Themes, puis thèmes libres, puis "sans thème")
+      const orderedThemeTags = getAllThemes();
+      const byTheme = new Map();
+      phaseRows.forEach(p => {
+        const tags = parseThemes(p.theme);
+        if (!tags.length) {
+          if (!byTheme.has('__none__')) byTheme.set('__none__', []);
+          byTheme.get('__none__').push(p);
+        } else {
+          tags.forEach(t => {
+            if (!byTheme.has(t)) byTheme.set(t, []);
+            byTheme.get(t).push(p);
+          });
+        }
+      });
+      if (!byTheme.size) return;
+
+      let bodyRows = '';
+      const themeOrder = [...orderedThemeTags.filter(t => byTheme.has(t)), ...(byTheme.has('__none__') ? ['__none__'] : [])];
+
+      themeOrder.forEach(tag => {
+        const items = byTheme.get(tag);
+        const label = tag === '__none__' ? 'Sans thème' : tag;
+        bodyRows += `<tr class="phase-row"><td colspan="5">${esc(label)}</td></tr>`;
+
+        items.forEach(p => {
+          const pilote = piloteOf(p);
+          const inst   = instanceOf(p);
+          const statut = statutMeta[projetStatut(p)];
+          const dDebut = fmtMonthYear(p.debut) || '—';
+          const dFin   = fmtMonthYear(p.fin) || '—';
+          const instHex   = inst ? (couleurs[inst.couleur]?.hex || inst.couleur) : null;
+          const instLabel = inst ? (inst.nom || inst.sigle) : '';
+          const desc = (p.objectifs || '').trim();
+
+          bodyRows += `<tr>
+            <td class="chantier-cell">
+              <div class="chantier-nom">${esc(p.nom || 'Sans nom')}</div>
+              ${desc ? `<div class="chantier-desc">${esc(desc.split('\n')[0])}</div>` : ''}
+            </td>
+            <td class="pilote-cell">${pilote ? esc(pilote.nom) : ''}</td>
+            <td><span class="pill ${statut.cls}">${statut.label}</span></td>
+            <td class="echeance-cell"><span>${esc(dDebut)}</span><span>${esc(dFin)}</span></td>
+            <td class="instance-cell" ${instHex ? `style="color:${instHex}"` : ''}>${instLabel ? esc(instLabel) : '—'}</td>
+          </tr>`;
+        });
+      });
+
+      const phaseColor = projetHex(phase) || '#33697F';
+      sectionsHtml += `<div class="engagement-section">
+  <div class="engagement-header">
+    ${phaseIcon}
+    <div class="engagement-eyebrow" style="color:${phaseColor}">Phase ${pIdx + 1}</div>
+    <div class="engagement-title">${esc(phase.nom || 'Sans nom')}</div>
+  </div>
+      <table class="fr-table">
+        <thead><tr><th>Chantier</th><th>Pilotage</th><th>Statut</th><th>Échéance</th><th>Instance</th></tr></thead>
+        <tbody>${bodyRows}</tbody>
+      </table>
+    </div>`;
+    });
+
+  if (!sectionsHtml) { showToast('Aucune donnée à exporter', 'error'); return; }
+
+  const today = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+    <style>
+      @page { size: A4 portrait; margin: 16mm 14mm 14mm; }
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: Arial, sans-serif; color: #222;
+             -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+      .engagement-section { page-break-before: always; padding-top: 4px; }
+      .engagement-section:first-child { page-break-before: auto; }
+
+      .engagement-header { text-align: center; margin-bottom: 22px; }
+      .engagement-eyebrow {
+        font-family: Georgia, 'Times New Roman', serif;
+        font-size: 15px; font-weight: 600; color: #E17F3D;
+        margin-top: 6px;
+      }
+      .engagement-title {
+        font-family: Georgia, 'Times New Roman', serif;
+        font-size: 19px; font-weight: 700; color: #1F2937;
+        line-height: 1.35; margin-top: 4px; max-width: 480px;
+        margin-left: auto; margin-right: auto;
+      }
+
+      table.fr-table { width: 100%; border-collapse: collapse; }
+      .fr-table thead th {
+        background: #33697F; color: #fff; font-size: 10.5px; font-weight: 600;
+        text-align: left; padding: 7px 9px; text-transform: uppercase; letter-spacing: .02em;
+      }
+      .fr-table tbody tr:not(.phase-row) { border-bottom: 1px solid #E5E7EB; }
+      .fr-table td { padding: 8px 9px; font-size: 10.5px; vertical-align: top; }
+
+      tr.phase-row td {
+        background: #E7ECEE; color: #33474F; font-weight: 700; font-size: 10px;
+        text-transform: uppercase; letter-spacing: .03em; padding: 5px 9px;
+      }
+
+      .chantier-cell { width: 40%; }
+      .chantier-nom { font-weight: 700; color: #1F2937; margin-bottom: 2px; }
+      .chantier-desc { color: #6B7280; font-size: 9.5px; line-height: 1.35; }
+      .pilote-cell { color: #374151; white-space: normal; overflow-wrap: break-word; }
+
+      .echeance-cell { white-space: nowrap; color: #374151; }
+      .echeance-cell span { display: block; text-transform: capitalize; }
+      .echeance-cell span:last-child { color: #9CA3AF; }
+
+      .instance-cell { font-weight: 700; white-space: normal; overflow-wrap: break-word; hyphens: auto; color: #1F2937; }
+
+      .pill {
+        display: inline-block; padding: 2px 9px; border-radius: 10px;
+        font-size: 9.5px; font-weight: 600; border: 1px solid; white-space: nowrap;
+      }
+      .pill-encours { color: #1F9254; border-color: #1F9254; background: #EAFBF1; }
+      .pill-alancer { color: #C2740A; border-color: #E5A94E; background: #FFF6E7; }
+      .pill-realise { color: #6B7280; border-color: #D1D5DB; background: #F3F4F6; }
+
+      .fr-footer {
+        text-align: right; font-size: 9px; color: #9CA3AF; margin-top: 10px;
+      }
+    </style>
+  </head><body>
+    ${sectionsHtml}
+    <div class="fr-footer">Édité le ${today}</div>
+  </body></html>`;
+
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+  win.onload = () => { win.focus(); win.print(); };
+}  
   
 function renderMindmap() {
   const svgEl = document.getElementById('mindmapSvg');
