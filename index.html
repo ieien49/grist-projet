@@ -1384,9 +1384,13 @@ tr:hover .cr-del-btn { opacity: 1; }
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
               <input type="text" class="search-input" id="kbSearch" placeholder="Rechercher…" oninput="renderKanban()">
             </div>
-           <select class="filter-select" id="kbFilterProjet" onchange="renderKanban()">
-              <option value="">Tous les sous-projets</option>
-            </select>
+           <div class="ms-wrap" id="kbFilterProjetWrap" style="min-width:150px;max-width:210px">
+             <div class="ms-tags" id="kbFilterProjetTags" onclick="toggleMsDropdown('kbFilterProjetWrap','kbFilterProjetDrop')">
+               <span class="ms-placeholder" id="kbFilterProjetPh">Tous les sous-projets</span>
+             </div>
+             <div class="ms-dropdown" id="kbFilterProjetDrop"></div>
+           </div>
+           <input type="hidden" id="kbFilterProjet">
             <select class="filter-select" id="kbFilterTheme" onchange="renderKanban()">
               <option value="">Tous les thèmes</option>
             </select>
@@ -5610,11 +5614,11 @@ if (mmBtn) mmBtn.classList.toggle('active', mode === 'mindmap');
 // ── Peupler les selects filtres Kanban ──
 function populateKanbanFilters() {
   // Sous-projets
-  const spSel = document.getElementById('kbFilterProjet');
-  if (spSel) {
-    const cur = spSel.value;
-    spSel.innerHTML = '<option value="">Tous les sous-projets</option>' + buildSubProjetsOptions(cur);
-    spSel.value = cur;
+  const spHidden = document.getElementById('kbFilterProjet');
+  if (spHidden) {
+    const cur = spHidden.value;
+    renderKbProjetPicker(cur);
+    renderKbProjetClosed(cur);
   }
   // Pilotes
 const pSel = document.getElementById('kbFilterPilote');
@@ -8574,7 +8578,113 @@ function renderRefClosed(selectedVal) {
   tag.innerHTML = `<span class="cdot" style="width:9px;height:9px;background:${hex}"></span>${esc(label)}`;
   tagsEl.appendChild(tag);
 }
-  
+
+// ── Picker sous-projet (filtre Kanban), même forme que le champ "Projet parent" ──
+var _kbProjetPickerOpen = new Set();
+
+function renderKbProjetPicker(selectedVal) {
+  const picker = document.getElementById('kbFilterProjetDrop');
+  if (!picker) return;
+
+  const _byId = {};
+  allProjets.forEach(p => { _byId[p.id] = { ...p, children: [] }; });
+  allProjets.forEach(p => {
+    if (p.ref && p.ref !== 0 && _byId[p.ref]) _byId[p.ref].children.push(_byId[p.id]);
+  });
+
+  const buildHtml = (node, depth) => {
+    const hasChildren = node.children.length > 0;
+    const isOpen = _kbProjetPickerOpen.has(node.id);
+    const isSelected = selectedVal && String(node.id) === String(selectedVal);
+    const indent = depth * 16 + 10;
+    const label = (node.code ? node.code + ' – ' : '') + (node.nom || '—');
+    const hex = projetHex(node) || '#9B9B9B';
+    const bg = isSelected ? 'var(--surface3)' : 'transparent';
+    const borderLeft = isSelected ? `2px solid ${hex}` : '2px solid transparent';
+    const fw = isSelected ? '600' : '400';
+    const color = isSelected ? 'var(--text-primary)' : 'var(--text-secondary)';
+
+    const chevron = hasChildren
+      ? `<span onclick="event.stopPropagation();kbProjetPickerToggle(${node.id})"
+           style="cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;color:var(--text-muted);
+                  transform:rotate(${isOpen ? '90' : '0'}deg);transition:transform 0.15s">
+           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+             <path d="M9 18l6-6-6-6"/>
+           </svg>
+         </span>`
+      : `<span style="width:10px;flex-shrink:0;display:inline-block"></span>`;
+
+    let html = `<div onclick="kbProjetPickerSelect(${node.id})"
+      style="display:flex;align-items:center;gap:6px;padding:4px 10px 4px ${indent}px;
+             cursor:pointer;background:${bg};border-left:${borderLeft};user-select:none"
+      onmouseover="if('${isSelected}'!=='true')this.style.background='var(--surface2)'"
+      onmouseout="this.style.background='${bg}'">
+      ${chevron}
+      <span style="width:8px;height:8px;border-radius:50%;background:${hex};
+                   flex-shrink:0;display:inline-block"></span>
+      <span style="font-size:12.5px;color:${color};font-weight:${fw};flex:1">${esc(label)}</span>
+      ${isSelected
+        ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0"><polyline points="20 6 9 17 4 12"/></svg>'
+        : ''}
+    </div>`;
+
+    if (hasChildren && isOpen) {
+      html += node.children
+        .sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999))
+        .map(c => buildHtml(_byId[c.id], depth + 1))
+        .join('');
+    }
+    return html;
+  };
+
+  const allOptionHtml = `<div onclick="kbProjetPickerSelect('')"
+    style="display:flex;align-items:center;gap:6px;padding:4px 10px 4px 10px;
+           cursor:pointer;background:${!selectedVal ? 'var(--surface3)' : 'transparent'};
+           border-left:2px solid transparent;border-bottom:1px solid var(--border);user-select:none"
+    onmouseover="this.style.background='var(--surface2)'"
+    onmouseout="this.style.background='${!selectedVal ? 'var(--surface3)' : 'transparent'}'">
+    <span style="width:10px;flex-shrink:0;display:inline-block"></span>
+    <span style="width:8px;height:8px;flex-shrink:0"></span>
+    <span style="font-size:12.5px;color:var(--text-secondary);font-weight:${!selectedVal ? '600' : '400'};flex:1">Tous les sous-projets</span>
+  </div>`;
+
+  const roots = allProjets.filter(p => !p.ref || p.ref === 0);
+  picker.innerHTML = allOptionHtml + roots.map(p => _byId[p.id] ? buildHtml(_byId[p.id], 0) : '').join('');
+}
+
+function kbProjetPickerToggle(nodeId) {
+  if (_kbProjetPickerOpen.has(nodeId)) _kbProjetPickerOpen.delete(nodeId);
+  else _kbProjetPickerOpen.add(nodeId);
+  const hidden = document.getElementById('kbFilterProjet');
+  renderKbProjetPicker(hidden ? hidden.value : '');
+}
+
+function kbProjetPickerSelect(nodeId) {
+  const hidden = document.getElementById('kbFilterProjet');
+  const val = nodeId === '' ? '' : String(nodeId);
+  if (hidden) hidden.value = val;
+  renderKbProjetPicker(val);
+  renderKbProjetClosed(val);
+  closeMsDropdown('kbFilterProjetWrap','kbFilterProjetDrop');
+  renderKanban();
+}
+
+function renderKbProjetClosed(selectedVal) {
+  const tagsEl = document.getElementById('kbFilterProjetTags');
+  const ph     = document.getElementById('kbFilterProjetPh');
+  if (!tagsEl) return;
+  tagsEl.querySelectorAll('.ms-tag').forEach(el => el.remove());
+  const node = selectedVal ? allProjets.find(p => String(p.id) === String(selectedVal)) : null;
+  if (!node) { if (ph) ph.style.display = ''; return; }
+  if (ph) ph.style.display = 'none';
+  const hex = projetHex(node) || '#9B9B9B';
+  const label = (node.code ? node.code + ' – ' : '') + (node.nom || '—');
+  const tag = document.createElement('span');
+  tag.className = 'ms-tag';
+  tag.innerHTML = `<span class="cdot" style="width:9px;height:9px;background:${hex}"></span>${esc(label)}`;
+  tagsEl.appendChild(tag);
+}
+
   function closeProjetModal() {
   document.getElementById('projetModalOverlay').classList.remove('open');
   editingProjetId = null;
