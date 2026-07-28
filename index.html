@@ -1456,10 +1456,19 @@ tr:hover .cr-del-btn { opacity: 1; }
     <div class="form-group full">
       <label class="field-label">Sous-projet</label>
       <div class="ms-wrap" id="ac_projetWrap">
-        <div class="ms-tags" id="ac_projetTags" onclick="toggleMsDropdown('ac_projetWrap','ac_projet_picker')">
+        <div class="ms-tags" id="ac_projetTags" onclick="toggleAcProjetDropdown()">
           <span class="ms-placeholder" id="ac_projetPlaceholder">— Sélectionner —</span>
         </div>
-        <div class="ms-dropdown" id="ac_projet_picker"></div>
+        <div class="ms-dropdown" id="ac_projet_picker">
+          <div style="padding:6px;border-bottom:1px solid var(--border)">
+            <input type="text" id="ac_projetSearch" placeholder="Code ou nom…" autocomplete="off"
+              oninput="acProjetPickerFilter(this.value)"
+              onclick="event.stopPropagation()"
+              onkeydown="acProjetSearchKeydown(event)"
+              style="width:100%;box-sizing:border-box;padding:5px 8px;font-size:12.5px;font-family:var(--font);border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);color:var(--text-primary);outline:none">
+          </div>
+          <div id="ac_projet_picker_list"></div>
+        </div>
       </div>
       <input type="hidden" id="ac_projet">
     </div>
