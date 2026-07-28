@@ -5764,7 +5764,7 @@ function kanbanCard(a, compact = false) {
   const badgeHtml = projet
     ? `<span class="kb-card-badge" style="background:${etatConf.bg};color:${etatConf.text}" title="${esc(projet.nom)}">${esc((projet.code||projet.nom||'').slice(0,18))}</span>`
     : '';
-  const themeHtml = projet ? themeBadgesHtml(projet.theme) : '';
+  const themeHtml = projet ? themeBadgesHtml(projet.theme, true) : '';
 
   // Avatar pilote
   const avatarHtml = pilote
@@ -7145,11 +7145,15 @@ function themeHex(tag) {
   if (m && m.couleur) return couleurs[m.couleur]?.hex || '#CCCCCC';
   return '#CCCCCC'; // thème hors table Themes : pas de couleur définie
 }
-function themeBadgesHtml(themeStr) {
+function themeBadgesHtml(themeStr, compact = false) {
   return parseThemes(themeStr).map(t => {
     const m = themeMeta(t);
     const hex = themeHex(t);
     const picto = m?.picto ? `<span style="display:inline-flex;width:12px;height:12px;vertical-align:-1px">${m.picto}</span> ` : '';
+    if (compact) {
+      const code = (m?.code || t.slice(0, 3)).toUpperCase();
+      return `<span class="badge" style="background:${hex};color:#333" title="${esc(t)}">${picto}${esc(code)}</span>`;
+    }
     return `<span class="badge" style="background:${hex};color:#333">${picto}${esc(t)}</span>`;
   }).join('');
 }
