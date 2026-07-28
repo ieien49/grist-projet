@@ -252,7 +252,11 @@ textarea.form-control { resize: vertical; min-height: 64px; line-height: 1.5; }
 .kb-card-compact .kb-card-meta {
   display: none;
 }  
+.kb-card-compact .kb-card-projet {
+  display: none;
+}
 .kb-card.dragging { opacity:0.45; box-shadow:none; transform:none; }
+.kb-card-projet { margin-bottom:4px; }
 .kb-card-title { font-size:12px; font-weight:500; color:var(--text-primary); margin-bottom:6px; line-height:1.35; }
 .kb-card-meta { display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
 .kb-card-badge { font-size:9.5px; padding:1px 6px; border-radius:3px; font-weight:500; white-space:nowrap; max-width:100px; overflow:hidden; text-overflow:ellipsis; }
@@ -5797,9 +5801,10 @@ function kanbanCard(a, compact = false) {
       ondragstart="kbDragStart(event, ${a.id}, '${esc(a.etat||'A faire')}')"
       ondragend="kbDragEnd(event)"
       ondblclick="openActionModal(${a.id})">
+    ${badgeHtml ? `<div class="kb-card-projet">${badgeHtml}</div>` : ''}
     <div class="kb-card-title">${esc(a.action||'—')}</div>
     <div class="kb-card-meta">
-      ${badgeHtml}${themeHtml}${prioHtml}${avatarHtml}${dateHtml}
+      ${themeHtml}${prioHtml}${avatarHtml}${dateHtml}
     </div>
   </div>`;
 }
