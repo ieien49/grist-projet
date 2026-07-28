@@ -7151,8 +7151,7 @@ function themeBadgesHtml(themeStr, compact = false) {
     const hex = themeHex(t);
     const picto = m?.picto ? `<span style="display:inline-flex;width:12px;height:12px;vertical-align:-1px">${m.picto}</span> ` : '';
     if (compact) {
-      const code = (m?.code || t.slice(0, 3)).toUpperCase();
-      return `<span class="badge" style="background:${hex};color:#333" title="${esc(t)}">${picto}${esc(code)}</span>`;
+      return `<span class="badge" style="background:${hex};color:#333;padding:2px 5px" title="${esc(t)}">${picto || esc(t.slice(0,1).toUpperCase())}</span>`;
     }
     return `<span class="badge" style="background:${hex};color:#333">${picto}${esc(t)}</span>`;
   }).join('');
