@@ -5405,27 +5405,47 @@ function renderAcProjetPicker(selectedVal, filterQuery = '') {
   const picker = document.getElementById('ac_projet_picker_list');
   if (!picker) return;
 
+  const q = (filterQuery || '').toLowerCase().trim();
+
   const byId = {};
   allProjets.forEach(p => { byId[p.id] = { ...p, children: [] }; });
   allProjets.forEach(p => {
     if (p.ref && p.ref !== 0 && byId[p.ref]) byId[p.ref].children.push(byId[p.id]);
   });
 
+  // Marque les nœuds qui matchent la recherche eux-mêmes, et ceux qui ont un descendant qui matche
+  const matchesBranch = {};
+  const nodeMatches = (node) => {
+    const label = ((node.code ? node.code + ' ' : '') + (node.nom || '')).toLowerCase();
+    return label.includes(q);
+  };
+  const computeBranch = (node) => {
+    let branchMatch = q ? nodeMatches(node) : true;
+    node.children.forEach(c => {
+      if (computeBranch(byId[c.id])) branchMatch = true;
+    });
+    matchesBranch[node.id] = branchMatch;
+    return branchMatch;
+  };
+  Object.values(byId).forEach(node => { if (!(node.id in matchesBranch)) computeBranch(node); });
+
   const buildHtml = (node, depth) => {
-    const hasChildren = node.children.length > 0;
+    if (q && !matchesBranch[node.id]) return '';
+    const visibleChildren = node.children.filter(c => !q || matchesBranch[c.id]);
+    const hasChildren = visibleChildren.length > 0;
 
     // Niveau racine (projet maître) : simple en-tête non sélectionnable, affiché seulement s'il a des sous-projets
     if (depth === 0) {
       if (!hasChildren) return '';
       let html = `<div style="padding:6px 10px 4px 10px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em">${esc((node.code ? node.code + ' – ' : '') + node.nom)}</div>`;
-      html += node.children
+      html += visibleChildren
         .sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999))
         .map(c => buildHtml(byId[c.id], 1))
         .join('');
       return html;
     }
 
-    const isOpen = _acProjetPickerOpen.has(node.id);
+    const isOpen = q ? true : _acProjetPickerOpen.has(node.id);
     const isSelected = selectedVal && String(node.id) === String(selectedVal);
     const indent = (depth - 1) * 16 + 20;
     const label = (node.code ? node.code + ' – ' : '') + (node.nom || '—');
@@ -5460,7 +5480,7 @@ function renderAcProjetPicker(selectedVal, filterQuery = '') {
     </div>`;
 
     if (hasChildren && isOpen) {
-      html += node.children
+      html += visibleChildren
         .sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999))
         .map(c => buildHtml(byId[c.id], depth + 1))
         .join('');
@@ -5470,7 +5490,7 @@ function renderAcProjetPicker(selectedVal, filterQuery = '') {
 
   const roots = allProjets.filter(p => !p.ref || p.ref === 0);
   picker.innerHTML = roots.map(p => byId[p.id] ? buildHtml(byId[p.id], 0) : '').join('')
-    || '<div style="padding:10px;font-size:12px;color:var(--text-muted)">Aucun sous-projet</div>';
+    || `<div style="padding:10px;font-size:12px;color:var(--text-muted)">${q ? 'Aucun résultat' : 'Aucun sous-projet'}</div>`;
 }
 
 function toggleAcProjetDropdown() {
