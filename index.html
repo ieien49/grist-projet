@@ -1455,7 +1455,13 @@ tr:hover .cr-del-btn { opacity: 1; }
   <div class="form-grid">
     <div class="form-group full">
       <label class="field-label">Sous-projet</label>
-      <select class="form-control" id="ac_projet"><option value="">— Sélectionner —</option></select>
+      <div class="ms-wrap" id="ac_projetWrap">
+        <div class="ms-tags" id="ac_projetTags" onclick="toggleMsDropdown('ac_projetWrap','ac_projet_picker')">
+          <span class="ms-placeholder" id="ac_projetPlaceholder">— Sélectionner —</span>
+        </div>
+        <div class="ms-dropdown" id="ac_projet_picker"></div>
+      </div>
+      <input type="hidden" id="ac_projet">
     </div>
     <div class="form-group full">
       <label class="field-label">Action</label>
@@ -5383,6 +5389,112 @@ function buildSubProjetsOptions(selectedVal) {
   return parts.join('');
 }
 
+// ── Picker sous-projet (modale Action), même forme/logique que le champ "Projet parent" ──
+var _acProjetPickerOpen = new Set();
+
+function renderAcProjetPicker(selectedVal) {
+  const picker = document.getElementById('ac_projet_picker');
+  if (!picker) return;
+
+  const byId = {};
+  allProjets.forEach(p => { byId[p.id] = { ...p, children: [] }; });
+  allProjets.forEach(p => {
+    if (p.ref && p.ref !== 0 && byId[p.ref]) byId[p.ref].children.push(byId[p.id]);
+  });
+
+  const buildHtml = (node, depth) => {
+    const hasChildren = node.children.length > 0;
+
+    // Niveau racine (projet maître) : simple en-tête non sélectionnable, affiché seulement s'il a des sous-projets
+    if (depth === 0) {
+      if (!hasChildren) return '';
+      let html = `<div style="padding:6px 10px 4px 10px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em">${esc((node.code ? node.code + ' – ' : '') + node.nom)}</div>`;
+      html += node.children
+        .sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999))
+        .map(c => buildHtml(byId[c.id], 1))
+        .join('');
+      return html;
+    }
+
+    const isOpen = _acProjetPickerOpen.has(node.id);
+    const isSelected = selectedVal && String(node.id) === String(selectedVal);
+    const indent = (depth - 1) * 16 + 20;
+    const label = (node.code ? node.code + ' – ' : '') + (node.nom || '—');
+    const hex = projetHex(node) || '#9B9B9B';
+    const bg = isSelected ? 'var(--surface3)' : 'transparent';
+    const borderLeft = isSelected ? `2px solid ${hex}` : '2px solid transparent';
+    const fw = isSelected ? '600' : '400';
+    const color = isSelected ? 'var(--text-primary)' : 'var(--text-secondary)';
+
+    const chevron = hasChildren
+      ? `<span onclick="event.stopPropagation();acProjetPickerToggle(${node.id})"
+           style="cursor:pointer;flex-shrink:0;display:inline-flex;align-items:center;color:var(--text-muted);
+                  transform:rotate(${isOpen ? '90' : '0'}deg);transition:transform 0.15s">
+           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+             <path d="M9 18l6-6-6-6"/>
+           </svg>
+         </span>`
+      : `<span style="width:10px;flex-shrink:0;display:inline-block"></span>`;
+
+    let html = `<div onclick="acProjetPickerSelect(${node.id})"
+      style="display:flex;align-items:center;gap:6px;padding:4px 10px 4px ${indent}px;
+             cursor:pointer;background:${bg};border-left:${borderLeft};user-select:none"
+      onmouseover="if('${isSelected}'!=='true')this.style.background='var(--surface2)'"
+      onmouseout="this.style.background='${bg}'">
+      ${chevron}
+      <span style="width:8px;height:8px;border-radius:50%;background:${hex};
+                   flex-shrink:0;display:inline-block"></span>
+      <span style="font-size:12.5px;color:${color};font-weight:${fw};flex:1">${esc(label)}</span>
+      ${isSelected
+        ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0"><polyline points="20 6 9 17 4 12"/></svg>'
+        : ''}
+    </div>`;
+
+    if (hasChildren && isOpen) {
+      html += node.children
+        .sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999))
+        .map(c => buildHtml(byId[c.id], depth + 1))
+        .join('');
+    }
+    return html;
+  };
+
+  const roots = allProjets.filter(p => !p.ref || p.ref === 0);
+  picker.innerHTML = roots.map(p => byId[p.id] ? buildHtml(byId[p.id], 0) : '').join('')
+    || '<div style="padding:10px;font-size:12px;color:var(--text-muted)">Aucun sous-projet</div>';
+}
+
+function acProjetPickerToggle(nodeId) {
+  if (_acProjetPickerOpen.has(nodeId)) _acProjetPickerOpen.delete(nodeId);
+  else _acProjetPickerOpen.add(nodeId);
+  const hidden = document.getElementById('ac_projet');
+  renderAcProjetPicker(hidden ? hidden.value : '');
+}
+
+function acProjetPickerSelect(nodeId) {
+  const hidden = document.getElementById('ac_projet');
+  if (hidden) hidden.value = String(nodeId);
+  renderAcProjetPicker(String(nodeId));
+  renderAcProjetClosed(String(nodeId));
+  closeMsDropdown('ac_projetWrap','ac_projet_picker');
+}
+
+function renderAcProjetClosed(selectedVal) {
+  const tagsEl = document.getElementById('ac_projetTags');
+  const ph     = document.getElementById('ac_projetPlaceholder');
+  if (!tagsEl) return;
+  tagsEl.querySelectorAll('.ms-tag').forEach(el => el.remove());
+  const node = selectedVal ? allProjets.find(p => String(p.id) === String(selectedVal)) : null;
+  if (!node) { if (ph) ph.style.display = ''; return; }
+  if (ph) ph.style.display = 'none';
+  const hex = projetHex(node) || '#9B9B9B';
+  const label = (node.code ? node.code + ' – ' : '') + (node.nom || '—');
+  const tag = document.createElement('span');
+  tag.className = 'ms-tag';
+  tag.innerHTML = `<span class="cdot" style="width:9px;height:9px;background:${hex}"></span>${esc(label)}`;
+  tagsEl.appendChild(tag);
+}
+
 function etatAcClass(etat) {
   if (etat === 'En cours')        return 'ac-etat-ec';
   if (etat === 'En attente')      return 'ac-etat-ea';
@@ -5497,10 +5609,6 @@ function openActionModal(id = null, preEtat = null, preProjetId = null) {
   document.getElementById('actionModalTitle').textContent = id ? "Modifier l'action" : "Nouvelle action";
   document.getElementById('ac_saveLabel').textContent = 'Enregistrer';
 
-  // Populate projet select (hierarchical)
-  const pSel = document.getElementById('ac_projet');
-  pSel.innerHTML = '<option value="">— Sélectionner —</option>' + buildSubProjetsOptions('');
-
   // Populate qui select
   const qSel = document.getElementById('ac_qui');
   while (qSel.options.length > 1) qSel.remove(1);
@@ -5509,10 +5617,11 @@ function openActionModal(id = null, preEtat = null, preProjetId = null) {
     .sort((a, b) => (a.nom||'').localeCompare(b.nom||'', 'fr'))
     .forEach(a => qSel.appendChild(new Option(a.nom + (a.role ? ' — ' + a.role : ''), a.id)));
 
+  let acVal = '';
   if (id) {
     const a = allActions.find(x => x.id === id);
     if (a) {
-      pSel.value = a.projet || '';
+      acVal = a.projet ? String(a.projet) : '';
       document.getElementById('ac_action').value      = a.action      || '';
       document.getElementById('ac_description').value = a.description || '';
       qSel.value = a.qui || '';
@@ -5520,13 +5629,29 @@ function openActionModal(id = null, preEtat = null, preProjetId = null) {
       document.getElementById('ac_echeance').value    = toDateInput(a.echeance);
     }
   } else {
-    pSel.value = preProjetId ? String(preProjetId) : (document.getElementById('kbFilterProjet')?.value || '');
+    acVal = preProjetId ? String(preProjetId) : (document.getElementById('kbFilterProjet')?.value || '');
     document.getElementById('ac_action').value      = '';
     document.getElementById('ac_description').value = '';
     qSel.value = document.getElementById('kbFilterPilote')?.value || '';
     document.getElementById('ac_etat').value        = preEtat || 'A faire';
     document.getElementById('ac_echeance').value    = '';
   }
+
+  // Populate projet picker (arbre indenté, même forme que le champ "Projet parent")
+  _acProjetPickerOpen.clear();
+  document.getElementById('ac_projet').value = acVal;
+  if (acVal) {
+    const targetId = parseInt(acVal);
+    const findAncestors = (nid) => {
+      const node = allProjets.find(p => p.id === nid);
+      if (!node || !node.ref || node.ref === 0) return;
+      _acProjetPickerOpen.add(node.ref);
+      findAncestors(node.ref);
+    };
+    findAncestors(targetId);
+  }
+  renderAcProjetPicker(acVal);
+  renderAcProjetClosed(acVal);
 
   document.getElementById('actionModalOverlay').classList.add('open');
   setTimeout(() => document.getElementById('ac_action').focus(), 80);
