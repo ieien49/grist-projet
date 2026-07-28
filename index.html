@@ -618,31 +618,25 @@ tr:hover .cr-del-btn { opacity: 1; }
 
 .kpi-section-title { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 10px; }
 
-/* Cartes métriques */
-.kpi-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
-.kpi-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
-.kpi-card-label { font-size: 11px; color: var(--text-muted); font-weight: 500; white-space: nowrap; }
-.kpi-card-value { font-size: 26px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.02em; line-height: 1; }
-.kpi-card-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
-.kpi-card.accent { border-left: 3px solid var(--text-primary); }
-.kpi-card.green  { border-left: 3px solid #15803d; }
-.kpi-card.orange { border-left: 3px solid #b45309; }
-.kpi-card.red    { border-left: 3px solid #dc2626; }
+/* Anneau de progression */
+.kpi-ring-row { display: flex; align-items: center; gap: 16px; }
+.kpi-ring-svg { flex-shrink: 0; }
+.kpi-ring-track { fill: none; stroke: var(--border); }
+.kpi-ring-val { fill: var(--text-primary); font-weight: 700; }
+.kpi-ring-lbl { fill: var(--text-muted); }
+.kpi-ring-body { flex: 1; min-width: 0; }
+.kpi-ring-title { font-size: 14px; font-weight: 600; color: var(--text-primary); margin: 0 0 4px; }
+.kpi-ring-sub { font-size: 12.5px; color: var(--text-muted); margin: 0; }
+.kpi-ring-breakdown { display: flex; gap: 10px; margin-top: 6px; font-size: 11.5px; color: var(--text-secondary); flex-wrap: wrap; }
+.kpi-ring-breakdown b { font-weight: 600; }
+.kpi-ring-badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; margin-top: 6px; }
 
-/* Barre de progression états */
-.kpi-progress-bar { height: 8px; border-radius: 4px; background: var(--surface3); overflow: hidden; display: flex; gap: 1px; margin-bottom: 8px; }
-.kpi-progress-seg { height: 100%; transition: width 0.3s; }
-.kpi-progress-legend { display: flex; flex-wrap: wrap; gap: 8px 16px; }
-.kpi-legend-item { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-secondary); }
-.kpi-legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
-
-/* Pilotes */
-.kpi-pilotes { display: flex; flex-direction: column; gap: 6px; }
-.kpi-pilote-row { display: flex; align-items: center; gap: 8px; }
-.kpi-pilote-name { font-size: 12.5px; color: var(--text-primary); flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.kpi-pilote-bar-wrap { width: 100px; height: 5px; background: var(--surface3); border-radius: 3px; overflow: hidden; flex-shrink: 0; }
-.kpi-pilote-bar { height: 100%; background: var(--text-primary); border-radius: 3px; }
-.kpi-pilote-count { font-size: 11px; color: var(--text-muted); min-width: 20px; text-align: right; flex-shrink: 0; }
+/* Pilotes (puces) */
+.kpi-pilote-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.kpi-pilote-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--surface2); border-radius: 20px; padding: 4px 10px 4px 4px; }
+.kpi-pilote-chip .pilote-av { width: 22px; height: 22px; font-size: 9px; }
+.kpi-pilote-chip-count { font-size: 12px; color: var(--text-primary); font-weight: 500; }
+.kpi-pilote-chip-name { font-size: 11px; color: var(--text-muted); }
 
 /* Alerte retard */
 .kpi-alert { display: flex; align-items: center; gap: 8px; padding: 9px 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--radius); font-size: 12.5px; color: #991b1b; }
@@ -7897,18 +7891,20 @@ function renderKpi() {
 
   const now = Date.now();
 
-  // ── couleurs communes ──
-  const etatColors = {
-    'A faire':          '#7c3aed',
-    'En cours':         '#1d4ed8',
-    'En attente':       '#b45309',
-    'Réalisé':          '#15803d',
-    'Pour information': '#6b7280',
+  // ── anneau de progression (r=38, stroke=7) ──
+  const RING_C = 2 * Math.PI * 38;
+  const ring = (pct, color) => {
+    const p = Math.max(0, Math.min(100, pct));
+    const offset = (RING_C * (1 - p / 100)).toFixed(1);
+    return `
+      <svg class="kpi-ring-svg" width="80" height="80" viewBox="0 0 88 88">
+        <circle class="kpi-ring-track" cx="44" cy="44" r="38" stroke-width="7"/>
+        <circle cx="44" cy="44" r="38" fill="none" stroke="${color}" stroke-width="7" stroke-linecap="round"
+          stroke-dasharray="${RING_C.toFixed(1)}" stroke-dashoffset="${offset}" transform="rotate(-90 44 44)"/>
+        <text x="44" y="40" text-anchor="middle" font-size="18" class="kpi-ring-val">${p}%</text>
+        <text x="44" y="55" text-anchor="middle" font-size="8.5" class="kpi-ring-lbl">réalisé</text>
+      </svg>`;
   };
-  const bar = (color, pctVal) =>
-    `<div class="kpi-progress-seg" style="width:${pctVal}%;background:${color};min-width:${pctVal>0?2:0}px"></div>`;
-  const legendItem = (color, label, n) =>
-    `<span class="kpi-legend-item"><span class="kpi-legend-dot" style="background:${color}"></span>${label} <strong>${n}</strong></span>`;
 
   // ══════════════════════════════════════════════
   // 1. SUIVI DES ACTIONS (= Plan d'actions / sous-projets)
@@ -7919,42 +7915,20 @@ function renderKpi() {
   const spEnCours    = subs.filter(p => projetStatut(p) === 'encours').length;
   const spALancer    = subs.filter(p => projetStatut(p) === 'alancer').length;
   const spPct        = spTotal > 0 ? Math.round(spRealise / spTotal * 100) : 0;
-  const spPctOf      = (n) => spTotal > 0 ? (n / spTotal * 100).toFixed(1) : 0;
-
-  const spColors = { realise: '#888888', encours: '#15803d', alancer: '#B45309' };
 
   const sectionActions = `
     <div>
       <div class="kpi-section-title">Suivi des actions</div>
-      <div class="kpi-cards">
-        <div class="kpi-card accent">
-          <span class="kpi-card-label">Réalisées</span>
-          <span class="kpi-card-value">${spPct}<span style="font-size:16px;font-weight:500;color:var(--text-muted)">%</span></span>
-          <span class="kpi-card-sub">${spRealise} / ${spTotal} sous-projets</span>
+      <div class="kpi-ring-row">
+        ${ring(spPct, '#534AB7')}
+        <div class="kpi-ring-body">
+          <p class="kpi-ring-title">Sous-projets</p>
+          <p class="kpi-ring-sub">${spRealise} / ${spTotal} réalisés</p>
+          <div class="kpi-ring-breakdown">
+            <span><b style="color:#534AB7">${spEnCours}</b> en cours</span>
+            <span><b style="color:#D85A30">${spALancer}</b> à lancer</span>
+          </div>
         </div>
-        <div class="kpi-card green">
-          <span class="kpi-card-label">En cours</span>
-          <span class="kpi-card-value">${spEnCours}</span>
-        </div>
-        <div class="kpi-card orange">
-          <span class="kpi-card-label">À lancer</span>
-          <span class="kpi-card-value">${spALancer}</span>
-        </div>
-        <div class="kpi-card">
-          <span class="kpi-card-label">Total</span>
-          <span class="kpi-card-value">${spTotal}</span>
-          <span class="kpi-card-sub">sous-projets</span>
-        </div>
-      </div>
-      <div class="kpi-progress-bar" style="margin-top:10px">
-        ${bar(spColors.realise, spPctOf(spRealise))}
-        ${bar(spColors.encours, spPctOf(spEnCours))}
-        ${bar(spColors.alancer, spPctOf(spALancer))}
-      </div>
-      <div class="kpi-progress-legend">
-        ${legendItem(spColors.realise, 'Réalisé',  spRealise)}
-        ${legendItem(spColors.encours, 'En cours', spEnCours)}
-        ${legendItem(spColors.alancer, 'À lancer', spALancer)}
       </div>
     </div>`;
 
@@ -7988,48 +7962,23 @@ function renderKpi() {
   const sectionTaches = `
     <div>
       <div class="kpi-section-title">Suivi des tâches</div>
-      <div class="kpi-cards">
-        <div class="kpi-card accent">
-          <span class="kpi-card-label">Réalisées</span>
-          <span class="kpi-card-value">${acPct}<span style="font-size:16px;font-weight:500;color:var(--text-muted)">%</span></span>
-          <span class="kpi-card-sub">${acRe} / ${acTotal} tâches</span>
-        </div>
-        ${acRetard > 0 ? `<div class="kpi-card red">
-          <span class="kpi-card-label">En retard</span>
-          <span class="kpi-card-value" style="color:#dc2626">${acRetard}</span>
-          <span class="kpi-card-sub">échéance dépassée</span>
-        </div>` : `<div class="kpi-card green">
-          <span class="kpi-card-label">En retard</span>
-          <span class="kpi-card-value" style="color:#15803d">0</span>
-          <span class="kpi-card-sub">Tout est à jour ✓</span>
-        </div>`}
-        <div class="kpi-card">
-          <span class="kpi-card-label">Total</span>
-          <span class="kpi-card-value">${acTotal}</span>
-          <span class="kpi-card-sub">tâches</span>
+      <div class="kpi-ring-row">
+        ${ring(acPct, '#0F6E56')}
+        <div class="kpi-ring-body">
+          <p class="kpi-ring-title">Tâches</p>
+          <p class="kpi-ring-sub">${acRe} / ${acTotal} réalisées</p>
+          ${acRetard > 0
+            ? `<span class="kpi-ring-badge" style="background:#FCEBEB;color:#791F1F">${acRetard} en retard</span>`
+            : `<span class="kpi-ring-badge" style="background:#EAF3DE;color:#173404">Tout est à jour</span>`}
         </div>
       </div>
-      <div class="kpi-progress-bar" style="margin-top:10px">
-        ${bar(etatColors['Réalisé'],          acPctOf(acRe))}
-        ${bar(etatColors['En cours'],         acPctOf(acEC))}
-        ${bar(etatColors['En attente'],       acPctOf(acEA))}
-        ${bar(etatColors['A faire'],          acPctOf(acAF))}
-        ${bar(etatColors['Pour information'], acPctOf(acPI))}
-      </div>
-      <div class="kpi-progress-legend">
-        ${legendItem(etatColors['Réalisé'],    'Réalisé',    acRe)}
-        ${legendItem(etatColors['En cours'],   'En cours',   acEC)}
-        ${legendItem(etatColors['En attente'], 'En attente', acEA)}
-        ${legendItem(etatColors['A faire'],    'A faire',    acAF)}
-      </div>
-      ${topPilotes.length ? `<div style="margin-top:14px">
-        <div style="font-size:10.5px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Top pilotes</div>
-        <div class="kpi-pilotes">${topPilotes.map(p =>
-          `<div class="kpi-pilote-row">
-            <span class="pilote-av" style="background:${p.prc.avatar};width:18px;height:18px;font-size:7px">${p.nom.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</span>
-            <span class="kpi-pilote-name">${esc(p.nom)}</span>
-            <div class="kpi-pilote-bar-wrap"><div class="kpi-pilote-bar" style="width:${Math.round(p.count/maxPilote*100)}%"></div></div>
-            <span class="kpi-pilote-count">${p.count}</span>
+      ${topPilotes.length ? `<div style="margin-top:16px">
+        <div class="kpi-section-title" style="margin-bottom:8px">Top pilotes</div>
+        <div class="kpi-pilote-chips">${topPilotes.map(p =>
+          `<div class="kpi-pilote-chip">
+            <span class="pilote-av" style="background:${p.prc.avatar}">${p.nom.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</span>
+            <span class="kpi-pilote-chip-count">${p.count}</span>
+            <span class="kpi-pilote-chip-name">${esc(p.nom)}</span>
           </div>`
         ).join('')}</div>
       </div>` : ''}
@@ -8040,12 +7989,8 @@ function renderKpi() {
   // ══════════════════════════════════════════════
   const decisions = allDecisions.filter(d => d.etat !== 'Ordre du jour');
   const decTotal  = decisions.length;
-  const decAF     = decisions.filter(d => d.etat === 'A faire').length;
-  const decEC     = decisions.filter(d => d.etat === 'En cours').length;
-  const decEA     = decisions.filter(d => d.etat === 'En attente').length;
   const decRe     = decisions.filter(d => d.etat === 'Réalisé').length;
-  const decPI     = decisions.filter(d => d.etat === 'Pour information').length;
-  const decPctOf  = (n) => decTotal > 0 ? (n / decTotal * 100).toFixed(1) : 0;
+  const decPct    = decTotal > 0 ? Math.round(decRe / decTotal * 100) : 0;
 
   const lastDate = Math.max(...decisions.map(d => d.date || 0).filter(Boolean));
   const decLastSeance = lastDate > 0 ? decisions.filter(d => d.date === lastDate).length : 0;
@@ -8056,35 +8001,13 @@ function renderKpi() {
   const sectionDecisions = `
     <div>
       <div class="kpi-section-title">Suivi des décisions</div>
-      <div class="kpi-cards">
-        ${lastDateStr ? `<div class="kpi-card accent">
-          <span class="kpi-card-label">Dernière séance</span>
-          <span class="kpi-card-value" style="font-size:20px">${decLastSeance}</span>
-          <span class="kpi-card-sub">${lastDateStr}</span>
-        </div>` : ''}
-        <div class="kpi-card green">
-          <span class="kpi-card-label">Réalisées</span>
-          <span class="kpi-card-value">${decRe}</span>
-          <span class="kpi-card-sub">${decTotal > 0 ? Math.round(decRe/decTotal*100) : 0}% du total</span>
+      <div class="kpi-ring-row">
+        ${ring(decPct, '#D85A30')}
+        <div class="kpi-ring-body">
+          <p class="kpi-ring-title">Décisions</p>
+          <p class="kpi-ring-sub">${decRe} / ${decTotal} réalisées</p>
+          ${lastDateStr ? `<p class="kpi-ring-sub" style="margin-top:4px;color:var(--text-muted)">Dernière séance : ${decLastSeance} décision${decLastSeance > 1 ? 's' : ''}, ${lastDateStr}</p>` : ''}
         </div>
-        <div class="kpi-card">
-          <span class="kpi-card-label">Total</span>
-          <span class="kpi-card-value">${decTotal}</span>
-          <span class="kpi-card-sub">décisions</span>
-        </div>
-      </div>
-      <div class="kpi-progress-bar" style="margin-top:10px">
-        ${bar(etatColors['Réalisé'],          decPctOf(decRe))}
-        ${bar(etatColors['En cours'],         decPctOf(decEC))}
-        ${bar(etatColors['En attente'],       decPctOf(decEA))}
-        ${bar(etatColors['A faire'],          decPctOf(decAF))}
-        ${bar(etatColors['Pour information'], decPctOf(decPI))}
-      </div>
-      <div class="kpi-progress-legend">
-        ${legendItem(etatColors['Réalisé'],    'Réalisé',    decRe)}
-        ${legendItem(etatColors['En cours'],   'En cours',   decEC)}
-        ${legendItem(etatColors['En attente'], 'En attente', decEA)}
-        ${legendItem(etatColors['A faire'],    'A faire',    decAF)}
       </div>
     </div>`;
 
