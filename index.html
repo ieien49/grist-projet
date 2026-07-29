@@ -3805,7 +3805,7 @@ sectionsHtml += `<div class="engagement-section">
   <div class="engagement-header">
     ${pictoHtml}
     <div class="engagement-eyebrow" style="color:${themeColor}">${esc(meta?.code || theme)}</div>
-    <div class="engagement-title" style="color:${themeColor}">${esc(meta?.nom || theme)}</div>
+    <div class="engagement-title">${esc(meta?.nom || theme)}</div>
   </div>
       <table class="fr-table">
         <thead><tr><th>Chantier</th><th>Pilotage</th><th>Statut</th><th>Échéance</th><th>Instance</th></tr></thead>
@@ -3855,7 +3855,7 @@ sectionsHtml += `<div class="engagement-section">
 
       .chantier-cell { width: 40%; }
       .chantier-code { font-weight: 700; color: #9CA3AF; font-size: 9px; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 1px; }
-      .chantier-nom { font-weight: 700; color: #1F2937; margin-bottom: 2px; }
+      .chantier-nom { font-weight: 300; color: #1F2937; margin-bottom: 2px; }
       .chantier-desc { color: #6B7280; font-size: 9.5px; line-height: 1.35; }
       .pilote-cell { color: #374151; white-space: normal; overflow-wrap: break-word; text-align: center; }
 
