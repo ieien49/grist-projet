@@ -3742,7 +3742,7 @@ function exportFeuilleRouteReportPdf() {
     realise: { label: 'Réalisé',   cls: 'pill-realise' },
   };
 
-  const flagIcon = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#E17F3D" stroke-width="1.8">
+  const flagIcon = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
     <path d="M4 22V4"/><path d="M4 4h13l-2.5 4L17 12H4"/>
   </svg>`;
 
@@ -3785,6 +3785,7 @@ function exportFeuilleRouteReportPdf() {
 
           bodyRows += `<tr>
             <td class="chantier-cell">
+              ${p.code ? `<div class="chantier-code">${esc(p.code)}</div>` : ''}
               <div class="chantier-nom">${esc(p.nom || 'Sans nom')}</div>
               ${desc ? `<div class="chantier-desc">${esc(desc.split('\n')[0])}</div>` : ''}
             </td>
@@ -3798,13 +3799,13 @@ function exportFeuilleRouteReportPdf() {
 
     const themeColor = themeHex(theme);
 const pictoHtml = meta?.picto
-  ? `<span style="display:inline-block;width:26px;height:26px;line-height:1">${meta.picto}</span>`
-  : flagIcon;
+  ? `<span style="display:inline-block;width:26px;height:26px;line-height:1;color:${themeColor}">${meta.picto}</span>`
+  : `<span style="display:inline-block;width:28px;height:28px;line-height:1;color:${themeColor}">${flagIcon}</span>`;
 sectionsHtml += `<div class="engagement-section">
   <div class="engagement-header">
     ${pictoHtml}
     <div class="engagement-eyebrow" style="color:${themeColor}">${esc(meta?.code || theme)}</div>
-    <div class="engagement-title">${esc(meta?.nom || theme)}</div>
+    <div class="engagement-title" style="color:${themeColor}">${esc(meta?.nom || theme)}</div>
   </div>
       <table class="fr-table">
         <thead><tr><th>Chantier</th><th>Pilotage</th><th>Statut</th><th>Échéance</th><th>Instance</th></tr></thead>
@@ -3818,7 +3819,7 @@ sectionsHtml += `<div class="engagement-section">
   const today = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
   const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
     <style>
-      @page { size: A4 portrait; margin: 16mm 14mm 14mm; }
+      @page { size: A4 portrait; margin: 16mm 22mm 14mm; }
       * { box-sizing: border-box; }
       body { margin: 0; font-family: Arial, sans-serif; color: #222;
              -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -3853,6 +3854,7 @@ sectionsHtml += `<div class="engagement-section">
       }
 
       .chantier-cell { width: 40%; }
+      .chantier-code { font-weight: 700; color: #9CA3AF; font-size: 9px; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 1px; }
       .chantier-nom { font-weight: 700; color: #1F2937; margin-bottom: 2px; }
       .chantier-desc { color: #6B7280; font-size: 9.5px; line-height: 1.35; }
       .pilote-cell { color: #374151; white-space: normal; overflow-wrap: break-word; text-align: center; }
