@@ -737,17 +737,59 @@ tr:hover .cr-del-btn { opacity: 1; }
   transition: all .12s;
 }
 .graph-ctrl-btn:hover { border-color: var(--text-primary); color: var(--text-primary); }
+
+/* ══ RÉGLAGES WIDGET (roue crantée + modale) ══ */
+.pcfg-gear-btn {
+  width: 30px; height: 30px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border); border-radius: var(--radius-sm); background: transparent;
+  color: var(--text-muted); cursor: pointer; transition: all .12s;
+}
+.pcfg-gear-btn:hover { border-color: var(--text-primary); color: var(--text-primary); background: var(--surface2); }
+.pcfg-ov {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 500;
+  align-items: center; justify-content: center;
+}
+.pcfg-ov.open { display: flex; }
+.pcfg-box {
+  width: 480px; max-width: calc(100vw - 40px); max-height: calc(100vh - 60px); overflow-y: auto;
+  background: var(--bg); border-radius: 8px; padding: 20px 22px; box-shadow: 0 10px 40px rgba(0,0,0,.2);
+}
+.pcfg-title { font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 14px; }
+.pcfg-section-title { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.07em; margin: 16px 0 8px; }
+.pcfg-hint { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+.pcfg-close-row { display: flex; justify-content: flex-end; margin-top: 18px; }
 </style>
 </head>
 <body>
 <div class="app">
 
   <!-- ══ TITRE GÉNÉRAL WIDGET ══ -->
-  <div class="widget-title-bar">
-    <div class="widget-title-label">Suivi de projet</div>
-    <div style="display:flex;align-items:center;gap:10px">
-      <span id="widgetColorSwatch" style="display:none;width:14px;height:14px;border-radius:3px;flex-shrink:0;margin-top:2px"></span>
-      <div class="widget-title-name" id="widgetProjectName" style="color:var(--project-color,var(--text-primary))">&nbsp;</div>
+  <div class="widget-title-bar" style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+    <div>
+      <div class="widget-title-label">Suivi de projet</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span id="widgetColorSwatch" style="display:none;width:14px;height:14px;border-radius:3px;flex-shrink:0;margin-top:2px"></span>
+        <div class="widget-title-name" id="widgetProjectName" style="color:var(--project-color,var(--text-primary))">&nbsp;</div>
+      </div>
+    </div>
+    <button class="pcfg-gear-btn" onclick="openPcfgModal()" title="Réglages du widget">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+    </button>
+  </div>
+
+  <!-- ══ MODALE RÉGLAGES WIDGET ══ -->
+  <div class="pcfg-ov" id="pcfgOv" onclick="handlePcfgOvClick(event)">
+    <div class="pcfg-box">
+      <div class="pcfg-title">Réglages du widget</div>
+      <div class="pcfg-section-title">Structure du document</div>
+      <div class="pcfg-hint" style="margin-bottom:8px">
+        Vérifie que les tables Grist nécessaires au widget existent dans ce document, et crée automatiquement celles qui manquent (sans jamais toucher aux tables déjà présentes).
+      </div>
+      <button class="btn-add-ghost" style="width:100%;justify-content:center;margin-bottom:8px" onclick="pcfgCheckTables()">Vérifier les tables</button>
+      <div id="pcfgTablesStatus" class="pcfg-hint" style="margin-bottom:4px"></div>
+      <div class="pcfg-close-row">
+        <button class="btn-add-ghost" onclick="closePcfgModal()">Fermer</button>
+      </div>
     </div>
   </div>
 
@@ -1924,19 +1966,33 @@ let attachToken   = null; // cache du token d'accès aux pièces jointes Grist
 let docFormUrl = null; // chargé depuis la table Parametres, pas de valeur codée en dur
 
 // ══ GRIST INIT ══
+// Plus de mapping de colonnes : toutes les tables (dont Acteurs) sont lues
+// explicitement par leur nom, garanties par l'installateur de tables (⚙).
 grist.ready({
-  requiredAccess: 'full',
-  columns: [
-    { name: 'nom',       title: 'Nom',      type: 'Text' },
-    { name: 'direction', title: 'Direction', type: 'Any' },
-    { name: 'externe',   title: 'Externe',   type: 'Bool' },
-    { name: 'role',      title: 'Rôle',      type: 'Choice' },
-    { name: 'instance',  title: 'Instance',  type: 'Any' },
-  ]
+  requiredAccess: 'full'
 });
 
-grist.onRecords(async (records, mappings) => {
-  allActors = mappings ? records.map(r => grist.mapColumnNames(r, mappings)) : records;
+async function fetchActeurs() {
+  try {
+    const t = await grist.docApi.fetchTable('Acteurs');
+    allActors = [];
+    if (t && t.id) {
+      t.id.forEach((id, i) => {
+        allActors.push({
+          id,
+          nom:       t.nom?.[i]       || '',
+          direction: t.direction?.[i] || 0,
+          externe:   !!t.externe?.[i],
+          role:      t.role?.[i]      || '',
+          instance:  t.instance?.[i]  || null,
+        });
+      });
+    }
+  } catch(e) { console.error('fetchActeurs error', e); }
+}
+
+(async () => {
+  await fetchActeurs();
   await fetchRefData();
   await fetchProjets();
   await fetchDecisions();
@@ -1972,7 +2028,157 @@ grist.onRecords(async (records, mappings) => {
       if (spMode === 'feuilleroute') { populateFeuillerouteFilters(); renderFeuilleDeroute(); }
       if (spMode === 'suivi')        { populateSuiviFrtFilters(); renderSuiviFeuilleRoute(); }
     }
-});
+})();
+
+// ══ RÉGLAGES WIDGET / INSTALLATEUR DE TABLES ══
+function openPcfgModal() {
+  document.getElementById('pcfgOv').classList.add('open');
+  document.getElementById('pcfgTablesStatus').innerHTML = '';
+}
+function closePcfgModal() { document.getElementById('pcfgOv').classList.remove('open'); }
+function handlePcfgOvClick(e) { if (e.target === document.getElementById('pcfgOv')) closePcfgModal(); }
+
+// Schéma reconstruit à partir des lectures/écritures existantes du widget.
+// Hypothèses à vérifier (voir la conversation) : les champs date (debut, fin,
+// finreelle, echeance, date) sont stockés en Int (jours depuis epoch, logique
+// gérée par le widget lui-même), pas en type Date natif Grist. Les relations
+// (pilote, direction, projet, qui, instance sur Projet/Taches/Decisions) sont
+// des Int bruts (id de ligne), pas des colonnes Ref natives — sauf
+// Acteurs.instance, seule vraie RefList du modèle.
+const PCFG_REQUIRED_TABLES = [
+  { id: 'Directions', label: 'Directions', cols: [
+    { id: 'sigle', type: 'Text' },
+    { id: 'nom',   type: 'Text' },
+  ]},
+  { id: 'Couleurs', label: 'Couleurs', cols: [
+    { id: 'nom', type: 'Text' },
+    { id: 'hex', type: 'Text' },
+  ]},
+  { id: 'Instances', label: 'Instances', cols: [
+    { id: 'sigle',   type: 'Text' },
+    { id: 'nom',     type: 'Text' },
+    { id: 'role',    type: 'Text' },
+    { id: 'couleur', type: 'Int' },
+    { id: 'ordre',   type: 'Int' },
+  ]},
+  { id: 'Themes', label: 'Thèmes', cols: [
+    { id: 'code',    type: 'Text' },
+    { id: 'nom',     type: 'Text' },
+    { id: 'picto',   type: 'Text' },
+    { id: 'couleur', type: 'Int' },
+    { id: 'ordre',   type: 'Int' },
+  ]},
+  { id: 'Acteurs', label: 'Acteurs', cols: [
+    { id: 'nom',       type: 'Text' },
+    { id: 'role',      type: 'Text' },
+    { id: 'direction', type: 'Int' },
+    { id: 'instance',  type: 'RefList:Instances' },
+    { id: 'externe',   type: 'Bool' },
+  ]},
+  { id: 'Parametres', label: 'Paramètres', cols: [
+    { id: 'cle',    type: 'Text' },
+    { id: 'valeur', type: 'Text' },
+  ]},
+  { id: 'Documents', label: 'Documents', cols: [
+    { id: 'titre', type: 'Text' },
+    { id: 'theme', type: 'Text' },
+    { id: 'pdf',   type: 'Attachments' },
+  ]},
+  { id: 'Projet', label: 'Projet', cols: [
+    { id: 'ordre',        type: 'Int' },
+    { id: 'code',         type: 'Text' },
+    { id: 'nom',          type: 'Text' },
+    { id: 'ref',          type: 'Int' },
+    { id: 'perimetre',    type: 'Text' },
+    { id: 'contexte',     type: 'Text' },
+    { id: 'objectifs',    type: 'Text' },
+    { id: 'livrables',    type: 'Text' },
+    { id: 'debut',        type: 'Int' },
+    { id: 'fin',          type: 'Int' },
+    { id: 'risques',      type: 'Text' },
+    { id: 'opportunites', type: 'Text' },
+    { id: 'moyens',       type: 'Text' },
+    { id: 'qualitatif',   type: 'Text' },
+    { id: 'quantitatif',  type: 'Text' },
+    { id: 'finreelle',    type: 'Int' },
+    { id: 'pilote',       type: 'Int' },
+    { id: 'antecedent',   type: 'Int' },
+    { id: 'couleur',      type: 'Int' },
+    { id: 'instance',     type: 'Int' },
+    { id: 'theme',        type: 'Text' },
+  ]},
+  { id: 'Taches', label: 'Tâches', cols: [
+    { id: 'projet',      type: 'Int' },
+    { id: 'action',      type: 'Text' },
+    { id: 'description', type: 'Text' },
+    { id: 'qui',         type: 'Int' },
+    { id: 'echeance',    type: 'Int' },
+    { id: 'etat',        type: 'Text' },
+    { id: 'priorite',    type: 'Text' },
+  ]},
+  { id: 'Decisions', label: 'Décisions', cols: [
+    { id: 'instance',     type: 'Int' },
+    { id: 'date',         type: 'Int' },
+    { id: 'projet',       type: 'Int' },
+    { id: 'probleme',     type: 'Text' },
+    { id: 'decision',     type: 'Text' },
+    { id: 'qui',          type: 'Text' },
+    { id: 'echeance',     type: 'Int' },
+    { id: 'etat',         type: 'Text' },
+    { id: 'commentaire',  type: 'Text' },
+    { id: 'participants', type: 'Text' },
+  ]},
+];
+
+function pcfgSetTablesStatus(html) {
+  const el = document.getElementById('pcfgTablesStatus');
+  if (el) el.innerHTML = html;
+}
+
+async function pcfgCheckTables() {
+  if (typeof grist === 'undefined') { pcfgSetTablesStatus('Indisponible hors de Grist (mode démo).'); return; }
+  pcfgSetTablesStatus('Vérification en cours…');
+  let existing;
+  try {
+    existing = await grist.docApi.listTables();
+  } catch (e) {
+    pcfgSetTablesStatus('Erreur lors de la lecture des tables : ' + e.message);
+    return;
+  }
+  const missing = PCFG_REQUIRED_TABLES.filter(t => !existing.includes(t.id));
+  if (!missing.length) {
+    pcfgSetTablesStatus('✓ Toutes les tables nécessaires sont déjà présentes.');
+    return;
+  }
+  const names = missing.map(t => t.label || t.id).join(', ');
+  pcfgSetTablesStatus(
+    `Tables manquantes : ${names}.<br>` +
+    `<button class="btn-add-ghost" style="margin-top:6px" onclick="pcfgInstallTables()">Créer ces ${missing.length} table${missing.length>1?'s':''}</button>`
+  );
+}
+
+async function pcfgInstallTables() {
+  pcfgSetTablesStatus('Création en cours…');
+  let existing;
+  try {
+    existing = await grist.docApi.listTables();
+  } catch (e) {
+    pcfgSetTablesStatus('Erreur lors de la lecture des tables : ' + e.message);
+    return;
+  }
+  const missing = PCFG_REQUIRED_TABLES.filter(t => !existing.includes(t.id));
+  if (!missing.length) {
+    pcfgSetTablesStatus('✓ Toutes les tables nécessaires sont déjà présentes.');
+    return;
+  }
+  const actions = missing.map(t => ['AddTable', t.id, t.cols]);
+  try {
+    await grist.docApi.applyUserActions(actions);
+    pcfgSetTablesStatus(`✓ Table${missing.length>1?'s':''} créée${missing.length>1?'s':''} : ${missing.map(t=>t.label||t.id).join(', ')}.<br>Recharge le widget pour peupler l'application.`);
+  } catch (e) {
+    pcfgSetTablesStatus('Erreur lors de la création : ' + e.message + '<br>Aucune table déjà existante n\'a été modifiée.');
+  }
+}
 
 // ══ FETCH REF DATA ══
 async function fetchInstances() {
@@ -5113,13 +5319,22 @@ async function saveActeur() {
       showToast('Acteur créé');
     }
     closeActeurModal();
+    await fetchActeurs();
+    renderActeurs();
+    renderInstances();
   } catch(e) { showToast(e.message, 'error'); }
 }
 
 async function deleteActeur(id) {
   const a = allActors.find(x=>x.id===id);
   if (!a || !confirm(`Supprimer "${a.nom}" ?`)) return;
-  try { await grist.docApi.applyUserActions([['RemoveRecord','Acteurs',id]]); showToast('Acteur supprimé'); }
+  try {
+    await grist.docApi.applyUserActions([['RemoveRecord','Acteurs',id]]);
+    showToast('Acteur supprimé');
+    await fetchActeurs();
+    renderActeurs();
+    renderInstances();
+  }
   catch(e) { showToast(e.message,'error'); }
 }
 
