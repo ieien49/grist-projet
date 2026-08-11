@@ -2174,6 +2174,38 @@ const PCFG_DEFAULT_COULEURS = [
   { nom: 'Corail',    hex: '#F2735B' },
 ];
 
+// Directions par défaut (import du CSV fourni), insérées à la création de
+// la table Directions uniquement. La colonne "rattachement" du CSV n'est
+// pas reprise : elle n'existe pas dans le schéma de la table et n'est lue
+// nulle part dans le widget — dis-le-moi si tu veux qu'elle soit ajoutée.
+const PCFG_DEFAULT_DIRECTIONS = [
+  { sigle: 'ÉLUS', nom: 'Élus départementaux' },
+  { sigle: 'CAB', nom: 'Cabinet de la présidente' },
+  { sigle: 'DGS', nom: 'Direction générale des services' },
+  { sigle: 'DIRCOM', nom: 'Direction de la communication et de l\'attractivité' },
+  { sigle: 'DIFAJE', nom: 'Direction des finances, des affaires juridiques et de l\'évaluation' },
+  { sigle: 'DGAPVS', nom: 'DGA parcours de vie solidaires' },
+  { sigle: 'SGDGAPVS', nom: 'Secrétariat général DGAPVS' },
+  { sigle: 'DA', nom: 'Direction de l\'autonomie' },
+  { sigle: 'DEF', nom: 'Direction de l\'enfance et de la famille' },
+  { sigle: 'DS', nom: 'Direction de la santé' },
+  { sigle: 'DAST', nom: 'Direction de l\'action sociale territoriale' },
+  { sigle: 'DGATEET', nom: 'DGA transition écologique et équilibres territoriaux' },
+  { sigle: 'SGDGATEET', nom: 'Secrétariat général DGATEET' },
+  { sigle: 'DI', nom: 'Direction de l\'insertion' },
+  { sigle: 'DITE', nom: 'Direction ingénierie territoriale et environnement' },
+  { sigle: 'DHL', nom: 'Direction de l\'habitat et du logement' },
+  { sigle: 'DRD', nom: 'Direction des routes départementales' },
+  { sigle: 'DGAQVS', nom: 'DGA Qualité de vie et de service' },
+  { sigle: 'DEJS', nom: 'Direction de l\'éducation, de la jeunesse et des sports' },
+  { sigle: 'DCP', nom: 'Direction de la culture et du patrimoine' },
+  { sigle: 'DAD', nom: 'Direction des archives départementales' },
+  { sigle: 'DSOP', nom: 'Direction stratégie, organisation et projets' },
+  { sigle: 'DRH', nom: 'Direction des ressources humaines' },
+  { sigle: 'DPI', nom: 'Direction du patrimoine immobilier' },
+  { sigle: 'DSI', nom: 'Direction des systèmes d\'information' },
+];
+
 async function pcfgInstallTables() {
   pcfgSetTablesStatus('Création en cours…');
   let existing;
@@ -2191,6 +2223,9 @@ async function pcfgInstallTables() {
   const actions = missing.map(t => ['AddTable', t.id, t.cols]);
   if (missing.some(t => t.id === 'Couleurs')) {
     PCFG_DEFAULT_COULEURS.forEach(c => actions.push(['AddRecord', 'Couleurs', null, c]));
+  }
+  if (missing.some(t => t.id === 'Directions')) {
+    PCFG_DEFAULT_DIRECTIONS.forEach(d => actions.push(['AddRecord', 'Directions', null, d]));
   }
   try {
     await grist.docApi.applyUserActions(actions);
