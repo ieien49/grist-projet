@@ -227,6 +227,8 @@ textarea.form-control { resize: vertical; min-height: 64px; line-height: 1.5; }
 .ms-item.sel { background: var(--surface3); }
 .ms-check { margin-left: auto; color: var(--text-primary); font-size: 11px; opacity: 0; }
 .ms-item.sel .ms-check { opacity: 1; }
+.ms-item-add { border-top: 1px solid var(--border); color: var(--text-secondary); font-weight: 500; }
+.ms-item-add:hover { color: var(--text-primary); }
 
 /* ══ KANBAN ══ */
 .kb-col { flex:1 1 0; min-width:230px; display:flex; flex-direction:column; border-radius:var(--radius); background:var(--bg); border:1px solid var(--border); max-height:100%; }
@@ -1956,6 +1958,7 @@ let frtSortCol = 'nom', frtSortDir = 1;
 let instSortCol   = 'ordre', instSortDir   = 1;
 let editingActeurId   = null;
 let editingInstanceId = null;
+let instanceModalLinkToActeur = false; // true quand la modale Instance est ouverte depuis la modale Acteur ("+ Nouvelle instance")
 let editingThemeId = null;
 let themeSortCol = 'ordre', themeSortDir = 1;  
 let selectedInstances = [];
@@ -2363,6 +2366,11 @@ function populateSelects() {
       el.addEventListener('click', e => { e.stopPropagation(); toggleMsItem(inst.id); });
       instDrop.appendChild(el);
     });
+  const instAddEl = document.createElement('div');
+  instAddEl.className = 'ms-item ms-item-add';
+  instAddEl.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Nouvelle instance</span>`;
+  instAddEl.addEventListener('click', e => { e.stopPropagation(); openInstanceModalForActeur(); });
+  instDrop.appendChild(instAddEl);
 
   // Instance filter (acteur panel)
   const fSel = document.getElementById('acteurFilterInstance');
@@ -5394,7 +5402,8 @@ async function deleteActeur(id) {
 }
 
 // ══ INSTANCE MODAL ══
-function openInstanceModal(inst = null) {
+function openInstanceModal(inst = null, linkToActeur = false) {
+  instanceModalLinkToActeur = linkToActeur;
   editingInstanceId = inst?.id ?? null;
   document.getElementById('instanceModalTitle').textContent = inst ? "Modifier l'instance" : 'Nouvelle instance';
   document.getElementById('i_saveLabel').textContent = inst ? 'Enregistrer' : 'Créer';
@@ -5406,10 +5415,19 @@ renderColorClosed(inst?.couleur || '');
   document.getElementById('instanceModalOverlay').classList.add('open');
   setTimeout(() => document.getElementById('i_sigle').focus(), 80);
 }
+// Ouverte depuis le "+ Nouvelle instance" du sélecteur d'instances de la
+// modale Acteur : la modale Instance s'ouvre par-dessus (l'acteur en cours
+// de saisie reste ouvert et intact derrière), et l'instance créée est
+// automatiquement rattachée à l'acteur dès l'enregistrement.
+function openInstanceModalForActeur() {
+  closeMsDropdown('a_instWrap','a_instDrop');
+  openInstanceModal(null, true);
+}
 function closeInstanceModal() {
   document.getElementById('instanceModalOverlay').classList.remove('open');
   closeMsDropdown('i_coulWrap','i_coulDrop');
   editingInstanceId = null;
+  instanceModalLinkToActeur = false;
 }
 function handleInstOverlay(e) { if (e.target.id==='instanceModalOverlay') closeInstanceModal(); }
 function editInstance(id) { const inst = instances[id]; if(inst) openInstanceModal(inst); }
@@ -5425,12 +5443,15 @@ async function saveInstance() {
     role:    document.getElementById('i_role').value.trim() || null,
     couleur: parseInt(document.getElementById('i_couleur').value) || 0,
   };
+  const linkToActeur = instanceModalLinkToActeur;
   try {
+    let newId = null;
     if (editingInstanceId) {
       await grist.docApi.applyUserActions([['UpdateRecord','Instances',editingInstanceId,fields]]);
       showToast('Instance mise à jour');
     } else {
-      await grist.docApi.applyUserActions([['AddRecord','Instances',null,fields]]);
+      const result = await grist.docApi.applyUserActions([['AddRecord','Instances',null,fields]]);
+      newId = result?.retValues?.[0] ?? null;
       showToast('Instance créée');
     }
     closeInstanceModal();
@@ -5438,6 +5459,11 @@ async function saveInstance() {
     populateSelects();
     renderInstances();
     renderActeurs();
+    if (linkToActeur && newId != null) {
+      // Rattache automatiquement la nouvelle instance à l'acteur en cours de saisie
+      if (!selectedInstances.map(Number).includes(Number(newId))) selectedInstances.push(Number(newId));
+      refreshMsUI();
+    }
   } catch(e) { showToast(e.message,'error'); }
 }
 
