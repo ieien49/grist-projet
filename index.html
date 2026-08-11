@@ -796,6 +796,12 @@ tr:hover .cr-del-btn { opacity: 1; }
       </div>
       <div id="pcfgTabsSection"></div>
 
+      <div class="pcfg-section-title">Sous-onglets visibles</div>
+      <div class="pcfg-hint" style="margin-bottom:8px">
+        Idem, pour les vues internes à chaque onglet.
+      </div>
+      <div id="pcfgSubTabsSection"></div>
+
       <div class="pcfg-close-row">
         <button class="btn-add-ghost" onclick="closePcfgModal()">Fermer</button>
       </div>
@@ -1977,12 +1983,38 @@ let editingInstanceId = null;
 let instanceModalLinkToActeur = false; // true quand la modale Instance est ouverte depuis la modale Acteur ("+ Nouvelle instance")
 let selectedInstanceActeurs = []; // acteurs cochés dans la modale Instance
 let hiddenTabs = []; // clés des onglets masqués (paramétrage widget)
+let hiddenSubTabs = []; // clés des sous-onglets masqués (paramétrage widget)
 const PCFG_TABS = [
   { key: 'definition', label: 'Projet' },
   { key: 'objectifs',  label: "Plan d'actions" },
   { key: 'actions',    label: 'Suivi des tâches' },
   { key: 'decisions',  label: 'Décisions' },
 ];
+// Sous-onglets pilotables : chacun garde son groupe (panel d'appartenance),
+// un sélecteur DOM pour le masquer, et comment revenir sur un onglet sûr du
+// même groupe s'il était actif au moment où on le masque.
+const PCFG_SUBTABS = [
+  { key: 'def-themes',    group: 'definition', label: 'Thème',               selector: '#panel-definition [data-sub="def-themes"]',    fallback: () => switchDefTab('def-definition') },
+  { key: 'def-documents', group: 'definition', label: 'Documents',           selector: '#panel-definition [data-sub="def-documents"]', fallback: () => switchDefTab('def-definition') },
+  { key: 'sp-gantt',      group: 'objectifs',  label: 'Gantt',                selector: '#spModeGantt',           fallback: () => switchSpMode('suivi') },
+  { key: 'sp-dessin',     group: 'objectifs',  label: 'Dessin',               selector: '#spModeFeuilleDeroute',  fallback: () => switchSpMode('suivi') },
+  { key: 'sp-dessin2',    group: 'objectifs',  label: 'Dessin2',              selector: '#spModeDessin2',         fallback: () => switchSpMode('suivi') },
+  { key: 'ac-actions',    group: 'actions',    label: 'Suivi des tâches',    selector: '#acModeActions',         fallback: () => switchAcMode('kanban') },
+  { key: 'ac-projets',    group: 'actions',    label: 'Par action',          selector: '#acModeProjets',         fallback: () => switchAcMode('kanban') },
+  { key: 'dec-suivi',     group: 'decisions',  label: 'Suivi',                selector: '#decModeSuivi',          fallback: () => pcfgFallbackDecisions('dec-suivi') },
+  { key: 'dec-odj',       group: 'decisions',  label: 'Ordre du jour',        selector: '#decModeOdj',            fallback: () => pcfgFallbackDecisions('dec-odj') },
+  { key: 'dec-cr',        group: 'decisions',  label: 'Relevé de décisions',  selector: '#decModeCompteRendu',    fallback: () => pcfgFallbackDecisions('dec-cr') },
+  { key: 'dec-pdf',       group: 'decisions',  label: 'PDF',                  selector: '#decModePdf',            fallback: () => pcfgFallbackDecisions('dec-pdf') },
+];
+// Groupes où TOUS les sous-onglets sont pilotables (aucun repli "sûr" fixe
+// comme Présentation/Feuille de route/Kanban ailleurs) : on y impose qu'il
+// en reste au moins un visible.
+const PCFG_SUBTAB_GROUPS_REQUIRE_ONE = ['decisions'];
+const PCFG_DEC_MODE_BY_KEY = { 'dec-suivi':'suivi', 'dec-odj':'odj', 'dec-cr':'compterendu', 'dec-pdf':'pdf' };
+function pcfgFallbackDecisions(excludeKey) {
+  const next = PCFG_SUBTABS.find(s => s.group==='decisions' && s.key!==excludeKey && !hiddenSubTabs.includes(s.key));
+  switchDecMode(next ? PCFG_DEC_MODE_BY_KEY[next.key] : 'suivi');
+}
 let editingThemeId = null;
 let themeSortCol = 'ordre', themeSortDir = 1;  
 let selectedInstances = [];
@@ -2336,6 +2368,7 @@ async function fetchDocFormUrl() {
 
 async function fetchHiddenTabs() {
   hiddenTabs = [];
+  hiddenSubTabs = [];
   try {
     const t = await grist.docApi.fetchTable('Parametres');
     if (t && t.cle) {
@@ -2343,8 +2376,12 @@ async function fetchHiddenTabs() {
       if (idx !== -1 && t.valeur?.[idx]) {
         try { hiddenTabs = JSON.parse(t.valeur[idx]) || []; } catch(e) { hiddenTabs = []; }
       }
+      const idx2 = t.cle.findIndex(c => c === 'sous_onglets_masques');
+      if (idx2 !== -1 && t.valeur?.[idx2]) {
+        try { hiddenSubTabs = JSON.parse(t.valeur[idx2]) || []; } catch(e) { hiddenSubTabs = []; }
+      }
     }
-  } catch(e) { hiddenTabs = []; } // table Parametres absente
+  } catch(e) { hiddenTabs = []; hiddenSubTabs = []; } // table Parametres absente
 }
 
 function applyHiddenTabs() {
@@ -2358,21 +2395,45 @@ function applyHiddenTabs() {
     const firstVisible = PCFG_TABS.find(t => !hiddenTabs.includes(t.key));
     if (firstVisible) switchTab(firstVisible.key);
   }
+  applyHiddenSubTabs();
+}
+
+function applyHiddenSubTabs() {
+  PCFG_SUBTABS.forEach(s => {
+    const el = document.querySelector(s.selector);
+    if (!el) return;
+    const hide = hiddenSubTabs.includes(s.key);
+    el.style.display = hide ? 'none' : '';
+    if (hide && el.classList.contains('active')) s.fallback();
+  });
+}
+
+async function pcfgSaveParam(cle, valeurObj) {
+  const valeur = JSON.stringify(valeurObj);
+  const t = await grist.docApi.fetchTable('Parametres');
+  const idx = t?.cle ? t.cle.findIndex(c => c === cle) : -1;
+  if (idx !== -1) {
+    await grist.docApi.applyUserActions([['UpdateRecord','Parametres',t.id[idx],{valeur}]]);
+  } else {
+    await grist.docApi.applyUserActions([['AddRecord','Parametres',null,{cle,valeur}]]);
+  }
 }
 
 async function pcfgSaveHiddenTabs(newHidden) {
   hiddenTabs = newHidden;
-  const valeur = JSON.stringify(newHidden);
   try {
-    const t = await grist.docApi.fetchTable('Parametres');
-    const idx = t?.cle ? t.cle.findIndex(c => c === 'onglets_masques') : -1;
-    if (idx !== -1) {
-      await grist.docApi.applyUserActions([['UpdateRecord','Parametres',t.id[idx],{valeur}]]);
-    } else {
-      await grist.docApi.applyUserActions([['AddRecord','Parametres',null,{cle:'onglets_masques',valeur}]]);
-    }
+    await pcfgSaveParam('onglets_masques', newHidden);
     applyHiddenTabs();
     showToast('Onglets mis à jour');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function pcfgSaveHiddenSubTabs(newHidden) {
+  hiddenSubTabs = newHidden;
+  try {
+    await pcfgSaveParam('sous_onglets_masques', newHidden);
+    applyHiddenSubTabs();
+    showToast('Sous-onglets mis à jour');
   } catch(e) { showToast(e.message, 'error'); }
 }
 
@@ -2384,6 +2445,23 @@ function pcfgRenderTabsSection() {
       <input type="checkbox" data-tabkey="${t.key}" ${hiddenTabs.includes(t.key)?'':'checked'} onchange="pcfgHandleTabCheckbox(this)">
       ${t.label}
     </label>
+  `).join('');
+
+  const subEl = document.getElementById('pcfgSubTabsSection');
+  if (!subEl) return;
+  const groupLabels = { definition: 'Projet', objectifs: "Plan d'actions", actions: 'Suivi des tâches', decisions: 'Décisions' };
+  const byGroup = {};
+  PCFG_SUBTABS.forEach(s => { (byGroup[s.group] = byGroup[s.group] || []).push(s); });
+  subEl.innerHTML = Object.keys(byGroup).map(g => `
+    <div style="margin-bottom:6px">
+      <div style="font-size:10.5px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin:6px 0 2px">${groupLabels[g]||g}</div>
+      ${byGroup[g].map(s => `
+        <label style="display:flex;align-items:center;gap:7px;padding:4px 0;font-size:12.5px;cursor:pointer">
+          <input type="checkbox" data-subkey="${s.key}" ${hiddenSubTabs.includes(s.key)?'':'checked'} onchange="pcfgHandleSubTabCheckbox(this)">
+          ${s.label}
+        </label>
+      `).join('')}
+    </div>
   `).join('');
 }
 
@@ -2398,6 +2476,24 @@ function pcfgHandleTabCheckbox(checkbox) {
     return;
   }
   pcfgSaveHiddenTabs(next);
+}
+
+function pcfgHandleSubTabCheckbox(checkbox) {
+  const key = checkbox.dataset.subkey;
+  const entry = PCFG_SUBTABS.find(s => s.key === key);
+  let next = hiddenSubTabs.filter(k => k !== key);
+  if (!checkbox.checked) next.push(key);
+  // Pour les groupes sans repli fixe (ex. Décisions), il doit rester au
+  // moins un sous-onglet visible dans le groupe.
+  if (entry && PCFG_SUBTAB_GROUPS_REQUIRE_ONE.includes(entry.group)) {
+    const groupKeys = PCFG_SUBTABS.filter(s => s.group === entry.group).map(s => s.key);
+    if (groupKeys.every(k => next.includes(k))) {
+      checkbox.checked = true;
+      showToast('Il doit rester au moins un sous-onglet visible dans ce groupe', 'error');
+      return;
+    }
+  }
+  pcfgSaveHiddenSubTabs(next);
 }
 
   
