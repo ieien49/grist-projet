@@ -789,6 +789,13 @@ tr:hover .cr-del-btn { opacity: 1; }
       </div>
       <button class="btn-add-ghost" style="width:100%;justify-content:center;margin-bottom:8px" onclick="pcfgCheckTables()">Vérifier les tables</button>
       <div id="pcfgTablesStatus" class="pcfg-hint" style="margin-bottom:4px"></div>
+
+      <div class="pcfg-section-title">Onglets visibles</div>
+      <div class="pcfg-hint" style="margin-bottom:8px">
+        Décoche un onglet pour le masquer dans ce widget (les données restent intactes, seul l'affichage change). Le réglage est commun à tous les utilisateurs du document.
+      </div>
+      <div id="pcfgTabsSection"></div>
+
       <div class="pcfg-close-row">
         <button class="btn-add-ghost" onclick="closePcfgModal()">Fermer</button>
       </div>
@@ -1969,6 +1976,13 @@ let editingActeurId   = null;
 let editingInstanceId = null;
 let instanceModalLinkToActeur = false; // true quand la modale Instance est ouverte depuis la modale Acteur ("+ Nouvelle instance")
 let selectedInstanceActeurs = []; // acteurs cochés dans la modale Instance
+let hiddenTabs = []; // clés des onglets masqués (paramétrage widget)
+const PCFG_TABS = [
+  { key: 'definition', label: 'Projet' },
+  { key: 'objectifs',  label: "Plan d'actions" },
+  { key: 'actions',    label: 'Suivi des tâches' },
+  { key: 'decisions',  label: 'Décisions' },
+];
 let editingThemeId = null;
 let themeSortCol = 'ordre', themeSortDir = 1;  
 let selectedInstances = [];
@@ -2047,6 +2061,7 @@ async function fetchActeurs() {
 function openPcfgModal() {
   document.getElementById('pcfgOv').classList.add('open');
   document.getElementById('pcfgTablesStatus').innerHTML = '';
+  pcfgRenderTabsSection();
 }
 function closePcfgModal() { document.getElementById('pcfgOv').classList.remove('open'); }
 function handlePcfgOvClick(e) { if (e.target === document.getElementById('pcfgOv')) closePcfgModal(); }
@@ -2319,6 +2334,72 @@ async function fetchDocFormUrl() {
   }
 }
 
+async function fetchHiddenTabs() {
+  hiddenTabs = [];
+  try {
+    const t = await grist.docApi.fetchTable('Parametres');
+    if (t && t.cle) {
+      const idx = t.cle.findIndex(c => c === 'onglets_masques');
+      if (idx !== -1 && t.valeur?.[idx]) {
+        try { hiddenTabs = JSON.parse(t.valeur[idx]) || []; } catch(e) { hiddenTabs = []; }
+      }
+    }
+  } catch(e) { hiddenTabs = []; } // table Parametres absente
+}
+
+function applyHiddenTabs() {
+  let activeIsHidden = false;
+  document.querySelectorAll('.tab').forEach(t => {
+    const hide = hiddenTabs.includes(t.dataset.tab);
+    t.style.display = hide ? 'none' : '';
+    if (hide && t.classList.contains('active')) activeIsHidden = true;
+  });
+  if (activeIsHidden) {
+    const firstVisible = PCFG_TABS.find(t => !hiddenTabs.includes(t.key));
+    if (firstVisible) switchTab(firstVisible.key);
+  }
+}
+
+async function pcfgSaveHiddenTabs(newHidden) {
+  hiddenTabs = newHidden;
+  const valeur = JSON.stringify(newHidden);
+  try {
+    const t = await grist.docApi.fetchTable('Parametres');
+    const idx = t?.cle ? t.cle.findIndex(c => c === 'onglets_masques') : -1;
+    if (idx !== -1) {
+      await grist.docApi.applyUserActions([['UpdateRecord','Parametres',t.id[idx],{valeur}]]);
+    } else {
+      await grist.docApi.applyUserActions([['AddRecord','Parametres',null,{cle:'onglets_masques',valeur}]]);
+    }
+    applyHiddenTabs();
+    showToast('Onglets mis à jour');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+function pcfgRenderTabsSection() {
+  const el = document.getElementById('pcfgTabsSection');
+  if (!el) return;
+  el.innerHTML = PCFG_TABS.map(t => `
+    <label style="display:flex;align-items:center;gap:7px;padding:4px 0;font-size:12.5px;cursor:pointer">
+      <input type="checkbox" data-tabkey="${t.key}" ${hiddenTabs.includes(t.key)?'':'checked'} onchange="pcfgHandleTabCheckbox(this)">
+      ${t.label}
+    </label>
+  `).join('');
+}
+
+function pcfgHandleTabCheckbox(checkbox) {
+  const key = checkbox.dataset.tabkey;
+  let next = hiddenTabs.filter(k => k !== key);
+  if (!checkbox.checked) next.push(key);
+  // Toujours garder au moins un onglet visible
+  if (next.length >= PCFG_TABS.length) {
+    checkbox.checked = true;
+    showToast('Il doit rester au moins un onglet visible', 'error');
+    return;
+  }
+  pcfgSaveHiddenTabs(next);
+}
+
   
 async function fetchRefData() {
   try {
@@ -2336,6 +2417,8 @@ async function fetchRefData() {
   await fetchThemes();
   await fetchDocuments();
   await fetchDocFormUrl();
+  await fetchHiddenTabs();
+  applyHiddenTabs();
 
   try {
     const t = await grist.docApi.fetchTable('Couleurs');
