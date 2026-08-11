@@ -2157,6 +2157,23 @@ async function pcfgCheckTables() {
   );
 }
 
+// Palette par défaut insérée à la création de la table Couleurs (pas de
+// re-remplissage si la table existe déjà, même vide).
+const PCFG_DEFAULT_COULEURS = [
+  { nom: 'Bleu',      hex: '#2F6FED' },
+  { nom: 'Vert',      hex: '#2E9E5B' },
+  { nom: 'Orange',    hex: '#E8A020' },
+  { nom: 'Rouge',     hex: '#D64545' },
+  { nom: 'Violet',    hex: '#7C5CD6' },
+  { nom: 'Rose',      hex: '#D6598B' },
+  { nom: 'Turquoise', hex: '#1FA6A0' },
+  { nom: 'Jaune',     hex: '#E0B400' },
+  { nom: 'Gris',      hex: '#6B7280' },
+  { nom: 'Marron',    hex: '#8B5E3C' },
+  { nom: 'Indigo',    hex: '#4C51BF' },
+  { nom: 'Corail',    hex: '#F2735B' },
+];
+
 async function pcfgInstallTables() {
   pcfgSetTablesStatus('Création en cours…');
   let existing;
@@ -2172,6 +2189,9 @@ async function pcfgInstallTables() {
     return;
   }
   const actions = missing.map(t => ['AddTable', t.id, t.cols]);
+  if (missing.some(t => t.id === 'Couleurs')) {
+    PCFG_DEFAULT_COULEURS.forEach(c => actions.push(['AddRecord', 'Couleurs', null, c]));
+  }
   try {
     await grist.docApi.applyUserActions(actions);
     pcfgSetTablesStatus(`✓ Table${missing.length>1?'s':''} créée${missing.length>1?'s':''} : ${missing.map(t=>t.label||t.id).join(', ')}.<br>Recharge le widget pour peupler l'application.`);
