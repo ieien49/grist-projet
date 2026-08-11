@@ -965,7 +965,10 @@ tr:hover .cr-del-btn { opacity: 1; }
               <option value="">Tous les thèmes</option>
             </select>
             <div class="spacer"></div>
-            <button class="btn-add" onclick="openDocumentForm()">
+            <button class="btn-add-ghost" id="documentExternalFormBtn" onclick="openDocumentForm()" style="display:none">
+              Via formulaire externe
+            </button>
+            <button class="btn-add" onclick="openDocumentModal()">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Ajouter un document
             </button>
@@ -973,6 +976,41 @@ tr:hover .cr-del-btn { opacity: 1; }
           <div class="table-scroll">
             <div id="documentTable"><div class="loading"><div class="spinner"></div> Chargement…</div></div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ MODAL AJOUT DOCUMENT (upload direct) ══ -->
+    <div class="modal-overlay" id="documentModalOverlay" onclick="if(event.target.id==='documentModalOverlay')closeDocumentModal()">
+      <div class="modal">
+        <div class="modal-head">
+          <h2>Ajouter un document</h2>
+          <button class="modal-close" onclick="closeDocumentModal()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group full">
+              <label class="field-label">Titre</label>
+              <input type="text" class="form-control" id="doc_titre" placeholder="Nom du document">
+            </div>
+            <div class="form-group full">
+              <label class="field-label">Thème</label>
+              <select class="form-control" id="doc_theme">
+                <option value="">— Aucun —</option>
+              </select>
+            </div>
+            <div class="form-group full">
+              <label class="field-label">Fichier(s) PDF</label>
+              <input type="file" class="form-control" id="doc_files" accept="application/pdf" multiple>
+            </div>
+          </div>
+          <div class="pcfg-hint" id="docUploadStatus" style="margin-top:8px"></div>
+        </div>
+        <div class="modal-foot">
+          <button class="btn-ghost" onclick="closeDocumentModal()">Annuler</button>
+          <button class="btn-primary" id="docUploadBtn" onclick="saveDocumentUpload()">Ajouter</button>
         </div>
       </div>
     </div>
@@ -2304,6 +2342,8 @@ async function fetchDocFormUrl() {
   } catch(e) {
     docFormUrl = null; // table Parametres absente
   }
+  const extBtn = document.getElementById('documentExternalFormBtn');
+  if (extBtn) extBtn.style.display = docFormUrl ? 'flex' : 'none';
 }
 
   
@@ -5251,6 +5291,69 @@ function openDocumentForm() {
     return;
   }
   window.open(docFormUrl, '_blank');
+}
+
+function openDocumentModal() {
+  document.getElementById('doc_titre').value = '';
+  document.getElementById('doc_files').value = '';
+  document.getElementById('docUploadStatus').textContent = '';
+  const sel = document.getElementById('doc_theme');
+  const themeNames = [...new Set(allThemesList.map(t => t.nom).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'fr'));
+  sel.innerHTML = '<option value="">— Aucun —</option>' + themeNames.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  document.getElementById('documentModalOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('doc_titre').focus(), 80);
+}
+function closeDocumentModal() {
+  document.getElementById('documentModalOverlay').classList.remove('open');
+}
+
+// Upload direct depuis le widget : jeton d'accès en écriture + POST REST
+// vers /attachments, puis AddRecord sur Documents avec les id renvoyés.
+// Attention ACL : si le document a des règles d'accès (ACL) restrictives,
+// ce flux par jeton peut échouer ou attribuer l'ajout à un utilisateur
+// anonyme selon la version de Grist — teste avec ton document réel avant de
+// retirer le formulaire externe en solution de secours.
+async function saveDocumentUpload() {
+  const titre = document.getElementById('doc_titre').value.trim();
+  const theme = document.getElementById('doc_theme').value || null;
+  const files = Array.from(document.getElementById('doc_files').files || []);
+  const statusEl = document.getElementById('docUploadStatus');
+  const btn = document.getElementById('docUploadBtn');
+
+  if (!titre) { showToast('Le titre est requis', 'error'); return; }
+  if (!files.length) { showToast('Sélectionne au moins un fichier', 'error'); return; }
+
+  btn.disabled = true;
+  statusEl.textContent = 'Envoi en cours…';
+  try {
+    const tokenInfo = await grist.docApi.getAccessToken({ readOnly: false });
+    const attachmentIds = [];
+    for (const file of files) {
+      const formData = new FormData();
+      formData.append('upload', file, file.name);
+      const response = await fetch(`${tokenInfo.baseUrl}/attachments?auth=${tokenInfo.token}`, {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      });
+      if (!response.ok) throw new Error(`Échec de l'envoi de "${file.name}" (${response.status})`);
+      const result = await response.json();
+      attachmentIds.push(...result);
+    }
+    await grist.docApi.applyUserActions([['AddRecord', 'Documents', null, {
+      titre, theme, pdf: ['L', ...attachmentIds],
+    }]]);
+    closeDocumentModal();
+    showToast('Document ajouté');
+    await fetchDocuments();
+    populateDocumentFilters();
+    renderDocuments();
+  } catch (e) {
+    statusEl.textContent = 'Erreur : ' + e.message;
+    showToast(e.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 function populateDocumentFilters() {
