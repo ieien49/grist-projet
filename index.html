@@ -1642,6 +1642,15 @@ tr:hover .cr-del-btn { opacity: 1; }
   </div>
   <input type="hidden" id="i_couleur">
 </div>
+        <div class="form-group full">
+          <label class="field-label">Acteurs</label>
+          <div class="ms-wrap" id="i_actWrap">
+            <div class="ms-tags" id="i_actTags" onclick="toggleMsDropdown('i_actWrap','i_actDrop')">
+              <span class="ms-placeholder" id="i_actPlaceholder">— Sélectionner —</span>
+            </div>
+            <div class="ms-dropdown" id="i_actDrop"></div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="modal-foot">
@@ -1959,6 +1968,7 @@ let instSortCol   = 'ordre', instSortDir   = 1;
 let editingActeurId   = null;
 let editingInstanceId = null;
 let instanceModalLinkToActeur = false; // true quand la modale Instance est ouverte depuis la modale Acteur ("+ Nouvelle instance")
+let selectedInstanceActeurs = []; // acteurs cochés dans la modale Instance
 let editingThemeId = null;
 let themeSortCol = 'ordre', themeSortDir = 1;  
 let selectedInstances = [];
@@ -2371,6 +2381,19 @@ function populateSelects() {
   instAddEl.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>Nouvelle instance</span>`;
   instAddEl.addEventListener('click', e => { e.stopPropagation(); openInstanceModalForActeur(); });
   instDrop.appendChild(instAddEl);
+
+  // Acteurs multiselect (instance modal)
+  const actDrop = document.getElementById('i_actDrop');
+  actDrop.innerHTML = '';
+  [...allActors].sort((a,b) => (a.nom||'').localeCompare(b.nom||'', 'fr'))
+    .forEach(a => {
+      const el = document.createElement('div');
+      el.className = 'ms-item';
+      el.dataset.id = a.id;
+      el.innerHTML = `<span>${esc(a.nom || '(sans nom)')}</span><span class="ms-check">✓</span>`;
+      el.addEventListener('click', e => { e.stopPropagation(); toggleInstActeurItem(a.id); });
+      actDrop.appendChild(el);
+    });
 
   // Instance filter (acteur panel)
   const fSel = document.getElementById('acteurFilterInstance');
@@ -5412,6 +5435,10 @@ function openInstanceModal(inst = null, linkToActeur = false) {
   document.getElementById('i_role').value    = inst?.role    || '';
   document.getElementById('i_couleur').value = inst?.couleur || '';
 renderColorClosed(inst?.couleur || '');
+  selectedInstanceActeurs = inst
+    ? allActors.filter(a => getRefList(a.instance).map(Number).includes(Number(inst.id))).map(a => a.id)
+    : [];
+  refreshInstActeursUI();
   document.getElementById('instanceModalOverlay').classList.add('open');
   setTimeout(() => document.getElementById('i_sigle').focus(), 80);
 }
@@ -5426,8 +5453,10 @@ function openInstanceModalForActeur() {
 function closeInstanceModal() {
   document.getElementById('instanceModalOverlay').classList.remove('open');
   closeMsDropdown('i_coulWrap','i_coulDrop');
+  closeMsDropdown('i_actWrap','i_actDrop');
   editingInstanceId = null;
   instanceModalLinkToActeur = false;
+  selectedInstanceActeurs = [];
 }
 function handleInstOverlay(e) { if (e.target.id==='instanceModalOverlay') closeInstanceModal(); }
 function editInstance(id) { const inst = instances[id]; if(inst) openInstanceModal(inst); }
@@ -5444,7 +5473,9 @@ async function saveInstance() {
     couleur: parseInt(document.getElementById('i_couleur').value) || 0,
   };
   const linkToActeur = instanceModalLinkToActeur;
+  const chosenActeurIds = selectedInstanceActeurs.map(Number);
   try {
+    let instId = editingInstanceId;
     let newId = null;
     if (editingInstanceId) {
       await grist.docApi.applyUserActions([['UpdateRecord','Instances',editingInstanceId,fields]]);
@@ -5452,9 +5483,26 @@ async function saveInstance() {
     } else {
       const result = await grist.docApi.applyUserActions([['AddRecord','Instances',null,fields]]);
       newId = result?.retValues?.[0] ?? null;
+      instId = newId;
       showToast('Instance créée');
     }
+
+    // Répercute les attributions/retraits d'acteurs pour cette instance
+    if (instId != null) {
+      const acteurActions = [];
+      allActors.forEach(a => {
+        const current = getRefList(a.instance).map(Number);
+        const has = current.includes(Number(instId));
+        const wants = chosenActeurIds.includes(a.id);
+        if (has === wants) return;
+        const next = wants ? [...current, Number(instId)] : current.filter(id => id !== Number(instId));
+        acteurActions.push(['UpdateRecord','Acteurs',a.id,{instance: next.length ? ['L', ...next] : null}]);
+      });
+      if (acteurActions.length) await grist.docApi.applyUserActions(acteurActions);
+    }
+
     closeInstanceModal();
+    await fetchActeurs();
     await fetchInstances();
     populateSelects();
     renderInstances();
@@ -5512,6 +5560,33 @@ function refreshMsUI() {
   }
   if (drop) drop.querySelectorAll('.ms-item').forEach(item => {
     item.classList.toggle('sel', selectedInstances.map(Number).includes(parseInt(item.dataset.id)));
+  });
+}
+function toggleInstActeurItem(id) {
+  const nid = parseInt(id);
+  const idx = selectedInstanceActeurs.map(Number).indexOf(nid);
+  if (idx===-1) selectedInstanceActeurs.push(nid); else selectedInstanceActeurs.splice(idx,1);
+  refreshInstActeursUI();
+}
+function refreshInstActeursUI() {
+  const tagsEl = document.getElementById('i_actTags');
+  const ph     = document.getElementById('i_actPlaceholder');
+  const drop   = document.getElementById('i_actDrop');
+  if (!tagsEl || !drop) return;
+  tagsEl.querySelectorAll('.ms-tag').forEach(el=>el.remove());
+  if (!selectedInstanceActeurs.length) { ph.style.display=''; }
+  else {
+    ph.style.display='none';
+    selectedInstanceActeurs.forEach(id => {
+      const a = allActors.find(x => x.id === id); if(!a) return;
+      const tag = document.createElement('span');
+      tag.className='ms-tag';
+      tag.innerHTML=`${esc(a.nom||'(sans nom)')}<span class="ms-tag-x" onclick="event.stopPropagation();toggleInstActeurItem(${id})">×</span>`;
+      tagsEl.appendChild(tag);
+    });
+  }
+  drop.querySelectorAll('.ms-item').forEach(item => {
+    item.classList.toggle('sel', selectedInstanceActeurs.map(Number).includes(parseInt(item.dataset.id)));
   });
 }
 function toggleMsDropdown(wrapId, dropId) {
