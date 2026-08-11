@@ -5026,7 +5026,7 @@ function renderActeurs() {
     const dirObj    = directions[a.direction];
     const instObjs  = getRefList(a.instance).map(v=>instances[v]||instances[resolveInstId(v)]).filter(Boolean);
     const rc        = roleClass(a.role);
-    return `<tr>
+    return `<tr ondblclick="if(!event.target.closest('.row-actions'))editActeur(${a.id})">
       <td><div class="actor-cell"><div class="avatar" style="background:${avatarBg}">${initials}</div><span class="actor-name">${esc(a.nom||'—')}</span></div></td>
       <td>${a.role?`<span class="badge ${rc}">${esc(a.role)}</span>`:'—'}</td>
       <td>${dirObj?`<span style="font-size:12.5px;color:var(--text-secondary)">${esc(dirObj.sigle||dirObj.nom)}</span>`:'—'}</td>
@@ -5086,7 +5086,7 @@ function renderInstances() {
     const colorCell = hex
       ? `<div class="inst-color-cell"><span class="inst-row-color" style="background:${hex}"></span><span class="inst-color-label">${esc(colorName || hex)}</span></div>`
       : '—';
-    return `<tr>
+    return `<tr ondblclick="if(!event.target.closest('.row-actions'))editInstance(${inst.id})">
     <td style="padding:7px 8px"><span class="cdot" style="background:${hex||'#ccc'};width:7px;height:7px"></span></td>
     <td><span class="inst-sigle" style="font-weight:600;font-size:12.5px">${esc(inst.sigle||'—')}</span></td>
     <td>${esc(inst.nom||'—')}</td>
