@@ -767,6 +767,10 @@ tr:hover .cr-del-btn { opacity: 1; }
 .pcfg-tabrow-move button:disabled { opacity: .3; cursor: default; }
 .pcfg-tabrow-input { flex: 1; padding: 4px 7px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface2); font-family: var(--font); font-size: 12.5px; color: var(--text-primary); outline: none; }
 .pcfg-tabrow-input:focus { border-color: var(--text-primary); }
+.pcfg-default-radio { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-muted); white-space: nowrap; cursor: pointer; flex-shrink: 0; }
+.pcfg-default-radio input[type="radio"] { margin: 0; cursor: pointer; }
+.pcfg-default-radio input[type="radio"]:disabled { cursor: default; }
+.pcfg-default-radio:has(input:checked) { color: var(--text-primary); font-weight: 500; }
 .pcfg-guest-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 10px; background: var(--surface2); }
 .pcfg-guest-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .pcfg-guest-del { border: none; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 14px; padding: 2px 6px; }
@@ -2024,6 +2028,7 @@ let tabLabels = {}; // libellés personnalisés des onglets { key: 'Libellé' } 
 let tabOrder = []; // ordre personnalisé des onglets (paramétrage widget)
 let subTabLabels = {}; // libellés personnalisés des sous-onglets { key: 'Libellé' } (paramétrage widget)
 let subTabOrder = {}; // ordre personnalisé des sous-onglets, par groupe { group: [keys...] } (paramétrage widget)
+let subTabDefault = {}; // sous-onglet ouvert par défaut, par groupe { group: key } (paramétrage widget)
 let guestProfiles = []; // vues partagées : [{ slug, label, tabs:[...] }]
 const urlParams = new URLSearchParams(location.search);
 const guestSlug = urlParams.get('vue');
@@ -2452,6 +2457,7 @@ async function fetchHiddenTabs() {
   tabOrder = [];
   subTabLabels = {};
   subTabOrder = {};
+  subTabDefault = {};
   guestProfiles = [];
   try {
     const t = await grist.docApi.fetchTable('Parametres');
@@ -2471,8 +2477,10 @@ async function fetchHiddenTabs() {
       if (raw6) { try { subTabLabels = JSON.parse(raw6) || {}; } catch(e) { subTabLabels = {}; } }
       const raw7 = get('ordre_sous_onglets');
       if (raw7) { try { subTabOrder = JSON.parse(raw7) || {}; } catch(e) { subTabOrder = {}; } }
+      const raw8 = get('sous_onglet_defaut');
+      if (raw8) { try { subTabDefault = JSON.parse(raw8) || {}; } catch(e) { subTabDefault = {}; } }
     }
-  } catch(e) { hiddenTabs = []; hiddenSubTabs = []; tabLabels = {}; tabOrder = []; subTabLabels = {}; subTabOrder = {}; guestProfiles = []; } // table Parametres absente
+  } catch(e) { hiddenTabs = []; hiddenSubTabs = []; tabLabels = {}; tabOrder = []; subTabLabels = {}; subTabOrder = {}; subTabDefault = {}; guestProfiles = []; } // table Parametres absente
 }
 
 function getTabOrder() {
@@ -2506,6 +2514,21 @@ function getSubTabOrder(group) {
   const saved = (subTabOrder[group] || []).filter(k => def.includes(k));
   def.forEach(k => { if (!saved.includes(k)) saved.push(k); });
   return saved;
+}
+
+function getSubTabDefault(group) {
+  const groupKeys = PCFG_SUBTABS.filter(s => s.group === group).map(s => s.key);
+  const visibleKeys = groupKeys.filter(k => !hiddenSubTabs.includes(k) && (!guestProfile || pcfgGuestSubtabs(guestProfile).includes(k)));
+  const wanted = subTabDefault[group];
+  if (wanted && visibleKeys.includes(wanted)) return wanted;
+  // Repli : premier sous-onglet visible dans l'ordre configuré du groupe.
+  return getSubTabOrder(group).find(k => visibleKeys.includes(k)) || visibleKeys[0];
+}
+
+function pcfgActivateDefaultSubTab(group) {
+  const key = getSubTabDefault(group);
+  const entry = key && PCFG_SUBTABS.find(s => s.key === key);
+  if (entry) entry.activate();
 }
 
 function applySubTabOrder() {
@@ -2629,6 +2652,10 @@ function pcfgRenderTabsSection() {
         </div>
         <input type="checkbox" data-subkey="${s.key}" ${hiddenSubTabs.includes(s.key)?'':'checked'} onchange="pcfgHandleSubTabCheckbox(this)">
         <input type="text" class="pcfg-tabrow-input" placeholder="${esc(s.label)}" value="${esc(subTabLabels[s.key]||'')}" onchange="pcfgSetSubTabLabel('${s.key}', this.value)">
+        <label class="pcfg-default-radio" title="Sous-onglet ouvert par défaut">
+          <input type="radio" name="pcfg-default-${g}" ${getSubTabDefault(g) === s.key ? 'checked' : ''} ${hiddenSubTabs.includes(s.key) ? 'disabled' : ''} onchange="pcfgSetSubTabDefault('${g}', '${s.key}')">
+          Défaut
+        </label>
       </div>`;
     }).join('');
     return `
@@ -2707,6 +2734,15 @@ function pcfgMoveSubTab(key, dir) {
   [order[i], order[j]] = [order[j], order[i]];
   subTabOrder[entry.group] = order;
   pcfgSaveSubTabOrderAndLabels();
+}
+
+async function pcfgSetSubTabDefault(group, key) {
+  subTabDefault[group] = key;
+  try {
+    await pcfgSaveParam('sous_onglet_defaut', subTabDefault);
+    pcfgRenderTabsSection();
+    showToast('Sous-onglet par défaut mis à jour');
+  } catch(e) { showToast(e.message, 'error'); }
 }
 
 function pcfgSetSubTabLabel(key, value) {
@@ -3168,22 +3204,16 @@ function renderProjetColorClosed(id) {
 function switchTab(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
   document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + name));
+  // Active le sous-onglet configuré comme défaut pour ce groupe (paramétrage
+  // widget) ; à défaut de configuration, retombe sur le premier sous-onglet
+  // visible du groupe.
+  pcfgActivateDefaultSubTab(name);
   if (name === 'definition') {
     renderDefinition();
     renderKpi();
   }
-  if (name === 'objectifs') {
-    const activeSub = document.querySelector('#panel-objectifs .cadre-subtab.active');
-    if (activeSub?.id === 'spModeGantt') { populateGanttProjetFilters(); renderGanttProjet(); }
-    else if (activeSub?.id === 'spModeFeuilleDeroute') { populateFeuillerouteFilters(); renderFeuilleDeroute(); }
-    else { populateSuiviFrtFilters(); renderSuiviFeuilleRoute(); }
-  }
-  if (name === 'decisions') {
-    switchDecMode('suivi');
-  }
   if (name === 'actions') {
     populateActionSelects();
-    renderActions();
   }
 }
 
