@@ -815,7 +815,7 @@ tr:hover .cr-del-btn { opacity: 1; }
 
       <div class="pcfg-section-title">Sous-onglets visibles</div>
       <div class="pcfg-hint" style="margin-bottom:8px">
-        Idem, pour les vues internes à chaque onglet.
+        Idem, pour les vues internes à chaque onglet : visibilité, libellé et ordre (au sein de son groupe).
       </div>
       <div id="pcfgSubTabsSection"></div>
 
@@ -860,24 +860,24 @@ tr:hover .cr-del-btn { opacity: 1; }
       <nav class="cadre-subnav">
         <div class="cadre-subtab active" data-sub="def-definition" onclick="switchDefTab('def-definition')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-          Présentation
+          <span class="subtab-label">Présentation</span>
         </div>
         
         <div class="cadre-subtab" data-sub="def-acteurs" onclick="switchDefTab('def-acteurs')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></svg>
-          Acteurs
+          <span class="subtab-label">Acteurs</span>
         </div>
         <div class="cadre-subtab" data-sub="def-instances" onclick="switchDefTab('def-instances')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
-          Instances
+          <span class="subtab-label">Instances</span>
         </div>
         <div class="cadre-subtab" data-sub="def-themes" onclick="switchDefTab('def-themes')">
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3H4a1 1 0 0 0-1 1v5.59a2 2 0 0 0 .59 1.41l9.58 9.58a2 2 0 0 0 2.83 0l5.59-5.59a2 2 0 0 0 0-2.83Z"/><circle cx="7.5" cy="7.5" r="1"/></svg>
-  Thèmes
+  <span class="subtab-label">Thèmes</span>
 </div>
         <div class="cadre-subtab" data-sub="def-documents" onclick="switchDefTab('def-documents')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-          Documents
+          <span class="subtab-label">Documents</span>
         </div>
 
         
@@ -1021,19 +1021,19 @@ tr:hover .cr-del-btn { opacity: 1; }
       <nav class="cadre-subnav">
         <div class="cadre-subtab active" id="spModeSuivi" data-sub="sp-suivi" onclick="switchSpMode('suivi')">
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-  Feuille de route
+  <span class="subtab-label">Feuille de route</span>
 </div>
 <div class="cadre-subtab" id="spModeGantt" data-sub="sp-gantt" onclick="switchSpMode('gantt')">
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="15" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="12" y2="18"/></svg>
-  Gantt
+  <span class="subtab-label">Gantt</span>
 </div>
 <div class="cadre-subtab" id="spModeFeuilleDeroute" data-sub="sp-feuilleroute" onclick="switchSpMode('feuilleroute')">
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="6" height="10" rx="1"/><rect x="9" y="4" width="6" height="13" rx="1"/><rect x="16" y="9" width="6" height="8" rx="1"/></svg>
-  Dessin
+  <span class="subtab-label">Dessin</span>
 </div>
 <div class="cadre-subtab" id="spModeDessin2" data-sub="sp-dessin2" onclick="switchSpMode('dessin2')">
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 12h8M12 8v8"/></svg>
-  Dessin2
+  <span class="subtab-label">Dessin2</span>
 </div>
         
         
@@ -1224,19 +1224,19 @@ tr:hover .cr-del-btn { opacity: 1; }
       <nav class="cadre-subnav">
         <div class="cadre-subtab active" id="decModeSuivi" data-sub="suivi" onclick="switchDecMode('suivi')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-          Suivi
+          <span class="subtab-label">Suivi</span>
         </div>
         <div class="cadre-subtab" id="decModeOdj" data-sub="odj" onclick="switchDecMode('odj')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-          Ordre du jour
+          <span class="subtab-label">Ordre du jour</span>
         </div>
         <div class="cadre-subtab" id="decModeCompteRendu" data-sub="compterendu" onclick="switchDecMode('compterendu')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          Relevés de décisions
+          <span class="subtab-label">Relevés de décisions</span>
         </div>
         <div class="cadre-subtab" id="decModePdf" data-sub="pdf" onclick="switchDecMode('pdf')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-          PDF
+          <span class="subtab-label">PDF</span>
         </div>
         <!-- Contrôles suivi intégrés dans la subnav — masqués sur les autres modes -->
         <div class="subnav-spacer" id="decToolbarSuivi"></div>
@@ -1420,15 +1420,15 @@ tr:hover .cr-del-btn { opacity: 1; }
       <nav class="cadre-subnav">
         <div class="cadre-subtab active" id="acModeKanban" data-sub="kanban" onclick="switchAcMode('kanban')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="12" rx="1"/><rect x="17" y="3" width="5" height="15" rx="1"/></svg>
-          Kanban
+          <span class="subtab-label">Kanban</span>
         </div>
         <div class="cadre-subtab" id="acModeActions" data-sub="actions" onclick="switchAcMode('actions')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-          Suivi des tâches
+          <span class="subtab-label">Suivi des tâches</span>
         </div>
         <div class="cadre-subtab" id="acModeProjets" data-sub="projets" onclick="switchAcMode('projets')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-          Par action
+          <span class="subtab-label">Par action</span>
         </div>
         
 
@@ -2010,6 +2010,8 @@ let hiddenTabs = []; // clés des onglets masqués (paramétrage widget)
 let hiddenSubTabs = []; // clés des sous-onglets masqués (paramétrage widget)
 let tabLabels = {}; // libellés personnalisés des onglets { key: 'Libellé' } (paramétrage widget)
 let tabOrder = []; // ordre personnalisé des onglets (paramétrage widget)
+let subTabLabels = {}; // libellés personnalisés des sous-onglets { key: 'Libellé' } (paramétrage widget)
+let subTabOrder = {}; // ordre personnalisé des sous-onglets, par groupe { group: [keys...] } (paramétrage widget)
 let guestProfiles = []; // vues partagées : [{ slug, label, tabs:[...] }]
 const urlParams = new URLSearchParams(location.search);
 const guestSlug = urlParams.get('vue');
@@ -2039,9 +2041,19 @@ const PCFG_SUBTABS = [
   { key: 'ac-projets',     group: 'actions',    label: 'Par action',          selector: '#acModeProjets',         activate: () => switchAcMode('projets') },
   { key: 'dec-suivi',      group: 'decisions',  label: 'Suivi',                selector: '#decModeSuivi',          activate: () => switchDecMode('suivi') },
   { key: 'dec-odj',        group: 'decisions',  label: 'Ordre du jour',        selector: '#decModeOdj',            activate: () => switchDecMode('odj') },
-  { key: 'dec-cr',         group: 'decisions',  label: 'Relevé de décisions',  selector: '#decModeCompteRendu',    activate: () => switchDecMode('compterendu') },
+  { key: 'dec-cr',         group: 'decisions',  label: 'Relevés de décisions', selector: '#decModeCompteRendu',    activate: () => switchDecMode('compterendu') },
   { key: 'dec-pdf',        group: 'decisions',  label: 'PDF',                  selector: '#decModePdf',            activate: () => switchDecMode('pdf') },
 ];
+// Conteneur DOM de la sous-navigation de chaque groupe, et élément-ancre
+// avant lequel réinsérer les sous-onglets réordonnés (le spacer qui pousse
+// les contrôles à droite — absent pour le groupe "definition", d'où le
+// repli sur null, qui revient à ajouter en fin de conteneur).
+const PCFG_SUBNAV_CONTAINER = {
+  definition: '#panel-definition .cadre-subnav',
+  objectifs:  '#panel-objectifs .cadre-subnav',
+  actions:    '#panel-actions .cadre-subnav',
+  decisions:  '#panel-decisions .cadre-subnav',
+};
 // Chaque groupe doit garder au moins un sous-onglet visible : quand celui
 // actif se fait masquer, on bascule sur un autre sous-onglet visible du
 // même groupe.
@@ -2406,6 +2418,8 @@ async function fetchHiddenTabs() {
   hiddenSubTabs = [];
   tabLabels = {};
   tabOrder = [];
+  subTabLabels = {};
+  subTabOrder = {};
   guestProfiles = [];
   try {
     const t = await grist.docApi.fetchTable('Parametres');
@@ -2421,8 +2435,12 @@ async function fetchHiddenTabs() {
       if (raw4) { try { tabOrder = JSON.parse(raw4) || []; } catch(e) { tabOrder = []; } }
       const raw5 = get('vues_partagees');
       if (raw5) { try { guestProfiles = JSON.parse(raw5) || []; } catch(e) { guestProfiles = []; } }
+      const raw6 = get('libelles_sous_onglets');
+      if (raw6) { try { subTabLabels = JSON.parse(raw6) || {}; } catch(e) { subTabLabels = {}; } }
+      const raw7 = get('ordre_sous_onglets');
+      if (raw7) { try { subTabOrder = JSON.parse(raw7) || {}; } catch(e) { subTabOrder = {}; } }
     }
-  } catch(e) { hiddenTabs = []; hiddenSubTabs = []; tabLabels = {}; tabOrder = []; guestProfiles = []; } // table Parametres absente
+  } catch(e) { hiddenTabs = []; hiddenSubTabs = []; tabLabels = {}; tabOrder = []; subTabLabels = {}; subTabOrder = {}; guestProfiles = []; } // table Parametres absente
 }
 
 function getTabOrder() {
@@ -2444,6 +2462,38 @@ function applyTabLabels() {
   PCFG_TABS.forEach(t => {
     const el = document.querySelector(`.tab[data-tab="${t.key}"] .tab-label`);
     if (el) el.textContent = tabLabels[t.key] || t.label;
+  });
+}
+
+function defaultSubTabOrder(group) {
+  return PCFG_SUBTABS.filter(s => s.group === group).map(s => s.key);
+}
+
+function getSubTabOrder(group) {
+  const def = defaultSubTabOrder(group);
+  const saved = (subTabOrder[group] || []).filter(k => def.includes(k));
+  def.forEach(k => { if (!saved.includes(k)) saved.push(k); });
+  return saved;
+}
+
+function applySubTabOrder() {
+  Object.keys(PCFG_SUBNAV_CONTAINER).forEach(group => {
+    const container = document.querySelector(PCFG_SUBNAV_CONTAINER[group]);
+    if (!container) return;
+    const anchor = container.querySelector('.subnav-spacer') || null;
+    getSubTabOrder(group).forEach(key => {
+      const entry = PCFG_SUBTABS.find(s => s.key === key);
+      const el = entry && document.querySelector(entry.selector);
+      if (el) container.insertBefore(el, anchor);
+    });
+  });
+}
+
+function applySubTabLabels() {
+  PCFG_SUBTABS.forEach(s => {
+    const el = document.querySelector(s.selector);
+    const labelEl = el && el.querySelector('.subtab-label');
+    if (labelEl) labelEl.textContent = subTabLabels[s.key] || s.label;
   });
 }
 
@@ -2479,6 +2529,8 @@ function applyHiddenSubTabs() {
     el.style.display = hide ? 'none' : '';
     if (hide && el.classList.contains('active')) pcfgFallbackForGroup(s.group, s.key);
   });
+  applySubTabLabels();
+  applySubTabOrder();
 }
 
 async function pcfgSaveParam(cle, valeurObj) {
@@ -2532,19 +2584,27 @@ function pcfgRenderTabsSection() {
   const subEl = document.getElementById('pcfgSubTabsSection');
   if (!subEl) return;
   const groupLabels = { definition: 'Projet', objectifs: "Plan d'actions", actions: 'Suivi des tâches', decisions: 'Décisions' };
-  const byGroup = {};
-  PCFG_SUBTABS.forEach(s => { (byGroup[s.group] = byGroup[s.group] || []).push(s); });
-  subEl.innerHTML = Object.keys(byGroup).map(g => `
+  subEl.innerHTML = Object.keys(groupLabels).map(g => {
+    const order = getSubTabOrder(g);
+    const rows = order.map((key, i) => {
+      const s = PCFG_SUBTABS.find(x => x.key === key);
+      if (!s) return '';
+      return `
+      <div class="pcfg-tabrow" data-subtab="${s.key}">
+        <div class="pcfg-tabrow-move">
+          <button onclick="pcfgMoveSubTab('${s.key}',-1)" ${i===0?'disabled':''}>▲</button>
+          <button onclick="pcfgMoveSubTab('${s.key}',1)" ${i===order.length-1?'disabled':''}>▼</button>
+        </div>
+        <input type="checkbox" data-subkey="${s.key}" ${hiddenSubTabs.includes(s.key)?'':'checked'} onchange="pcfgHandleSubTabCheckbox(this)">
+        <input type="text" class="pcfg-tabrow-input" placeholder="${esc(s.label)}" value="${esc(subTabLabels[s.key]||'')}" onchange="pcfgSetSubTabLabel('${s.key}', this.value)">
+      </div>`;
+    }).join('');
+    return `
     <div style="margin-bottom:6px">
-      <div style="font-size:10.5px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin:6px 0 2px">${groupLabels[g]||g}</div>
-      ${byGroup[g].map(s => `
-        <label style="display:flex;align-items:center;gap:7px;padding:4px 0;font-size:12.5px;cursor:pointer">
-          <input type="checkbox" data-subkey="${s.key}" ${hiddenSubTabs.includes(s.key)?'':'checked'} onchange="pcfgHandleSubTabCheckbox(this)">
-          ${s.label}
-        </label>
-      `).join('')}
-    </div>
-  `).join('');
+      <div style="font-size:10.5px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin:6px 0 2px">${groupLabels[g]}</div>
+      ${rows}
+    </div>`;
+  }).join('');
 }
 
 function pcfgHandleTabCheckbox(checkbox) {
@@ -2601,6 +2661,35 @@ async function pcfgSaveOrderAndLabels() {
     applyHiddenTabs();
     pcfgRenderTabsSection();
     showToast('Onglets mis à jour');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+// ── Ordre et libellés des sous-onglets ──
+function pcfgMoveSubTab(key, dir) {
+  const entry = PCFG_SUBTABS.find(s => s.key === key);
+  if (!entry) return;
+  const order = getSubTabOrder(entry.group);
+  const i = order.indexOf(key);
+  const j = i + dir;
+  if (j < 0 || j >= order.length) return;
+  [order[i], order[j]] = [order[j], order[i]];
+  subTabOrder[entry.group] = order;
+  pcfgSaveSubTabOrderAndLabels();
+}
+
+function pcfgSetSubTabLabel(key, value) {
+  const v = (value || '').trim();
+  if (v) subTabLabels[key] = v; else delete subTabLabels[key];
+  pcfgSaveSubTabOrderAndLabels();
+}
+
+async function pcfgSaveSubTabOrderAndLabels() {
+  try {
+    await pcfgSaveParam('ordre_sous_onglets', subTabOrder);
+    await pcfgSaveParam('libelles_sous_onglets', subTabLabels);
+    applyHiddenSubTabs();
+    pcfgRenderTabsSection();
+    showToast('Sous-onglets mis à jour');
   } catch(e) { showToast(e.message, 'error'); }
 }
 
