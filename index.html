@@ -2070,7 +2070,9 @@ const PCFG_SUBNAV_CONTAINER = {
 // actif se fait masquer, on bascule sur un autre sous-onglet visible du
 // même groupe.
 function pcfgFallbackForGroup(group, excludeKey) {
-  const next = PCFG_SUBTABS.find(s => s.group === group && s.key !== excludeKey && !hiddenSubTabs.includes(s.key));
+  const next = PCFG_SUBTABS.find(s => s.group === group && s.key !== excludeKey
+    && !hiddenSubTabs.includes(s.key)
+    && (!guestProfile || pcfgGuestSubtabs(guestProfile).includes(s.key)));
   if (next) next.activate();
 }
 let editingThemeId = null;
@@ -2555,7 +2557,7 @@ function applyHiddenSubTabs() {
   PCFG_SUBTABS.forEach(s => {
     const el = document.querySelector(s.selector);
     if (!el) return;
-    const hide = hiddenSubTabs.includes(s.key);
+    const hide = hiddenSubTabs.includes(s.key) || (guestProfile && !pcfgGuestSubtabs(guestProfile).includes(s.key));
     el.style.display = hide ? 'none' : '';
     if (hide && el.classList.contains('active')) pcfgFallbackForGroup(s.group, s.key);
   });
@@ -2731,7 +2733,12 @@ function pcfgSlug(s) {
 function pcfgAddGuest() {
   let base = 'invite', slug = base, n = 1;
   while (guestProfiles.some(p => p.slug === slug)) { n++; slug = base + '-' + n; }
-  guestProfiles.push({ slug, label: 'Nouvelle vue', tabs: getTabOrder().filter(k => !hiddenTabs.includes(k)) });
+  guestProfiles.push({
+    slug,
+    label: 'Nouvelle vue',
+    tabs: getTabOrder().filter(k => !hiddenTabs.includes(k)),
+    subtabs: PCFG_SUBTABS.filter(s => !hiddenSubTabs.includes(s.key)).map(s => s.key),
+  });
   pcfgSaveGuestProfiles();
 }
 
@@ -2749,6 +2756,37 @@ function pcfgToggleGuestTab(slug, key) {
   if (!p) return;
   const i = p.tabs.indexOf(key);
   if (i === -1) p.tabs.push(key); else p.tabs.splice(i,1);
+  pcfgSaveGuestProfiles();
+}
+
+// Sous-onglets d'une vue partagée : tableau optionnel (profils créés avant
+// cette fonctionnalité) — repli sur "tous les sous-onglets visibles".
+function pcfgGuestSubtabs(p) {
+  return p.subtabs || PCFG_SUBTABS.filter(s => !hiddenSubTabs.includes(s.key)).map(s => s.key);
+}
+
+function pcfgToggleGuestSubTab(slug, key) {
+  const p = guestProfiles.find(x => x.slug === slug);
+  if (!p) return;
+  const entry = PCFG_SUBTABS.find(s => s.key === key);
+  let current = pcfgGuestSubtabs(p).slice();
+  const i = current.indexOf(key);
+  if (i === -1) {
+    current.push(key);
+  } else {
+    // Garder au moins un sous-onglet visible par groupe dans la vue.
+    if (entry) {
+      const groupKeys = PCFG_SUBTABS.filter(s => s.group === entry.group).map(s => s.key);
+      const remaining = current.filter(k => k !== key);
+      if (!groupKeys.some(k => remaining.includes(k))) {
+        showToast('Il doit rester au moins un sous-onglet visible dans ce groupe', 'error');
+        pcfgRenderGuests();
+        return;
+      }
+    }
+    current.splice(i, 1);
+  }
+  p.subtabs = current;
   pcfgSaveGuestProfiles();
 }
 
@@ -2790,6 +2828,23 @@ function pcfgRenderGuests() {
       const on = p.tabs.includes(key);
       return `<label class="pcfg-guest-chk"><input type="checkbox" ${on?'checked':''} onchange="pcfgToggleGuestTab('${p.slug}','${key}')"> ${esc(lbl)}</label>`;
     }).join('');
+
+    const pSubtabs = pcfgGuestSubtabs(p);
+    const subtabsH = visibleTabs
+      .filter(key => p.tabs.includes(key)) // seuls les onglets cochés ont des sous-onglets pertinents
+      .map(key => {
+        const t = PCFG_TABS.find(x => x.key === key);
+        const groupLabel = tabLabels[key] || (t ? t.label : key);
+        const subs = PCFG_SUBTABS.filter(s => s.group === key && !hiddenSubTabs.includes(s.key));
+        if (!subs.length) return '';
+        const chks = subs.map(s => {
+          const lbl = subTabLabels[s.key] || s.label;
+          const on = pSubtabs.includes(s.key);
+          return `<label class="pcfg-guest-chk"><input type="checkbox" ${on?'checked':''} onchange="pcfgToggleGuestSubTab('${p.slug}','${s.key}')"> ${esc(lbl)}</label>`;
+        }).join('');
+        return `<div class="pcfg-guest-sub" style="margin-top:6px">${esc(groupLabel)}</div><div class="pcfg-guest-grid">${chks}</div>`;
+      }).join('');
+
     return `<div class="pcfg-guest-card">
       <div class="pcfg-guest-head">
         <input type="text" class="pcfg-tabrow-input" value="${esc(p.label)}" onchange="pcfgRenameGuest('${p.slug}', this.value)">
@@ -2797,6 +2852,7 @@ function pcfgRenderGuests() {
       </div>
       <div class="pcfg-guest-sub">Onglets visibles</div>
       <div class="pcfg-guest-grid">${tabsH}</div>
+      ${subtabsH ? `<div class="pcfg-guest-sub" style="margin-top:2px">Sous-onglets visibles</div>${subtabsH}` : ''}
       <div class="pcfg-guest-link-row">
         <button class="btn-add-ghost" onclick="pcfgCopyGuestLink('${p.slug}')">Copier le lien</button>
         <span class="pcfg-guest-copied" id="pcfg-guest-copied-${p.slug}">Copié ✓</span>
