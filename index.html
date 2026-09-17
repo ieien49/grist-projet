@@ -807,6 +807,13 @@ tr:hover .cr-del-btn { opacity: 1; }
       <button class="btn-add-ghost" style="width:100%;justify-content:center;margin-bottom:8px" onclick="pcfgCheckTables()">Vérifier les tables</button>
       <div id="pcfgTablesStatus" class="pcfg-hint" style="margin-bottom:4px"></div>
 
+      <div class="pcfg-section-title">Pilotes multiples</div>
+      <div class="pcfg-hint" style="margin-bottom:8px">
+        Permet d'attribuer plusieurs pilotes à un même sous-projet (colonne « pilote » de la table Projet, convertie en liste de références vers Acteurs). Cette opération ne supprime aucune donnée : un pilote déjà renseigné est conservé.
+      </div>
+      <button class="btn-add-ghost" style="width:100%;justify-content:center;margin-bottom:8px" onclick="pcfgEnableMultiPilote()">Activer les pilotes multiples</button>
+      <div id="pcfgMultiPiloteStatus" class="pcfg-hint" style="margin-bottom:4px"></div>
+
       <div class="pcfg-section-title">Onglets</div>
       <div class="pcfg-hint" style="margin-bottom:8px">
         Décoche un onglet pour le masquer (les données restent intactes, seul l'affichage change). Le champ personnalise le libellé affiché. Les flèches ▲▼ changent l'ordre. Réglage commun à tous les utilisateurs du document.
@@ -1832,8 +1839,13 @@ tr:hover .cr-del-btn { opacity: 1; }
     </div>
     <div class="form-group full" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
       <div class="form-group" id="p_piloteGroup" style="display:none">
-        <label class="field-label">Pilote</label>
-        <select class="form-control" id="p_pilote"><option value="">— Sélectionner un acteur —</option></select>
+        <label class="field-label">Pilote(s)</label>
+        <div class="ms-wrap" id="p_piloteWrap">
+          <div class="ms-tags" id="p_piloteTags" onclick="toggleMsDropdown('p_piloteWrap','p_piloteDrop')">
+            <span class="ms-placeholder" id="p_pilotePlaceholder">— Sélectionner un ou plusieurs acteurs —</span>
+          </div>
+          <div class="ms-dropdown" id="p_piloteDrop"></div>
+        </div>
       </div>
       <div class="form-group">
         <label class="field-label">Instance / groupe de travail</label>
@@ -2064,6 +2076,7 @@ function pcfgFallbackForGroup(group, excludeKey) {
 let editingThemeId = null;
 let themeSortCol = 'ordre', themeSortDir = 1;  
 let selectedInstances = [];
+let selectedProjetPilotes = [];
 let allDocuments  = [];
 let allThemesList = [];  
 let docSortCol = 'titre', docSortDir = 1;
@@ -2208,7 +2221,7 @@ const PCFG_REQUIRED_TABLES = [
     { id: 'qualitatif',   type: 'Text' },
     { id: 'quantitatif',  type: 'Text' },
     { id: 'finreelle',    type: 'Int' },
-    { id: 'pilote',       type: 'Int' },
+    { id: 'pilote',       type: 'RefList:Acteurs' },
     { id: 'antecedent',   type: 'Int' },
     { id: 'couleur',      type: 'Int' },
     { id: 'instance',     type: 'Int' },
@@ -2339,6 +2352,23 @@ async function pcfgInstallTables() {
     pcfgSetTablesStatus(`✓ Table${missing.length>1?'s':''} créée${missing.length>1?'s':''} : ${missing.map(t=>t.label||t.id).join(', ')}.<br>Recharge le widget pour peupler l'application.`);
   } catch (e) {
     pcfgSetTablesStatus('Erreur lors de la création : ' + e.message + '<br>Aucune table déjà existante n\'a été modifiée.');
+  }
+}
+
+async function pcfgEnableMultiPilote() {
+  const el = document.getElementById('pcfgMultiPiloteStatus');
+  const setStatus = html => { if (el) el.innerHTML = html; };
+  if (typeof grist === 'undefined') { setStatus('Indisponible hors de Grist (mode démo).'); return; }
+  setStatus('Conversion en cours…');
+  try {
+    await grist.docApi.applyUserActions([
+      ['ModifyColumn', 'Projet', 'pilote', { type: 'RefList:Acteurs' }]
+    ]);
+    setStatus('✓ La colonne « pilote » accepte désormais plusieurs acteurs. Recharge le widget si besoin.');
+    await fetchProjets();
+    refreshObjectifsView();
+  } catch (e) {
+    setStatus('Erreur lors de la conversion : ' + e.message);
   }
 }
 
@@ -3734,14 +3764,13 @@ function renderSuiviFeuilleRoute() {
   const scopedRows = rows;
   const matchesOtherFilters = (p) => {
     if (search) {
-      const pilote = p.pilote ? allActors.find(a => a.id === p.pilote) : null;
-      const text = (p.nom || '') + (p._parent?.nom || '') + (pilote?.nom || '') + (p.theme || '');
+      const text = (p.nom || '') + (p._parent?.nom || '') + projetPiloteNoms(p) + (p.theme || '');
       if (!text.toLowerCase().includes(search)) return false;
     }
     if (fTheme && !parseThemes(p.theme).includes(fTheme)) return false;
     if (fInstance && String(p.instance) !== fInstance) return false;
     if (fEtat && projetStatut(p) !== fEtat) return false;
-    if (fPilote && String(p.pilote) !== fPilote) return false;
+    if (fPilote && !projetPiloteIds(p).includes(parseInt(fPilote))) return false;
     return true;
   };
 
@@ -3763,7 +3792,6 @@ function renderSuiviFeuilleRoute() {
     return;
   }
 
-  const piloteOf   = p => p.pilote ? allActors.find(a => a.id === p.pilote) : null;
   const instanceOf = p => p.instance ? instances[p.instance] : null;
 
   
@@ -3788,7 +3816,6 @@ const actorOptionsBase = allActors
   const themeOptionsBase = allThemesList;
 
   const tbody = visibleRows.map(p => {
-    const pilote  = piloteOf(p);
     const inst    = instanceOf(p);
     const statut  = projetStatut(p);
     const termine = statut === 'realise';
@@ -3797,12 +3824,12 @@ const actorOptionsBase = allActors
     const dFin    = fmtMonthYear(p.fin) || '—';
     const dates   = `<div style="display:flex;flex-direction:column;line-height:1.5;font-size:11.5px;color:var(--text-secondary)"><span>${esc(dDebut)}</span><span style="color:var(--text-muted)">${esc(dFin)}</span></div>`;
 
-    const piloteHtml = `<select class="cr-cell cr-cell-select" style="font-size:11.5px;min-width:120px;${p.pilote?'':'color:var(--text-faint)'}"
-      onclick="event.stopPropagation()"
-      onchange="event.stopPropagation();updateFrtField(${p.id},'pilote',parseInt(this.value)||0)">
-      <option value="" style="color:var(--text-faint)">— Aucun —</option>
-      ${actorOptionsBase.map(a => `<option value="${a.id}"${p.pilote===a.id?' selected':''}>${esc(a.nom)}</option>`).join('')}
-    </select>`;
+    const piloteChips = piloteChipsHtml(p);
+    const piloteHtml = `<div class="cr-cell" style="font-size:11.5px;min-width:120px;cursor:pointer;display:flex;flex-wrap:wrap;gap:4px;align-items:center;${piloteChips?'':'color:var(--text-faint)'}"
+      title="Cliquer pour modifier le(s) pilote(s)"
+      onclick="event.stopPropagation();editSousProjet(${p.id})">
+      ${piloteChips || '— Aucun —'}
+    </div>`;
 
 const instColorHex = inst ? (couleurs[inst.couleur]?.hex || inst.couleur || '#9C9691') : 'transparent';
     const instHtml = `<span style="display:inline-flex;align-items:center;gap:5px">
@@ -4473,7 +4500,7 @@ function exportFeuilleRouteReportPdf() {
   const themes = getAllThemes();
   if (!themes.length) { showToast('Aucun thème renseigné sur les sous-sous-projets', 'error'); return; }
 
-  const piloteOf   = p => p.pilote ? allActors.find(a => a.id === p.pilote) : null;
+  const piloteOf   = p => projetPilotes(p);
   const instanceOf = p => p.instance ? instances[p.instance] : null;
 
   const rootOf = (p) => {
@@ -4539,7 +4566,7 @@ function exportFeuilleRouteReportPdf() {
               <div class="chantier-nom">${esc(p.nom || 'Sans nom')}</div>
               ${desc ? `<div class="chantier-desc">${esc(desc.split('\n')[0])}</div>` : ''}
             </td>
-            <td class="pilote-cell">${pilote ? esc(pilote.nom) : ''}</td>
+            <td class="pilote-cell">${esc(pilote.map(a=>a.nom).join(', '))}</td>
             <td style="text-align:center"><span class="pill ${statut.cls}">${statut.label}</span></td>
             <td class="echeance-cell"><span>${esc(dDebut)}</span><span>${esc(dFin)}</span></td>
             <td class="instance-cell" ${instHex ? `style="color:${instHex}"` : ''}>${instLabel ? esc(instLabel) : '—'}</td>
@@ -4648,7 +4675,7 @@ function exportFeuilleRouteReportPdfParInstance() {
     .sort((a,b) => (a.ordre??9999) - (b.ordre??9999));
   if (!instList.length) { showToast('Aucune instance / groupe de travail renseigné', 'error'); return; }
 
-  const piloteOf = p => p.pilote ? allActors.find(a => a.id === p.pilote) : null;
+  const piloteOf   = p => projetPilotes(p);
 
   const rootOf = (p) => {
     let cur = p;
@@ -4714,7 +4741,7 @@ function exportFeuilleRouteReportPdfParInstance() {
               <div class="chantier-nom">${esc(p.nom || 'Sans nom')}</div>
               ${desc ? `<div class="chantier-desc">${esc(desc.split('\n')[0])}</div>` : ''}
             </td>
-            <td class="pilote-cell">${pilote ? esc(pilote.nom) : ''}</td>
+            <td class="pilote-cell">${esc(pilote.map(a=>a.nom).join(', '))}</td>
             <td><span class="pill ${statut.cls}">${statut.label}</span></td>
             <td class="echeance-cell"><span>${esc(dDebut)}</span><span>${esc(dFin)}</span></td>
             <td class="theme-cell">${themeBadgesPdf(p.theme)}</td>
@@ -4828,7 +4855,7 @@ function exportFeuilleRouteReportPdfParPhase() {
   const phases = rows.filter(p => p._depth === 0);
   if (!phases.length) { showToast('Aucune phase définie sur le projet', 'error'); return; }
 
-  const piloteOf   = p => p.pilote ? allActors.find(a => a.id === p.pilote) : null;
+  const piloteOf   = p => projetPilotes(p);
   const instanceOf = p => p.instance ? instances[p.instance] : null;
 
   const rootOf = (p) => {
@@ -4899,7 +4926,7 @@ function exportFeuilleRouteReportPdfParPhase() {
               <div class="chantier-nom">${esc(p.nom || 'Sans nom')}</div>
               ${desc ? `<div class="chantier-desc">${esc(desc.split('\n')[0])}</div>` : ''}
             </td>
-            <td class="pilote-cell">${pilote ? esc(pilote.nom) : ''}</td>
+            <td class="pilote-cell">${esc(pilote.map(a=>a.nom).join(', '))}</td>
             <td><span class="pill ${statut.cls}">${statut.label}</span></td>
             <td class="echeance-cell"><span>${esc(dDebut)}</span><span>${esc(dFin)}</span></td>
             <td class="instance-cell" ${instHex ? `style="color:${instHex}"` : ''}>${instLabel ? esc(instLabel) : '—'}</td>
@@ -5389,8 +5416,8 @@ function renderMindmap() {
     // Tooltip
     allNodeSel
       .on('mouseenter', (e, d) => {
-        const actor    = d.pilote ? allActors.find(a => a.id === d.pilote) : null;
-        const pilote   = actor ? actor.nom : '';
+        const piloteNoms = getRefList(d.pilote).map(Number).map(id => allActors.find(a => a.id === id)).filter(Boolean).map(a => a.nom).join(', ');
+        const pilote   = piloteNoms;
         const dateStr  = d.finreelle ? `Réalisé ${fmtDateShort(d.finreelle)}` : d.fin ? `Fin prév. ${fmtDateShort(d.fin)}` : '';
         const children = childrenOf(d.id);
         const hint     = !d.isMaster && children.length ? `<br><span style="color:#f59e0b">${expandedIds.has(d.id) ? '− Cliquer pour replier' : '+ Cliquer pour déplier ('+children.length+' enfant'+(children.length>1?'s':'')+')'}</span>` : '';
@@ -6020,6 +6047,38 @@ function refreshMsUI() {
     item.classList.toggle('sel', selectedInstances.map(Number).includes(parseInt(item.dataset.id)));
   });
 }
+// ── Multiselect pilotes (modale sous-projet) ──
+function setSelectedProjetPilotes(ids) {
+  selectedProjetPilotes = (ids || []).map(Number).filter(v => !isNaN(v));
+  refreshProjetPiloteMsUI();
+}
+function toggleProjetPiloteItem(id) {
+  const nid = parseInt(id);
+  const idx = selectedProjetPilotes.indexOf(nid);
+  if (idx === -1) selectedProjetPilotes.push(nid); else selectedProjetPilotes.splice(idx, 1);
+  refreshProjetPiloteMsUI();
+}
+function refreshProjetPiloteMsUI() {
+  const tagsEl = document.getElementById('p_piloteTags');
+  const ph     = document.getElementById('p_pilotePlaceholder');
+  const drop   = document.getElementById('p_piloteDrop');
+  if (!tagsEl) return;
+  tagsEl.querySelectorAll('.ms-tag').forEach(el => el.remove());
+  if (!selectedProjetPilotes.length) { if (ph) ph.style.display = ''; }
+  else {
+    if (ph) ph.style.display = 'none';
+    selectedProjetPilotes.forEach(id => {
+      const a = allActors.find(x => x.id === id); if (!a) return;
+      const tag = document.createElement('span');
+      tag.className = 'ms-tag';
+      tag.innerHTML = `${esc(a.nom)}<span class="ms-tag-x" onclick="event.stopPropagation();toggleProjetPiloteItem(${id})">×</span>`;
+      tagsEl.appendChild(tag);
+    });
+  }
+  if (drop) drop.querySelectorAll('.ms-item').forEach(item => {
+    item.classList.toggle('sel', selectedProjetPilotes.includes(parseInt(item.dataset.id)));
+  });
+}
 function toggleInstActeurItem(id) {
   const nid = parseInt(id);
   const idx = selectedInstanceActeurs.map(Number).indexOf(nid);
@@ -6077,6 +6136,29 @@ function getRefList(val) {
 function resolveInstId(v) {
   if (typeof v==='number') return v;
   const o = instances[v]; return o ? o.id : null;
+}
+
+// ── Pilotes de sous-projet (multi) ──
+// p.pilote peut être : 0/null (aucun), un nombre (un seul pilote, ancien
+// format), ou un tableau ['L', id1, id2, ...] (RefList, plusieurs pilotes).
+function projetPiloteIds(p) {
+  return getRefList(p?.pilote).map(Number).filter(v => !isNaN(v));
+}
+function projetPilotes(p) {
+  const seen = new Set();
+  return projetPiloteIds(p)
+    .map(id => allActors.find(a => a.id === id))
+    .filter(a => { if (!a || seen.has(a.id)) return false; seen.add(a.id); return true; });
+}
+function projetPiloteNoms(p) { return projetPilotes(p).map(a => a.nom).join(', '); }
+function piloteChipsHtml(p) {
+  const actors = projetPilotes(p);
+  if (!actors.length) return '';
+  return actors.map(a => {
+    const prc = roleColors[a.role] || { avatar: '#6B7280' };
+    const ini = (a.nom||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    return `<span class="pilote-inline"><span class="pilote-av" style="background:${prc.avatar}">${ini}</span>${esc(a.nom)}</span>`;
+  }).join(' ');
 }
 function roleClass(role) {
   if (!role) return '';
@@ -7134,14 +7216,14 @@ function showGanttInfo(evt, id) {
   if (!p || !tip) return;
 
   const label  = (p.code ? p.code + ' – ' : '') + (p.nom || '—');
-  const pilote = p.pilote ? allActors.find(a => a.id === p.pilote) : null;
+  const piloteNoms = projetPiloteNoms(p);
   const d1 = p.debut > 0 ? new Date(p.debut * 86400000).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : null;
   const endMs = p.finreelle > 0 ? p.finreelle : p.fin;
   const d2 = endMs > 0 ? new Date(endMs * 86400000).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : null;
   const closedTag = p.finreelle > 0 ? ' <span style="color:#DC2626">(clôturé)</span>' : (projetStatut(p) === 'alancer' ? ' <span style="color:#B45309">(à lancer)</span>' : '');
 
   tip.innerHTML = `<strong style="display:block;margin-bottom:4px">${esc(label)}</strong>
-    <span style="font-size:11px;color:var(--text-muted)">${pilote ? esc(pilote.nom) : 'Pilote non défini'}</span><br>
+    <span style="font-size:11px;color:var(--text-muted)">${piloteNoms ? esc(piloteNoms) : 'Pilote non défini'}</span><br>
     <span style="font-size:11px;color:var(--text-muted)">${d1 || '—'} → ${d2 || '—'}${closedTag}</span>`;
   tip.style.left = (evt.clientX + 12) + 'px';
   tip.style.top  = (evt.clientY - 8)  + 'px';
@@ -7229,7 +7311,7 @@ function renderGanttProjet() {
 if (fEtat === 'alancer')  rows = rows.filter(r => projetStatut(r) === 'alancer');
   if (fEtat === 'encours')  rows = rows.filter(r => projetStatut(r) === 'encours');
   if (fEtat === 'realise')  rows = rows.filter(r => projetStatut(r) === 'realise');
-  if (fPilote) rows = rows.filter(r => r.pilote === parseInt(fPilote));
+  if (fPilote) rows = rows.filter(r => projetPiloteIds(r).includes(parseInt(fPilote)));
   if (fThemeGantt) rows = rows.filter(r => parseThemes(r.theme).includes(fThemeGantt));
   if (fInstanceGantt) rows = rows.filter(r => String(r.instance) === fInstanceGantt);
 
@@ -8530,7 +8612,7 @@ function renderCanvas() {
   grid.style.cssText = 'display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:auto auto auto;gap:8px';
 
   // Bloc titre
-  const pilote = masterProjet.pilote ? allActors.find(a => a.id === masterProjet.pilote) : null;
+  const pilotesMaitre = projetPilotes(masterProjet);
   const dateStr = [
     masterProjet.debut > 0 ? new Date(masterProjet.debut*86400000).toLocaleDateString('fr-FR',{month:'short',year:'numeric'}) : null,
     masterProjet.fin   > 0 ? new Date(masterProjet.fin  *86400000).toLocaleDateString('fr-FR',{month:'short',year:'numeric'}) : null,
@@ -8542,7 +8624,7 @@ function renderCanvas() {
       <div style="font-size:18px;font-weight:700;color:var(--text-primary);line-height:1.2">${esc(masterProjet.nom||'—')}</div>
       ${masterProjet.code ? `<div style="font-size:11.5px;color:var(--text-muted);margin-top:2px">${esc(masterProjet.code)}</div>` : ''}
     </div>
-    ${pilote ? `<div style="text-align:right"><div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Chef de projet</div><div style="font-size:12.5px;font-weight:600;color:var(--text-primary)">${esc(pilote.nom)}</div></div>` : ''}
+    ${pilotesMaitre.length ? `<div style="text-align:right"><div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">${pilotesMaitre.length>1?'Chefs de projet':'Chef de projet'}</div><div style="font-size:12.5px;font-weight:600;color:var(--text-primary)">${esc(pilotesMaitre.map(a=>a.nom).join(', '))}</div></div>` : ''}
     ${dateStr ? `<div style="text-align:right;border-left:1px solid var(--border);padding-left:14px"><div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Période</div><div style="font-size:12.5px;font-weight:600;color:var(--text-primary)">${dateStr}</div></div>` : ''}
   </div>`;
 
@@ -8752,10 +8834,8 @@ function openSubCanvas(projetId) {
   const grid = document.getElementById('subCanvasGrid');
   grid.dataset.projetId = projetId;
 
-  // Pilote
-  const pilote = p.pilote ? allActors.find(a => a.id === p.pilote) : null;
-  const prcol  = pilote ? (roleColors[pilote.role]?.avatar || '#6B7280') : null;
-  const ini    = pilote ? (pilote.nom||'').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase() : null;
+  // Pilote(s)
+  const pilotes = projetPilotes(p);
 
   // Dates
   const dateStr = [
@@ -8781,9 +8861,13 @@ grid.innerHTML = '';
       ${p.code?`<div style="font-size:10px;font-weight:700;color:var(--text-muted);letter-spacing:.05em;margin-bottom:2px">${esc(p.code)}</div>`:''}
       <div style="font-size:15px;font-weight:700;color:var(--text-primary)">${esc(p.nom||'—')}</div>
     </div>
-    ${pilote?`<div style="display:flex;align-items:center;gap:7px;border-left:1px solid var(--border);padding-left:14px;flex-shrink:0">
-      <span style="width:26px;height:26px;border-radius:50%;background:${prcol};display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff">${ini}</span>
-      <div><div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em">Pilote</div><div style="font-size:12px;font-weight:600;color:var(--text-primary)">${esc(pilote.nom)}</div></div>
+    ${pilotes.length?`<div style="display:flex;align-items:center;gap:7px;border-left:1px solid var(--border);padding-left:14px;flex-shrink:0">
+      ${pilotes.map(a => {
+        const prcol = roleColors[a.role]?.avatar || '#6B7280';
+        const ini   = (a.nom||'').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+        return `<span style="width:26px;height:26px;border-radius:50%;background:${prcol};display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff" title="${esc(a.nom)}">${ini}</span>`;
+      }).join('')}
+      <div><div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em">${pilotes.length>1?'Pilotes':'Pilote'}</div><div style="font-size:12px;font-weight:600;color:var(--text-primary)">${esc(pilotes.map(a=>a.nom).join(', '))}</div></div>
     </div>`:''}
     ${dateStr?`<div style="border-left:1px solid var(--border);padding-left:14px;flex-shrink:0">
       <div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em">Période</div>
@@ -9175,11 +9259,8 @@ const matchingIds = search
   }
 
   const piloteBadge = (p) => {
-    const actor = p.pilote ? allActors.find(a => a.id === p.pilote) : null;
-    if (!actor) return '<span style="font-size:11.5px;color:var(--text-muted);font-style:italic">—</span>';
-    const prc = roleColors[actor.role] || { avatar: '#6B7280' };
-    const ini = (actor.nom||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-    return `<span class="pilote-inline"><span class="pilote-av" style="background:${prc.avatar}">${ini}</span>${esc(actor.nom)}</span>`;
+    const html = piloteChipsHtml(p);
+    return html || '<span style="font-size:11.5px;color:var(--text-muted);font-style:italic">—</span>';
   };
 
   const renderNode = (p, depth, autoOpen) => {
@@ -9337,11 +9418,13 @@ function openSpDetail(id) {
   const parentProj = allProjets.find(x => x.id === p.ref);
   const parentVal  = parentProj ? esc((parentProj.code ? parentProj.code + ' – ' : '') + parentProj.nom) : '—';
 
-  const piloteDetailActor = p.pilote ? allActors.find(a => a.id === p.pilote) : null;
-  const piloteDetailVal   = piloteDetailActor ? esc(piloteDetailActor.nom) + (piloteDetailActor.role ? ' <span style="color:var(--text-muted);font-size:12px">— ' + esc(piloteDetailActor.role) + '</span>' : '') : '<span style="color:var(--text-muted);font-style:italic">Non défini</span>';
+  const piloteDetailActors = projetPilotes(p);
+  const piloteDetailVal    = piloteDetailActors.length
+    ? piloteDetailActors.map(a => esc(a.nom) + (a.role ? ' <span style="color:var(--text-muted);font-size:12px">— ' + esc(a.role) + '</span>' : '')).join('<br>')
+    : '<span style="color:var(--text-muted);font-style:italic">Non défini</span>';
   document.getElementById('spDetailProps').innerHTML =
     propHtml('Projet parent', parentVal) +
-    propHtml('Pilote', piloteDetailVal) +
+    propHtml(piloteDetailActors.length>1?'Pilotes':'Pilote', piloteDetailVal) +
     propHtml('Calendrier', datesVal);
 
   // Blocks
@@ -9452,16 +9535,22 @@ renderRefPicker(currentRefVal);
   }
   renderAntecedentPicker(currentAntVal);
 
-  // Populate pilote select
-  const pilSel = document.getElementById('p_pilote');
-  while (pilSel.options.length > 1) pilSel.remove(1);
-  allActors
-    .filter((a, i, arr) => arr.findIndex(x => x.id === a.id) === i && typeof a.id === 'number')
-    .sort((a, b) => (a.nom||'').localeCompare(b.nom||'', 'fr'))
-    .forEach(a => {
-      const rc = {'Commanditaire':'🟣','Directeur de projet':'🔴','Chef de projet':'🟡','Contributeur interne':'🟢','Contributeur externe':'🔵',"Pilote d'actions":'🟠'}[a.role] || '⚪';
-      pilSel.appendChild(new Option(a.nom + (a.role ? ' — ' + a.role : ''), a.id));
-    });
+  // Populate pilote multiselect dropdown
+  const pilDrop = document.getElementById('p_piloteDrop');
+  if (pilDrop) {
+    pilDrop.innerHTML = '';
+    allActors
+      .filter((a, i, arr) => arr.findIndex(x => x.id === a.id) === i && typeof a.id === 'number')
+      .sort((a, b) => (a.nom||'').localeCompare(b.nom||'', 'fr'))
+      .forEach(a => {
+        const el = document.createElement('div');
+        el.className = 'ms-item';
+        el.dataset.id = a.id;
+        el.innerHTML = `<span>${esc(a.nom)}${a.role ? ' — ' + esc(a.role) : ''}</span><span class="ms-check">✓</span>`;
+        el.addEventListener('click', e => { e.stopPropagation(); toggleProjetPiloteItem(a.id); });
+        pilDrop.appendChild(el);
+      });
+  }
 
   // Populate instance select
   const instSel = document.getElementById('p_instance');
@@ -9490,7 +9579,8 @@ renderRefPicker(currentRefVal);
   document.getElementById('p_debut').value      = toDateInput(projet?.debut);
   document.getElementById('p_fin').value        = toDateInput(projet?.fin);
   document.getElementById('p_finreelle').value  = toDateInput(projet?.finreelle);
-  document.getElementById('p_pilote').value     = projet?.pilote || '';
+  closeMsDropdown('p_piloteWrap','p_piloteDrop');
+  setSelectedProjetPilotes(projetPiloteIds(projet));
   document.getElementById('p_antecedent').value = projet?.antecedent || '';
   renderAntecedentClosed(currentAntVal);
 
@@ -9704,6 +9794,8 @@ function renderKbProjetClosed(selectedVal) {
   document.getElementById('projetModalOverlay').classList.remove('open');
   editingProjetId = null;
   _refPickerOpen.clear();
+  closeMsDropdown('p_piloteWrap','p_piloteDrop');
+  selectedProjetPilotes = [];
 }
 function handleProjetOverlay(e) { if (e.target.id==='projetModalOverlay') closeProjetModal(); }
 
@@ -9732,7 +9824,7 @@ moyens:      existingP?.moyens      || null,
     debut:       fromDateInput(document.getElementById('p_debut').value),
     fin:         fromDateInput(document.getElementById('p_fin').value),
     finreelle:   fromDateInput(document.getElementById('p_finreelle').value),
-    pilote:      parseInt(document.getElementById('p_pilote').value) || 0,
+    pilote:      selectedProjetPilotes.length ? ['L', ...selectedProjetPilotes.map(Number)] : null,
     couleur:     parseInt(document.getElementById('p_couleur').value) || 0,
     antecedent:  isSub ? (parseInt(document.getElementById('p_antecedent').value) || 0) : 0,
     instance:    parseInt(document.getElementById('p_instance').value) || 0,
