@@ -760,6 +760,23 @@ tr:hover .cr-del-btn { opacity: 1; }
 .pcfg-section-title { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.07em; margin: 16px 0 8px; }
 .pcfg-hint { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
 .pcfg-close-row { display: flex; justify-content: flex-end; margin-top: 18px; }
+.pcfg-tabrow { display: flex; align-items: center; gap: 8px; padding: 5px 0; }
+.pcfg-tabrow-move { display: flex; flex-direction: column; gap: 1px; }
+.pcfg-tabrow-move button { border: none; background: var(--surface3); color: var(--text-muted); width: 16px; height: 13px; font-size: 9px; line-height: 1; cursor: pointer; border-radius: 3px; padding: 0; }
+.pcfg-tabrow-move button:hover:not(:disabled) { background: var(--text-primary); color: #fff; }
+.pcfg-tabrow-move button:disabled { opacity: .3; cursor: default; }
+.pcfg-tabrow-input { flex: 1; padding: 4px 7px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface2); font-family: var(--font); font-size: 12.5px; color: var(--text-primary); outline: none; }
+.pcfg-tabrow-input:focus { border-color: var(--text-primary); }
+.pcfg-guest-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 10px; background: var(--surface2); }
+.pcfg-guest-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.pcfg-guest-del { border: none; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 14px; padding: 2px 6px; }
+.pcfg-guest-del:hover { color: #c0392b; }
+.pcfg-guest-sub { font-size: 10.5px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; margin: 8px 0 4px; }
+.pcfg-guest-grid { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.pcfg-guest-chk { display: flex; align-items: center; gap: 5px; font-size: 12.5px; cursor: pointer; }
+.pcfg-guest-link-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.pcfg-guest-copied { font-size: 11.5px; color: #2a9d5c; opacity: 0; transition: opacity .2s; }
+.pcfg-guest-copied.vis { opacity: 1; }
 </style>
 </head>
 <body>
@@ -790,9 +807,9 @@ tr:hover .cr-del-btn { opacity: 1; }
       <button class="btn-add-ghost" style="width:100%;justify-content:center;margin-bottom:8px" onclick="pcfgCheckTables()">Vérifier les tables</button>
       <div id="pcfgTablesStatus" class="pcfg-hint" style="margin-bottom:4px"></div>
 
-      <div class="pcfg-section-title">Onglets visibles</div>
+      <div class="pcfg-section-title">Onglets</div>
       <div class="pcfg-hint" style="margin-bottom:8px">
-        Décoche un onglet pour le masquer dans ce widget (les données restent intactes, seul l'affichage change). Le réglage est commun à tous les utilisateurs du document.
+        Décoche un onglet pour le masquer (les données restent intactes, seul l'affichage change). Le champ personnalise le libellé affiché. Les flèches ▲▼ changent l'ordre. Réglage commun à tous les utilisateurs du document.
       </div>
       <div id="pcfgTabsSection"></div>
 
@@ -801,6 +818,13 @@ tr:hover .cr-del-btn { opacity: 1; }
         Idem, pour les vues internes à chaque onglet.
       </div>
       <div id="pcfgSubTabsSection"></div>
+
+      <div class="pcfg-section-title">Vues partagées</div>
+      <div class="pcfg-hint" style="margin-bottom:8px">
+        Génère un lien qui n'affiche que certains onglets — pratique pour partager une vue simplifiée à un contact externe. <strong>Ce n'est pas une restriction de sécurité</strong> : la personne garde accès à l'ensemble des données du document Grist par d'autres moyens ; c'est uniquement pour alléger l'affichage.
+      </div>
+      <div id="pcfgGuestsList"></div>
+      <button class="btn-add-ghost" style="width:100%;margin-bottom:8px" onclick="pcfgAddGuest()">+ Nouvelle vue partagée</button>
 
       <div class="pcfg-close-row">
         <button class="btn-add-ghost" onclick="closePcfgModal()">Fermer</button>
@@ -812,19 +836,19 @@ tr:hover .cr-del-btn { opacity: 1; }
   <nav class="tabbar">
     <div class="tab active" data-tab="definition" onclick="switchTab('definition')">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-      PROJET
+      <span class="tab-label">PROJET</span>
     </div>
     <div class="tab" data-tab="objectifs" onclick="switchTab('objectifs')">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-      Plan d'actions
+      <span class="tab-label">Plan d'actions</span>
     </div>
     <div class="tab" data-tab="actions" onclick="switchTab('actions')">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-      Suivi des tâches
+      <span class="tab-label">Suivi des tâches</span>
     </div>
     <div class="tab" data-tab="decisions" onclick="switchTab('decisions')">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-      Décisions
+      <span class="tab-label">Décisions</span>
     </div>
   </nav>
 
@@ -1984,36 +2008,46 @@ let instanceModalLinkToActeur = false; // true quand la modale Instance est ouve
 let selectedInstanceActeurs = []; // acteurs cochés dans la modale Instance
 let hiddenTabs = []; // clés des onglets masqués (paramétrage widget)
 let hiddenSubTabs = []; // clés des sous-onglets masqués (paramétrage widget)
+let tabLabels = {}; // libellés personnalisés des onglets { key: 'Libellé' } (paramétrage widget)
+let tabOrder = []; // ordre personnalisé des onglets (paramétrage widget)
+let guestProfiles = []; // vues partagées : [{ slug, label, tabs:[...] }]
+const urlParams = new URLSearchParams(location.search);
+const guestSlug = urlParams.get('vue');
+let guestProfile = null;
 const PCFG_TABS = [
   { key: 'definition', label: 'Projet' },
   { key: 'objectifs',  label: "Plan d'actions" },
   { key: 'actions',    label: 'Suivi des tâches' },
   { key: 'decisions',  label: 'Décisions' },
 ];
+const DEFAULT_TAB_ORDER = PCFG_TABS.map(t => t.key);
 // Sous-onglets pilotables : chacun garde son groupe (panel d'appartenance),
-// un sélecteur DOM pour le masquer, et comment revenir sur un onglet sûr du
-// même groupe s'il était actif au moment où on le masque.
+// un sélecteur DOM pour le masquer, et comment revenir sur un sous-onglet
+// visible du même groupe s'il était actif au moment où on le masque.
 const PCFG_SUBTABS = [
-  { key: 'def-themes',    group: 'definition', label: 'Thème',               selector: '#panel-definition [data-sub="def-themes"]',    fallback: () => switchDefTab('def-definition') },
-  { key: 'def-documents', group: 'definition', label: 'Documents',           selector: '#panel-definition [data-sub="def-documents"]', fallback: () => switchDefTab('def-definition') },
-  { key: 'sp-gantt',      group: 'objectifs',  label: 'Gantt',                selector: '#spModeGantt',           fallback: () => switchSpMode('suivi') },
-  { key: 'sp-dessin',     group: 'objectifs',  label: 'Dessin',               selector: '#spModeFeuilleDeroute',  fallback: () => switchSpMode('suivi') },
-  { key: 'sp-dessin2',    group: 'objectifs',  label: 'Dessin2',              selector: '#spModeDessin2',         fallback: () => switchSpMode('suivi') },
-  { key: 'ac-actions',    group: 'actions',    label: 'Suivi des tâches',    selector: '#acModeActions',         fallback: () => switchAcMode('kanban') },
-  { key: 'ac-projets',    group: 'actions',    label: 'Par action',          selector: '#acModeProjets',         fallback: () => switchAcMode('kanban') },
-  { key: 'dec-suivi',     group: 'decisions',  label: 'Suivi',                selector: '#decModeSuivi',          fallback: () => pcfgFallbackDecisions('dec-suivi') },
-  { key: 'dec-odj',       group: 'decisions',  label: 'Ordre du jour',        selector: '#decModeOdj',            fallback: () => pcfgFallbackDecisions('dec-odj') },
-  { key: 'dec-cr',        group: 'decisions',  label: 'Relevé de décisions',  selector: '#decModeCompteRendu',    fallback: () => pcfgFallbackDecisions('dec-cr') },
-  { key: 'dec-pdf',       group: 'decisions',  label: 'PDF',                  selector: '#decModePdf',            fallback: () => pcfgFallbackDecisions('dec-pdf') },
+  { key: 'def-definition', group: 'definition', label: 'Présentation',        selector: '#panel-definition [data-sub="def-definition"]', activate: () => switchDefTab('def-definition') },
+  { key: 'def-acteurs',    group: 'definition', label: 'Acteurs',             selector: '#panel-definition [data-sub="def-acteurs"]',    activate: () => switchDefTab('def-acteurs') },
+  { key: 'def-instances',  group: 'definition', label: 'Instances',           selector: '#panel-definition [data-sub="def-instances"]',  activate: () => switchDefTab('def-instances') },
+  { key: 'def-themes',     group: 'definition', label: 'Thème',               selector: '#panel-definition [data-sub="def-themes"]',     activate: () => switchDefTab('def-themes') },
+  { key: 'def-documents',  group: 'definition', label: 'Documents',           selector: '#panel-definition [data-sub="def-documents"]',  activate: () => switchDefTab('def-documents') },
+  { key: 'sp-suivi',       group: 'objectifs',  label: 'Feuille de route',    selector: '#spModeSuivi',           activate: () => switchSpMode('suivi') },
+  { key: 'sp-gantt',       group: 'objectifs',  label: 'Gantt',                selector: '#spModeGantt',           activate: () => switchSpMode('gantt') },
+  { key: 'sp-dessin',      group: 'objectifs',  label: 'Dessin',               selector: '#spModeFeuilleDeroute',  activate: () => switchSpMode('feuilleroute') },
+  { key: 'sp-dessin2',     group: 'objectifs',  label: 'Dessin2',              selector: '#spModeDessin2',         activate: () => switchSpMode('dessin2') },
+  { key: 'ac-kanban',      group: 'actions',    label: 'Kanban',               selector: '#acModeKanban',          activate: () => switchAcMode('kanban') },
+  { key: 'ac-actions',     group: 'actions',    label: 'Suivi des tâches',    selector: '#acModeActions',         activate: () => switchAcMode('actions') },
+  { key: 'ac-projets',     group: 'actions',    label: 'Par action',          selector: '#acModeProjets',         activate: () => switchAcMode('projets') },
+  { key: 'dec-suivi',      group: 'decisions',  label: 'Suivi',                selector: '#decModeSuivi',          activate: () => switchDecMode('suivi') },
+  { key: 'dec-odj',        group: 'decisions',  label: 'Ordre du jour',        selector: '#decModeOdj',            activate: () => switchDecMode('odj') },
+  { key: 'dec-cr',         group: 'decisions',  label: 'Relevé de décisions',  selector: '#decModeCompteRendu',    activate: () => switchDecMode('compterendu') },
+  { key: 'dec-pdf',        group: 'decisions',  label: 'PDF',                  selector: '#decModePdf',            activate: () => switchDecMode('pdf') },
 ];
-// Groupes où TOUS les sous-onglets sont pilotables (aucun repli "sûr" fixe
-// comme Présentation/Feuille de route/Kanban ailleurs) : on y impose qu'il
-// en reste au moins un visible.
-const PCFG_SUBTAB_GROUPS_REQUIRE_ONE = ['decisions'];
-const PCFG_DEC_MODE_BY_KEY = { 'dec-suivi':'suivi', 'dec-odj':'odj', 'dec-cr':'compterendu', 'dec-pdf':'pdf' };
-function pcfgFallbackDecisions(excludeKey) {
-  const next = PCFG_SUBTABS.find(s => s.group==='decisions' && s.key!==excludeKey && !hiddenSubTabs.includes(s.key));
-  switchDecMode(next ? PCFG_DEC_MODE_BY_KEY[next.key] : 'suivi');
+// Chaque groupe doit garder au moins un sous-onglet visible : quand celui
+// actif se fait masquer, on bascule sur un autre sous-onglet visible du
+// même groupe.
+function pcfgFallbackForGroup(group, excludeKey) {
+  const next = PCFG_SUBTABS.find(s => s.group === group && s.key !== excludeKey && !hiddenSubTabs.includes(s.key));
+  if (next) next.activate();
 }
 let editingThemeId = null;
 let themeSortCol = 'ordre', themeSortDir = 1;  
@@ -2094,6 +2128,7 @@ function openPcfgModal() {
   document.getElementById('pcfgOv').classList.add('open');
   document.getElementById('pcfgTablesStatus').innerHTML = '';
   pcfgRenderTabsSection();
+  pcfgRenderGuests();
 }
 function closePcfgModal() { document.getElementById('pcfgOv').classList.remove('open'); }
 function handlePcfgOvClick(e) { if (e.target === document.getElementById('pcfgOv')) closePcfgModal(); }
@@ -2369,31 +2404,69 @@ async function fetchDocFormUrl() {
 async function fetchHiddenTabs() {
   hiddenTabs = [];
   hiddenSubTabs = [];
+  tabLabels = {};
+  tabOrder = [];
+  guestProfiles = [];
   try {
     const t = await grist.docApi.fetchTable('Parametres');
     if (t && t.cle) {
-      const idx = t.cle.findIndex(c => c === 'onglets_masques');
-      if (idx !== -1 && t.valeur?.[idx]) {
-        try { hiddenTabs = JSON.parse(t.valeur[idx]) || []; } catch(e) { hiddenTabs = []; }
-      }
-      const idx2 = t.cle.findIndex(c => c === 'sous_onglets_masques');
-      if (idx2 !== -1 && t.valeur?.[idx2]) {
-        try { hiddenSubTabs = JSON.parse(t.valeur[idx2]) || []; } catch(e) { hiddenSubTabs = []; }
-      }
+      const get = (cle) => { const idx = t.cle.findIndex(c => c === cle); return idx !== -1 ? t.valeur?.[idx] : undefined; };
+      const raw1 = get('onglets_masques');
+      if (raw1) { try { hiddenTabs = JSON.parse(raw1) || []; } catch(e) { hiddenTabs = []; } }
+      const raw2 = get('sous_onglets_masques');
+      if (raw2) { try { hiddenSubTabs = JSON.parse(raw2) || []; } catch(e) { hiddenSubTabs = []; } }
+      const raw3 = get('libelles_onglets');
+      if (raw3) { try { tabLabels = JSON.parse(raw3) || {}; } catch(e) { tabLabels = {}; } }
+      const raw4 = get('ordre_onglets');
+      if (raw4) { try { tabOrder = JSON.parse(raw4) || []; } catch(e) { tabOrder = []; } }
+      const raw5 = get('vues_partagees');
+      if (raw5) { try { guestProfiles = JSON.parse(raw5) || []; } catch(e) { guestProfiles = []; } }
     }
-  } catch(e) { hiddenTabs = []; hiddenSubTabs = []; } // table Parametres absente
+  } catch(e) { hiddenTabs = []; hiddenSubTabs = []; tabLabels = {}; tabOrder = []; guestProfiles = []; } // table Parametres absente
+}
+
+function getTabOrder() {
+  const order = tabOrder.filter(k => DEFAULT_TAB_ORDER.includes(k));
+  DEFAULT_TAB_ORDER.forEach(k => { if (!order.includes(k)) order.push(k); });
+  return order;
+}
+
+function applyTabOrder() {
+  const container = document.querySelector('.tabbar');
+  if (!container) return;
+  getTabOrder().forEach(key => {
+    const el = container.querySelector(`[data-tab="${key}"]`);
+    if (el) container.appendChild(el);
+  });
+}
+
+function applyTabLabels() {
+  PCFG_TABS.forEach(t => {
+    const el = document.querySelector(`.tab[data-tab="${t.key}"] .tab-label`);
+    if (el) el.textContent = tabLabels[t.key] || t.label;
+  });
+}
+
+function resolveGuestProfile() {
+  guestProfile = guestSlug ? (guestProfiles.find(p => p.slug === guestSlug) || null) : null;
 }
 
 function applyHiddenTabs() {
+  resolveGuestProfile();
+  const gearBtn = document.querySelector('.pcfg-gear-btn');
+  if (gearBtn) gearBtn.style.display = guestProfile ? 'none' : '';
   let activeIsHidden = false;
   document.querySelectorAll('.tab').forEach(t => {
-    const hide = hiddenTabs.includes(t.dataset.tab);
+    const key = t.dataset.tab;
+    const hide = hiddenTabs.includes(key) || (guestProfile && !guestProfile.tabs.includes(key));
     t.style.display = hide ? 'none' : '';
     if (hide && t.classList.contains('active')) activeIsHidden = true;
   });
+  applyTabLabels();
+  applyTabOrder();
   if (activeIsHidden) {
-    const firstVisible = PCFG_TABS.find(t => !hiddenTabs.includes(t.key));
-    if (firstVisible) switchTab(firstVisible.key);
+    const firstVisible = getTabOrder().find(k => !hiddenTabs.includes(k) && (!guestProfile || guestProfile.tabs.includes(k)));
+    if (firstVisible) switchTab(firstVisible);
   }
   applyHiddenSubTabs();
 }
@@ -2404,7 +2477,7 @@ function applyHiddenSubTabs() {
     if (!el) return;
     const hide = hiddenSubTabs.includes(s.key);
     el.style.display = hide ? 'none' : '';
-    if (hide && el.classList.contains('active')) s.fallback();
+    if (hide && el.classList.contains('active')) pcfgFallbackForGroup(s.group, s.key);
   });
 }
 
@@ -2439,13 +2512,22 @@ async function pcfgSaveHiddenSubTabs(newHidden) {
 
 function pcfgRenderTabsSection() {
   const el = document.getElementById('pcfgTabsSection');
-  if (!el) return;
-  el.innerHTML = PCFG_TABS.map(t => `
-    <label style="display:flex;align-items:center;gap:7px;padding:4px 0;font-size:12.5px;cursor:pointer">
-      <input type="checkbox" data-tabkey="${t.key}" ${hiddenTabs.includes(t.key)?'':'checked'} onchange="pcfgHandleTabCheckbox(this)">
-      ${t.label}
-    </label>
-  `).join('');
+  if (el) {
+    const order = getTabOrder();
+    el.innerHTML = order.map((key, i) => {
+      const t = PCFG_TABS.find(x => x.key === key);
+      if (!t) return '';
+      return `
+      <div class="pcfg-tabrow" data-tab="${t.key}">
+        <div class="pcfg-tabrow-move">
+          <button onclick="pcfgMoveTab('${t.key}',-1)" ${i===0?'disabled':''}>▲</button>
+          <button onclick="pcfgMoveTab('${t.key}',1)" ${i===order.length-1?'disabled':''}>▼</button>
+        </div>
+        <input type="checkbox" data-tabkey="${t.key}" ${hiddenTabs.includes(t.key)?'':'checked'} onchange="pcfgHandleTabCheckbox(this)">
+        <input type="text" class="pcfg-tabrow-input" placeholder="${esc(t.label)}" value="${esc(tabLabels[t.key]||'')}" onchange="pcfgSetTabLabel('${t.key}', this.value)">
+      </div>`;
+    }).join('');
+  }
 
   const subEl = document.getElementById('pcfgSubTabsSection');
   if (!subEl) return;
@@ -2483,9 +2565,8 @@ function pcfgHandleSubTabCheckbox(checkbox) {
   const entry = PCFG_SUBTABS.find(s => s.key === key);
   let next = hiddenSubTabs.filter(k => k !== key);
   if (!checkbox.checked) next.push(key);
-  // Pour les groupes sans repli fixe (ex. Décisions), il doit rester au
-  // moins un sous-onglet visible dans le groupe.
-  if (entry && PCFG_SUBTAB_GROUPS_REQUIRE_ONE.includes(entry.group)) {
+  // Chaque groupe doit garder au moins un sous-onglet visible.
+  if (entry) {
     const groupKeys = PCFG_SUBTABS.filter(s => s.group === entry.group).map(s => s.key);
     if (groupKeys.every(k => next.includes(k))) {
       checkbox.checked = true;
@@ -2494,6 +2575,115 @@ function pcfgHandleSubTabCheckbox(checkbox) {
     }
   }
   pcfgSaveHiddenSubTabs(next);
+}
+
+// ── Ordre et libellés des onglets ──
+function pcfgMoveTab(key, dir) {
+  const order = getTabOrder();
+  const i = order.indexOf(key);
+  const j = i + dir;
+  if (j < 0 || j >= order.length) return;
+  [order[i], order[j]] = [order[j], order[i]];
+  tabOrder = order;
+  pcfgSaveOrderAndLabels();
+}
+
+function pcfgSetTabLabel(key, value) {
+  const v = (value || '').trim();
+  if (v) tabLabels[key] = v; else delete tabLabels[key];
+  pcfgSaveOrderAndLabels();
+}
+
+async function pcfgSaveOrderAndLabels() {
+  try {
+    await pcfgSaveParam('ordre_onglets', tabOrder);
+    await pcfgSaveParam('libelles_onglets', tabLabels);
+    applyHiddenTabs();
+    pcfgRenderTabsSection();
+    showToast('Onglets mis à jour');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+// ── Vues partagées (liens invité) ──
+function pcfgSlug(s) {
+  return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') || 'invite';
+}
+
+function pcfgAddGuest() {
+  let base = 'invite', slug = base, n = 1;
+  while (guestProfiles.some(p => p.slug === slug)) { n++; slug = base + '-' + n; }
+  guestProfiles.push({ slug, label: 'Nouvelle vue', tabs: getTabOrder().filter(k => !hiddenTabs.includes(k)) });
+  pcfgSaveGuestProfiles();
+}
+
+function pcfgRenameGuest(oldSlug, newLabel) {
+  const p = guestProfiles.find(x => x.slug === oldSlug);
+  if (!p) return;
+  p.label = newLabel;
+  const newSlug = pcfgSlug(newLabel);
+  if (newSlug !== oldSlug && !guestProfiles.some(x => x.slug === newSlug)) p.slug = newSlug;
+  pcfgSaveGuestProfiles();
+}
+
+function pcfgToggleGuestTab(slug, key) {
+  const p = guestProfiles.find(x => x.slug === slug);
+  if (!p) return;
+  const i = p.tabs.indexOf(key);
+  if (i === -1) p.tabs.push(key); else p.tabs.splice(i,1);
+  pcfgSaveGuestProfiles();
+}
+
+function pcfgDeleteGuest(slug) {
+  if (!confirm('Supprimer cette vue partagée ?')) return;
+  guestProfiles = guestProfiles.filter(p => p.slug !== slug);
+  pcfgSaveGuestProfiles();
+}
+
+function pcfgCopyGuestLink(slug) {
+  const url = location.origin + location.pathname + '?vue=' + encodeURIComponent(slug);
+  navigator.clipboard.writeText(url).then(() => pcfgShowGuestCopied(slug)).catch(() => prompt('Copie manuelle :', url));
+}
+
+function pcfgShowGuestCopied(slug) {
+  const el = document.getElementById('pcfg-guest-copied-' + slug);
+  if (!el) return;
+  el.classList.add('vis');
+  setTimeout(() => el.classList.remove('vis'), 1400);
+}
+
+async function pcfgSaveGuestProfiles() {
+  try {
+    await pcfgSaveParam('vues_partagees', guestProfiles);
+    pcfgRenderGuests();
+    showToast('Vues partagées mises à jour');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+function pcfgRenderGuests() {
+  const box = document.getElementById('pcfgGuestsList');
+  if (!box) return;
+  if (!guestProfiles.length) { box.innerHTML = '<div class="pcfg-hint" style="margin-bottom:8px">Aucune vue partagée pour l\'instant.</div>'; return; }
+  const visibleTabs = getTabOrder().filter(k => !hiddenTabs.includes(k));
+  box.innerHTML = guestProfiles.map(p => {
+    const tabsH = visibleTabs.map(key => {
+      const t = PCFG_TABS.find(x => x.key === key);
+      const lbl = tabLabels[key] || (t ? t.label : key);
+      const on = p.tabs.includes(key);
+      return `<label class="pcfg-guest-chk"><input type="checkbox" ${on?'checked':''} onchange="pcfgToggleGuestTab('${p.slug}','${key}')"> ${esc(lbl)}</label>`;
+    }).join('');
+    return `<div class="pcfg-guest-card">
+      <div class="pcfg-guest-head">
+        <input type="text" class="pcfg-tabrow-input" value="${esc(p.label)}" onchange="pcfgRenameGuest('${p.slug}', this.value)">
+        <button class="pcfg-guest-del" onclick="pcfgDeleteGuest('${p.slug}')" title="Supprimer">✕</button>
+      </div>
+      <div class="pcfg-guest-sub">Onglets visibles</div>
+      <div class="pcfg-guest-grid">${tabsH}</div>
+      <div class="pcfg-guest-link-row">
+        <button class="btn-add-ghost" onclick="pcfgCopyGuestLink('${p.slug}')">Copier le lien</button>
+        <span class="pcfg-guest-copied" id="pcfg-guest-copied-${p.slug}">Copié ✓</span>
+      </div>
+    </div>`;
+  }).join('');
 }
 
   
