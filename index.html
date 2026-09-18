@@ -781,6 +781,39 @@ tr:hover .cr-del-btn { opacity: 1; }
 .pcfg-guest-link-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
 .pcfg-guest-copied { font-size: 11.5px; color: #2a9d5c; opacity: 0; transition: opacity .2s; }
 .pcfg-guest-copied.vis { opacity: 1; }
+/* ══ Plan d'action — vue visuelle (management visuel des chantiers) ══ */
+.chantier-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; padding: 16px; align-content: start; }
+.chantier-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  border-left: 4px solid var(--card-color, #999); padding: 14px 14px 12px; cursor: pointer;
+  display: flex; flex-direction: column; gap: 9px; transition: box-shadow 0.12s, transform 0.12s;
+}
+.chantier-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.chantier-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.chantier-card-code { font-size: 9.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; }
+.chantier-card-nom { font-size: 13.5px; font-weight: 600; color: var(--text-primary); line-height: 1.3; }
+.vz-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
+.vz-pill-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.chantier-card-progress-track { height: 5px; border-radius: 3px; background: var(--surface3); overflow: hidden; }
+.chantier-card-progress-fill { height: 100%; border-radius: 3px; background: var(--card-color, #999); transition: width 0.2s; }
+.chantier-card-progress-label { font-size: 10.5px; color: var(--text-muted); }
+.chantier-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 2px; }
+.chantier-card-deadline { font-size: 10.5px; color: var(--text-muted); white-space: nowrap; }
+.chantier-card-deadline.overdue { color: var(--danger); font-weight: 600; }
+.chantier-card-children { font-size: 10.5px; color: var(--text-faint); }
+.vz-detail-section { padding: 14px 18px; border-bottom: 1px solid var(--border); }
+.vz-detail-section:last-child { border-bottom: none; }
+.vz-detail-row { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 12px; color: var(--text-secondary); }
+.vz-detail-label { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-faint); font-weight: 600; margin-bottom: 4px; }
+.vz-detail-text { font-size: 12.5px; color: var(--text-secondary); line-height: 1.45; white-space: pre-wrap; }
+.vz-task-row { display: flex; align-items: center; gap: 8px; padding: 7px 4px; border-bottom: 1px solid var(--border); cursor: pointer; font-size: 12.5px; }
+.vz-task-row:last-child { border-bottom: none; }
+.vz-task-row:hover { background: var(--surface2); }
+.vz-task-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.vz-task-label { flex: 1; color: var(--text-primary); }
+.vz-task-meta { font-size: 10.5px; color: var(--text-muted); white-space: nowrap; }
+.vz-subchantier-row { display: flex; align-items: center; gap: 8px; padding: 6px 4px; cursor: pointer; font-size: 12.5px; border-radius: var(--radius-sm); }
+.vz-subchantier-row:hover { background: var(--surface2); }
 </style>
 </head>
 <body>
@@ -1030,7 +1063,11 @@ tr:hover .cr-del-btn { opacity: 1; }
     <!-- ── OBJECTIFS ── -->
     <div class="panel" id="panel-objectifs">
       <nav class="cadre-subnav">
-        <div class="cadre-subtab active" id="spModeSuivi" data-sub="sp-suivi" onclick="switchSpMode('suivi')">
+        <div class="cadre-subtab" id="spModeVisuel" data-sub="sp-visuel" onclick="switchSpMode('visuel')">
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+  <span class="subtab-label">Vue visuelle</span>
+</div>
+<div class="cadre-subtab active" id="spModeSuivi" data-sub="sp-suivi" onclick="switchSpMode('suivi')">
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
   <span class="subtab-label">Feuille de route</span>
 </div>
@@ -1224,6 +1261,34 @@ tr:hover .cr-del-btn { opacity: 1; }
           <div class="table-scroll">
               <div id="frtTable" style="max-width:none;margin:0"><div class="loading"><div class="spinner"></div> Chargement…</div></div>
             </div>
+          </div>
+        </div>
+        <!-- Vue visuelle (management visuel des chantiers) -->
+        <div id="sp-visuel" style="flex:1;flex-direction:column;overflow:hidden;display:none">
+          <div style="padding:8px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;background:var(--bg)">
+            <div class="search-wrap" style="min-width:130px;max-width:190px">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+              <input type="text" class="search-input" id="vzSearch" placeholder="Rechercher…" oninput="renderVisuelChantiers()">
+            </div>
+            <select class="filter-select" id="vzFilterEtat" onchange="renderVisuelChantiers()">
+              <option value="">Suivi</option>
+              <option value="alancer">À lancer</option>
+              <option value="encours">En cours</option>
+              <option value="realise">Réalisé</option>
+            </select>
+            <select class="filter-select" id="vzFilterNiveau" onchange="renderVisuelChantiers()">
+              <option value="1" selected>Chantiers (niveau 1)</option>
+              <option value="2">Jusqu'au niveau 2</option>
+              <option value="99">Tous les niveaux</option>
+            </select>
+            <span class="count-badge" id="vzCount" style="margin-left:auto">—</span>
+            <button class="btn-add" onclick="openSousProjetModal()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Ajouter
+            </button>
+          </div>
+          <div style="flex:1;overflow:auto">
+            <div id="vzGrid" class="chantier-grid"></div>
           </div>
         </div>
       </div>
@@ -1536,6 +1601,21 @@ tr:hover .cr-del-btn { opacity: 1; }
 </div><!-- /app -->
 
 <!-- ══ MODAL ACTION ══ -->
+<div class="modal-overlay" id="chantierDetailOverlay" onclick="if(event.target.id==='chantierDetailOverlay')closeChantierDetail()">
+  <div class="modal-box" style="max-width:620px">
+    <div class="modal-head">
+      <h3 id="vzDetailTitle" style="font-size:15px">—</h3>
+      <button class="modal-close" onclick="closeChantierDetail()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="vzDetailBody" style="padding:0"></div>
+    <div class="modal-foot">
+      <button class="btn-ghost" onclick="closeChantierDetail()">Fermer</button>
+      <button class="btn-primary" id="vzDetailEditBtn" onclick="">Modifier le sous-projet</button>
+    </div>
+  </div>
+</div>
 <div class="modal-overlay" id="actionModalOverlay" onclick="if(event.target.id==='actionModalOverlay')closeActionModal()">
   <div class="modal-box" style="max-width:560px">
     <div class="modal-head">
@@ -2049,6 +2129,7 @@ const PCFG_SUBTABS = [
   { key: 'def-instances',  group: 'definition', label: 'Instances',           selector: '#panel-definition [data-sub="def-instances"]',  activate: () => switchDefTab('def-instances') },
   { key: 'def-themes',     group: 'definition', label: 'Thème',               selector: '#panel-definition [data-sub="def-themes"]',     activate: () => switchDefTab('def-themes') },
   { key: 'def-documents',  group: 'definition', label: 'Documents',           selector: '#panel-definition [data-sub="def-documents"]',  activate: () => switchDefTab('def-documents') },
+  { key: 'sp-visuel',      group: 'objectifs',  label: 'Vue visuelle',        selector: '#spModeVisuel',          activate: () => switchSpMode('visuel') },
   { key: 'sp-suivi',       group: 'objectifs',  label: 'Feuille de route',    selector: '#spModeSuivi',           activate: () => switchSpMode('suivi') },
   { key: 'sp-gantt',       group: 'objectifs',  label: 'Gantt',                selector: '#spModeGantt',           activate: () => switchSpMode('gantt') },
   { key: 'sp-dessin',      group: 'objectifs',  label: 'Dessin',               selector: '#spModeFeuilleDeroute',  activate: () => switchSpMode('feuilleroute') },
@@ -2152,6 +2233,7 @@ async function fetchActeurs() {
       if (spMode === 'gantt')        { populateGanttProjetFilters(); renderGanttProjet(); }
       if (spMode === 'feuilleroute') { populateFeuillerouteFilters(); renderFeuilleDeroute(); }
       if (spMode === 'suivi')        { populateSuiviFrtFilters(); renderSuiviFeuilleRoute(); }
+      if (spMode === 'visuel')       { renderVisuelChantiers(); }
     }
 })();
 
@@ -3383,7 +3465,9 @@ function printOdj() {
 function refreshObjectifsView() {
   if (spMode === 'gantt')        { populateGanttProjetFilters(); renderGanttProjet(); }
   else if (spMode === 'feuilleroute') { populateFeuillerouteFilters(); renderFeuilleDeroute(); }
+  else if (spMode === 'visuel')  { renderVisuelChantiers(); }
   else { populateSuiviFrtFilters(); renderSuiviFeuilleRoute(); }
+  refreshChantierDetailIfOpen();
 }
 
 function switchSpMode(mode) {
@@ -3393,13 +3477,14 @@ function switchSpMode(mode) {
   document.getElementById('spModeFeuilleDeroute').classList.toggle('active', mode === 'feuilleroute');
   document.getElementById('spModeDessin2').classList.toggle('active', mode === 'dessin2');
   document.getElementById('spModeSuivi').classList.toggle('active', mode === 'suivi');
-  
+  document.getElementById('spModeVisuel').classList.toggle('active', mode === 'visuel');
   
   
   document.getElementById('sp-gantt').style.display        = mode === 'gantt'        ? 'flex' : 'none';
   document.getElementById('sp-feuilleroute').style.display = mode === 'feuilleroute' ? 'flex' : 'none';
   document.getElementById('sp-dessin2').style.display       = mode === 'dessin2'      ? 'flex' : 'none';
   document.getElementById('sp-suivi').style.display         = mode === 'suivi'        ? 'flex' : 'none';
+  document.getElementById('sp-visuel').style.display        = mode === 'visuel'       ? 'flex' : 'none';
   
   
   
@@ -3408,8 +3493,181 @@ function switchSpMode(mode) {
   if (mode === 'feuilleroute') { populateFeuillerouteFilters(); renderFeuilleDeroute(); }
   if (mode === 'dessin2')      { populateDessin2Filters(); renderDessin2(); }
   if (mode === 'suivi')        { populateSuiviFrtFilters(); renderSuiviFeuilleRoute(); }
+  if (mode === 'visuel')       { renderVisuelChantiers(); }
   
   
+}
+
+// ══ VUE VISUELLE (management visuel des chantiers) ══
+const VZ_STATUT = {
+  alancer: { label: 'À lancer', color: '#9CA3AF' },
+  encours: { label: 'En cours', color: '#2563EB' },
+  realise: { label: 'Réalisé',  color: '#15803D' },
+};
+
+let chantierDetailStack = [];
+
+function vzTasksFor(projetId) {
+  return allActions.filter(a => a.projet === projetId);
+}
+
+function vzProgress(projetId) {
+  const tasks = vzTasksFor(projetId);
+  if (!tasks.length) return null;
+  const done = tasks.filter(a => a.etat === 'Réalisé').length;
+  return { done, total: tasks.length, pct: Math.round(done / tasks.length * 100) };
+}
+
+function renderVisuelChantiers() {
+  const grid = document.getElementById('vzGrid');
+  if (!grid) return;
+  if (!masterProjet) {
+    grid.innerHTML = emptyState('Aucun projet maître défini', "Définissez un projet maître dans l'onglet Projet.", 'folder');
+    const c = document.getElementById('vzCount'); if (c) c.textContent = '—';
+    return;
+  }
+  const search = (document.getElementById('vzSearch')?.value || '').trim().toLowerCase();
+  const fEtat  = document.getElementById('vzFilterEtat')?.value || '';
+  const fNiv   = parseInt(document.getElementById('vzFilterNiveau')?.value || '1', 10);
+
+  const rows = buildFrtHierarchy().filter(p => {
+    if (p._depth > fNiv - 1) return false;
+    if (fEtat && projetStatut(p) !== fEtat) return false;
+    if (search && !((p.nom + ' ' + p.code).toLowerCase().includes(search))) return false;
+    return true;
+  });
+
+  const countEl = document.getElementById('vzCount');
+  if (countEl) countEl.textContent = rows.length + (rows.length > 1 ? ' chantiers' : ' chantier');
+
+  if (!rows.length) {
+    grid.innerHTML = emptyState('Aucun chantier', 'Ajoutez un sous-projet pour le voir apparaître ici.', 'folder');
+    return;
+  }
+
+  grid.innerHTML = rows.map(p => {
+    const hex = projetHex(p) || '#9CA3AF';
+    const statut = VZ_STATUT[projetStatut(p)] || VZ_STATUT.alancer;
+    const prog = vzProgress(p.id);
+    const overdue = p.fin && !p.finreelle && (p.fin * 86400000 < Date.now());
+    const childrenCount = allProjets.filter(x => x.ref === p.id).length;
+    const progressHtml = prog
+      ? `<div class="chantier-card-progress-track"><div class="chantier-card-progress-fill" style="width:${prog.pct}%"></div></div>
+         <div class="chantier-card-progress-label">${prog.done}/${prog.total} tâche${prog.total>1?'s':''} réalisée${prog.done>1?'s':''}</div>`
+      : `<div class="chantier-card-progress-label">Aucune tâche</div>`;
+    return `
+      <div class="chantier-card" style="--card-color:${hex}" onclick="openChantierDetail(${p.id})">
+        <div class="chantier-card-top">
+          <div>
+            ${p.code ? `<div class="chantier-card-code">${esc(p.code)}</div>` : ''}
+            <div class="chantier-card-nom">${esc(p.nom || 'Sans nom')}</div>
+          </div>
+          <span class="vz-pill" style="background:${statut.color}22;color:${statut.color}"><span class="vz-pill-dot"></span>${statut.label}</span>
+        </div>
+        ${progressHtml}
+        ${p.theme ? `<div>${themeBadgesHtml(p.theme, true)}</div>` : ''}
+        <div class="chantier-card-foot">
+          <div>${piloteChipsHtml(p) || '<span class="chantier-card-deadline">Pilote non défini</span>'}</div>
+          ${p.fin ? `<span class="chantier-card-deadline${overdue?' overdue':''}">${overdue?'⚠ ':''}${fmtDateShort(p.fin)}</span>` : ''}
+        </div>
+        ${childrenCount ? `<div class="chantier-card-children">${childrenCount} sous-chantier${childrenCount>1?'s':''}</div>` : ''}
+      </div>`;
+  }).join('');
+}
+
+function openChantierDetail(id) {
+  chantierDetailStack = [id];
+  document.getElementById('chantierDetailOverlay').classList.add('open');
+  renderChantierDetailBody(id);
+}
+
+function closeChantierDetail() {
+  document.getElementById('chantierDetailOverlay').classList.remove('open');
+  chantierDetailStack = [];
+}
+
+function refreshChantierDetailIfOpen() {
+  if (chantierDetailStack.length) renderChantierDetailBody(chantierDetailStack[chantierDetailStack.length - 1]);
+}
+
+function vzOpenSubChantier(id) {
+  chantierDetailStack.push(id);
+  renderChantierDetailBody(id);
+}
+
+function vzBackChantier() {
+  if (chantierDetailStack.length > 1) {
+    chantierDetailStack.pop();
+    renderChantierDetailBody(chantierDetailStack[chantierDetailStack.length - 1]);
+  }
+}
+
+function renderChantierDetailBody(id) {
+  const p = allProjets.find(x => x.id === id);
+  const body    = document.getElementById('vzDetailBody');
+  const titleEl = document.getElementById('vzDetailTitle');
+  const editBtn = document.getElementById('vzDetailEditBtn');
+  if (!p || !body) { closeChantierDetail(); return; }
+
+  const statut  = VZ_STATUT[projetStatut(p)] || VZ_STATUT.alancer;
+  const inst    = p.instance ? instances[p.instance] : null;
+  const overdue = p.fin && !p.finreelle && (p.fin * 86400000 < Date.now());
+
+  titleEl.innerHTML = (chantierDetailStack.length > 1 ? `<span onclick="vzBackChantier()" style="cursor:pointer;color:var(--text-muted);font-weight:400">← </span>` : '')
+    + esc(p.code ? p.code + ' — ' : '') + esc(p.nom || 'Sans nom');
+  editBtn.onclick = () => { closeChantierDetail(); editSousProjet(p.id); };
+
+  const children = allProjets.filter(x => x.ref === p.id).sort((a,b) => (a.ordre??9999)-(b.ordre??9999));
+  const tasks    = vzTasksFor(p.id).sort((a,b) => (a.echeance||Infinity) - (b.echeance||Infinity));
+
+  body.innerHTML = `
+    <div class="vz-detail-section">
+      <div class="vz-detail-row" style="margin-bottom:8px">
+        <span class="vz-pill" style="background:${statut.color}22;color:${statut.color}"><span class="vz-pill-dot"></span>${statut.label}</span>
+        ${p.theme ? themeBadgesHtml(p.theme) : ''}
+        ${inst ? `<span class="badge" style="background:var(--surface2);color:var(--text-secondary)">${esc(inst.sigle || inst.nom)}</span>` : ''}
+      </div>
+      <div class="vz-detail-row">
+        <div><div class="vz-detail-label">Pilote(s)</div>${piloteChipsHtml(p) || '—'}</div>
+        <div><div class="vz-detail-label">Début</div>${fmtDateShort(p.debut)}</div>
+        <div><div class="vz-detail-label">Échéance</div><span${overdue?' style="color:var(--danger);font-weight:600"':''}>${fmtDateShort(p.fin)}</span></div>
+        ${p.finreelle ? `<div><div class="vz-detail-label">Réalisé le</div>${fmtDateShort(p.finreelle)}</div>` : ''}
+      </div>
+      ${p.objectifs ? `<div style="margin-top:10px"><div class="vz-detail-label">Objectifs</div><div class="vz-detail-text">${esc(p.objectifs)}</div></div>` : ''}
+    </div>
+    ${children.length ? `
+    <div class="vz-detail-section">
+      <div class="vz-detail-label" style="margin-bottom:6px">${children.length} sous-chantier${children.length>1?'s':''}</div>
+      ${children.map(c => {
+        const chex = projetHex(c) || '#9CA3AF';
+        const cst  = VZ_STATUT[projetStatut(c)] || VZ_STATUT.alancer;
+        return `<div class="vz-subchantier-row" onclick="vzOpenSubChantier(${c.id})">
+          <span class="vz-task-dot" style="background:${chex}"></span>
+          <span style="flex:1">${esc(c.nom || 'Sans nom')}</span>
+          <span class="vz-pill" style="background:${cst.color}22;color:${cst.color}">${cst.label}</span>
+        </div>`;
+      }).join('')}
+    </div>` : ''}
+    <div class="vz-detail-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div class="vz-detail-label" style="margin:0">${tasks.length} tâche${tasks.length>1?'s':''}</div>
+        <button class="btn-add-ghost" onclick="closeChantierDetail();openActionModal(null,'A faire',${p.id})">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Tâche
+        </button>
+      </div>
+      ${tasks.length ? tasks.map(t => {
+        const et  = ETAT_KANBAN.find(e => e.key === t.etat) || ETAT_KANBAN[0];
+        const qui = t.qui ? allActors.find(a => a.id === t.qui) : null;
+        return `<div class="vz-task-row" onclick="closeChantierDetail();openActionModal(${t.id})">
+          <span class="vz-task-dot" style="background:${et.dot}"></span>
+          <span class="vz-task-label">${esc(t.action || 'Sans intitulé')}</span>
+          ${qui ? `<span class="vz-task-meta">${esc(qui.nom)}</span>` : ''}
+          ${t.echeance ? `<span class="vz-task-meta">${fmtDateShort(t.echeance)}</span>` : ''}
+        </div>`;
+      }).join('') : '<div class="vz-detail-text" style="color:var(--text-muted)">Aucune tâche pour ce chantier.</div>'}
+    </div>
+  `;
 }
 
 function renderSpMindmap() {
@@ -6739,6 +6997,8 @@ async function saveAction() {
     closeActionModal();
     await fetchActions();
     if (acMode === 'kanban') renderKanban(); else renderActions();
+    if (spMode === 'visuel') renderVisuelChantiers();
+    refreshChantierDetailIfOpen();
   } catch(e) { showToast(e.message, 'error'); }
 }
 
@@ -6750,6 +7010,8 @@ async function deleteAction(id) {
     showToast('Action supprimée');
     await fetchActions();
     if (acMode === 'kanban') renderKanban(); else renderActions();
+    if (spMode === 'visuel') renderVisuelChantiers();
+    refreshChantierDetailIfOpen();
   } catch(e) { showToast(e.message, 'error'); }
 }
 
