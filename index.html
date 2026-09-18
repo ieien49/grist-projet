@@ -3795,7 +3795,9 @@ function renderChantierDetailBody(id) {
         </button>
       </div>
       ${tasks.length ? tasks.map(t => {
-        const et  = ETAT_KANBAN.find(e => e.key === t.etat) || ETAT_KANBAN[0];
+        const isDone = t.etat === 'Réalisé';
+        const isLate = t.echeance > 0 && !isDone && (t.echeance * 86400000) < Date.now();
+        const et  = isLate ? { key: 'En retard', bg: '#FEF2F2', text: '#DC2626' } : (ETAT_KANBAN.find(e => e.key === t.etat) || ETAT_KANBAN[0]);
         const qui = t.qui ? allActors.find(a => a.id === t.qui) : null;
         return `<div class="vz-task-row" onclick="closeChantierDetail();openActionModal(${t.id})">
           <span class="vz-pill" style="background:${et.bg};color:${et.text};flex-shrink:0;margin-top:1px">${esc(et.key)}</span>
@@ -3803,7 +3805,7 @@ function renderChantierDetailBody(id) {
             <span class="vz-task-label">${esc(t.action || 'Sans intitulé')}</span>
             ${(qui || t.echeance) ? `<div class="vz-task-meta-row">
               ${qui ? `<span class="vz-task-meta">${esc(qui.nom)}</span>` : ''}
-              ${t.echeance ? `<span class="vz-task-meta">${fmtDateShort(t.echeance)}</span>` : ''}
+              ${t.echeance ? `<span class="vz-task-meta"${isLate ? ' style="color:var(--danger);font-weight:600"' : ''}>${isLate ? '⚠ ' : ''}${fmtDateShort(t.echeance)}</span>` : ''}
             </div>` : ''}
           </div>
         </div>`;
