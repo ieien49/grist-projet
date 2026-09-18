@@ -3529,10 +3529,19 @@ function switchSpMode(mode) {
 
 // ══ VUE VISUELLE (management visuel des chantiers) ══
 const VZ_STATUT = {
-  alancer: { label: 'À lancer', color: '#9CA3AF' },
-  encours: { label: 'En cours', color: '#2563EB' },
-  realise: { label: 'Réalisé',  color: '#15803D' },
+  alancer:  { label: 'À lancer', color: '#9CA3AF' },
+  encours:  { label: 'En cours', color: '#2563EB' },
+  enretard: { label: 'En retard', color: '#DC2626' },
+  realise:  { label: 'Réalisé',  color: '#15803D' },
 };
+
+// Statut réel (alancer/encours/realise, utilisé pour le filtrage) vs statut affiché
+// (bascule "encours" -> "enretard" si l'échéance est dépassée, pour l'affichage seulement)
+function projetStatutAffiche(p) {
+  const s = projetStatut(p);
+  if (s === 'encours' && p.fin && !p.finreelle && (p.fin * 86400000 < Date.now())) return 'enretard';
+  return s;
+}
 
 let chantierDetailStack = [];
 
@@ -3575,7 +3584,7 @@ function vzCollapseAllPhases() {
 function chantierCardHtml(p, opts) {
   opts = opts || {};
   const hex = projetHex(p) || '#9CA3AF';
-  const statut = VZ_STATUT[projetStatut(p)] || VZ_STATUT.alancer;
+  const statut = VZ_STATUT[projetStatutAffiche(p)] || VZ_STATUT.alancer;
   const prog = vzProgress(p.id);
   const overdue = p.fin && !p.finreelle && (p.fin * 86400000 < Date.now());
   const childrenCount = allProjets.filter(x => x.ref === p.id).length;
@@ -3607,7 +3616,7 @@ function chantierCardHtml(p, opts) {
 // Ligne "sous-chantier" façon liste (même style que dans le panneau de détail), cliquable → panneau latéral
 function subChantierRowHtml(c) {
   const chex = projetHex(c) || '#9CA3AF';
-  const cst  = VZ_STATUT[projetStatut(c)] || VZ_STATUT.alancer;
+  const cst  = VZ_STATUT[projetStatutAffiche(c)] || VZ_STATUT.alancer;
   const overdue = c.fin && !c.finreelle && (c.fin * 86400000 < Date.now());
   return `<div class="vz-subchantier-row" onclick="openChantierDetail(${c.id})">
     <span class="vz-task-dot" style="background:${chex}"></span>
@@ -3738,7 +3747,7 @@ function renderChantierDetailBody(id) {
   const editBtn = document.getElementById('vzDetailEditBtn');
   if (!p || !body) { closeChantierDetail(); return; }
 
-  const statut  = VZ_STATUT[projetStatut(p)] || VZ_STATUT.alancer;
+  const statut  = VZ_STATUT[projetStatutAffiche(p)] || VZ_STATUT.alancer;
   const inst    = p.instance ? instances[p.instance] : null;
   const overdue = p.fin && !p.finreelle && (p.fin * 86400000 < Date.now());
 
@@ -3769,7 +3778,7 @@ function renderChantierDetailBody(id) {
       <div class="vz-detail-label" style="margin-bottom:6px">${children.length} sous-chantier${children.length>1?'s':''}</div>
       ${children.map(c => {
         const chex = projetHex(c) || '#9CA3AF';
-        const cst  = VZ_STATUT[projetStatut(c)] || VZ_STATUT.alancer;
+        const cst  = VZ_STATUT[projetStatutAffiche(c)] || VZ_STATUT.alancer;
         return `<div class="vz-subchantier-row" onclick="vzOpenSubChantier(${c.id})">
           <span class="vz-task-dot" style="background:${chex}"></span>
           <span style="flex:1">${esc(c.nom || 'Sans nom')}</span>
