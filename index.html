@@ -791,6 +791,7 @@ tr:hover .cr-del-btn { opacity: 1; }
 .pcfg-guest-copied.vis { opacity: 1; }
 /* ══ Plan d'action — vue visuelle (management visuel des chantiers) ══ */
 .chantier-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; padding: 16px; align-content: start; }
+.vz-phase-list { max-width: 760px; padding-bottom: 16px; }
 .chantier-card {
   background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
   border-left: 4px solid var(--card-color, #999); padding: 14px 14px 12px; cursor: pointer;
@@ -1298,11 +1299,12 @@ tr:hover .cr-del-btn { opacity: 1; }
               <option value="encours">En cours</option>
               <option value="realise">Réalisé</option>
             </select>
-            <select class="filter-select" id="vzFilterNiveau" onchange="renderVisuelChantiers()">
-              <option value="1" selected>Phases + chantiers en cours</option>
-              <option value="2">Jusqu'au niveau 2</option>
-              <option value="99">Tous les niveaux</option>
-            </select>
+            <button class="btn-add-ghost" onclick="vzExpandAllPhases()" title="Tout déplier" style="padding:3px 9px">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/><path d="M6 3l6 6 6-6" opacity=".4"/></svg>
+            </button>
+            <button class="btn-add-ghost" onclick="vzCollapseAllPhases()" title="Tout replier" style="padding:3px 9px">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 15l-6-6-6 6"/><path d="M18 21l-6-6-6 6" opacity=".4"/></svg>
+            </button>
             <span class="count-badge" id="vzCount" style="margin-left:auto">—</span>
             <button class="btn-add" onclick="openSousProjetModal()">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -1310,7 +1312,7 @@ tr:hover .cr-del-btn { opacity: 1; }
             </button>
           </div>
           <div style="flex:1;overflow:auto">
-            <div id="vzGrid" class="chantier-grid"></div>
+            <div id="vzGrid" class="vz-phase-list"></div>
           </div>
         </div>
       </div>
@@ -3555,6 +3557,16 @@ function toggleVzPhaseOthers(id) {
   renderVisuelChantiers();
 }
 
+function vzExpandAllPhases() {
+  vzCollapsedPhases.clear();
+  renderVisuelChantiers();
+}
+
+function vzCollapseAllPhases() {
+  buildFrtHierarchy().filter(p => p._depth === 0).forEach(p => vzCollapsedPhases.add(p.id));
+  renderVisuelChantiers();
+}
+
 function chantierCardHtml(p, opts) {
   opts = opts || {};
   const hex = projetHex(p) || '#9CA3AF';
@@ -3614,84 +3626,61 @@ function renderVisuelChantiers() {
   }
   const search = (document.getElementById('vzSearch')?.value || '').trim().toLowerCase();
   const fEtat  = document.getElementById('vzFilterEtat')?.value || '';
-  const fNiv   = parseInt(document.getElementById('vzFilterNiveau')?.value || '1', 10);
   const allRows = buildFrtHierarchy();
   const countEl = document.getElementById('vzCount');
   const matchSearch = p => !search || ((p.nom || '') + ' ' + (p.code || '')).toLowerCase().includes(search);
 
-  // Mode "Phases" (niveau 1) : carte de phase en accordéon + sous-chantiers en liste dessous
-  if (fNiv === 1) {
-    const phases = allRows.filter(p => p._depth === 0);
-    const blocks = [];
-    let phaseCount = 0, chantierCount = 0;
+  // Carte de phase en accordéon + sous-chantiers en liste dessous
+  const phases = allRows.filter(p => p._depth === 0);
+  const blocks = [];
+  let phaseCount = 0, chantierCount = 0;
 
-    phases.forEach(phase => {
-      const children = allRows.filter(p => p._depth === 1 && p.ref === phase.id);
-      const visibleChildren = children.filter(c => (!fEtat || projetStatut(c) === fEtat) && matchSearch(c));
-      const phaseItself = matchSearch(phase) && (!fEtat || projetStatut(phase) === fEtat);
-      if (!phaseItself && !visibleChildren.length) return;
+  phases.forEach(phase => {
+    const children = allRows.filter(p => p._depth === 1 && p.ref === phase.id);
+    const visibleChildren = children.filter(c => (!fEtat || projetStatut(c) === fEtat) && matchSearch(c));
+    const phaseItself = matchSearch(phase) && (!fEtat || projetStatut(phase) === fEtat);
+    if (!phaseItself && !visibleChildren.length) return;
 
-      phaseCount++;
-      chantierCount += children.length;
+    phaseCount++;
+    chantierCount += children.length;
 
-      const collapsed = vzCollapsedPhases.has(phase.id);
-      const chevron = `<span class="phase-card-chevron${collapsed ? '' : ' open'}">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 6 15 12 9 18"/></svg>
-        </span>`;
-      const phaseCardHtml = `<div class="phase-card-wrap" onclick="toggleVzPhaseCollapse(${phase.id})">${chantierCardHtml(phase, { compact: true, noClick: true })}${chevron}</div>`;
+    const collapsed = vzCollapsedPhases.has(phase.id);
+    const chevron = `<span class="phase-card-chevron${collapsed ? '' : ' open'}">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 6 15 12 9 18"/></svg>
+      </span>`;
+    const phaseCardHtml = `<div class="phase-card-wrap" onclick="toggleVzPhaseCollapse(${phase.id})">${chantierCardHtml(phase, { compact: true, noClick: true })}${chevron}</div>`;
 
-      let bodyHtml = '';
-      if (!collapsed) {
-        const defaultState = fEtat || 'encours';
-        const shown  = visibleChildren.filter(c => projetStatut(c) === defaultState);
-        const others = visibleChildren.filter(c => projetStatut(c) !== defaultState);
-        const showOthers = vzExpandedOthers.has(phase.id);
-        const displayed = showOthers ? visibleChildren : shown;
+    let bodyHtml = '';
+    if (!collapsed) {
+      const defaultState = fEtat || 'encours';
+      const shown  = visibleChildren.filter(c => projetStatut(c) === defaultState);
+      const others = visibleChildren.filter(c => projetStatut(c) !== defaultState);
+      const showOthers = vzExpandedOthers.has(phase.id);
+      const displayed = showOthers ? visibleChildren : shown;
 
-        const listHtml = displayed.length
-          ? `<div class="phase-children-list">${displayed.map(c => subChantierRowHtml(c)).join('')}</div>`
-          : (children.length ? `<div class="phase-children-empty">Aucun chantier « en cours » pour cette phase.</div>` : '');
+      const listHtml = displayed.length
+        ? `<div class="phase-children-list">${displayed.map(c => subChantierRowHtml(c)).join('')}</div>`
+        : (children.length ? `<div class="phase-children-empty">Aucun chantier « en cours » pour cette phase.</div>` : '');
 
-        const toggleHtml = (others.length && !fEtat)
-          ? `<button class="vz-toggle-others" onclick="event.stopPropagation();toggleVzPhaseOthers(${phase.id})">
-               ${showOthers ? 'Masquer les autres chantiers' : `Voir ${others.length} autre${others.length > 1 ? 's' : ''} chantier${others.length > 1 ? 's' : ''} (à lancer / réalisés)`}
-             </button>`
-          : '';
+      const toggleHtml = (others.length && !fEtat)
+        ? `<button class="vz-toggle-others" onclick="event.stopPropagation();toggleVzPhaseOthers(${phase.id})">
+             ${showOthers ? 'Masquer les autres chantiers' : `Voir ${others.length} autre${others.length > 1 ? 's' : ''} chantier${others.length > 1 ? 's' : ''} (à lancer / réalisés)`}
+           </button>`
+        : '';
 
-        bodyHtml = listHtml + toggleHtml;
-      }
-
-      blocks.push(`<div class="phase-block">${phaseCardHtml}${bodyHtml}</div>`);
-    });
-
-    if (countEl) countEl.textContent = phaseCount + (phaseCount > 1 ? ' phases' : ' phase') + ' · ' + chantierCount + (chantierCount > 1 ? ' chantiers' : ' chantier');
-
-    if (!blocks.length) {
-      grid.innerHTML = emptyState('Aucun chantier', 'Ajoutez un sous-projet pour le voir apparaître ici.', 'folder');
-      return;
+      bodyHtml = listHtml + toggleHtml;
     }
-    grid.className = '';
-    grid.innerHTML = blocks.join('');
-    return;
-  }
 
-  // Modes "Jusqu'au niveau 2" / "Tous les niveaux" : liste à plat, comme avant
-  grid.className = 'chantier-grid';
-  const rows = allRows.filter(p => {
-    if (p._depth > fNiv - 1) return false;
-    if (fEtat && projetStatut(p) !== fEtat) return false;
-    if (!matchSearch(p)) return false;
-    return true;
+    blocks.push(`<div class="phase-block">${phaseCardHtml}${bodyHtml}</div>`);
   });
 
-  if (countEl) countEl.textContent = rows.length + (rows.length > 1 ? ' chantiers' : ' chantier');
+  if (countEl) countEl.textContent = phaseCount + (phaseCount > 1 ? ' phases' : ' phase') + ' · ' + chantierCount + (chantierCount > 1 ? ' chantiers' : ' chantier');
 
-  if (!rows.length) {
+  if (!blocks.length) {
     grid.innerHTML = emptyState('Aucun chantier', 'Ajoutez un sous-projet pour le voir apparaître ici.', 'folder');
     return;
   }
-
-  grid.innerHTML = rows.map(p => chantierCardHtml(p)).join('');
+  grid.innerHTML = blocks.join('');
 }
 
 function openChantierDetail(id) {
