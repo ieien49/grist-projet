@@ -1301,6 +1301,9 @@ tr:hover .cr-del-btn { opacity: 1; }
               <option value="encours">En cours</option>
               <option value="realise">Réalisé</option>
             </select>
+            <select class="filter-select" id="vzFilterPilote" onchange="renderVisuelChantiers()">
+              <option value="">Pilote</option>
+            </select>
             <button class="btn-add-ghost" onclick="vzExpandAllPhases()" title="Tout déplier" style="padding:3px 9px">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/><path d="M6 3l6 6 6-6" opacity=".4"/></svg>
             </button>
@@ -3544,12 +3547,12 @@ function vzProgress(projetId) {
   return { done, total: tasks.length, pct: Math.round(done / tasks.length * 100) };
 }
 
-let vzCollapsedPhases = new Set(); // phases repliées (par défaut : toutes ouvertes)
-let vzExpandedOthers  = new Set(); // phases où "à lancer / réalisés" est aussi affiché
+let vzExpandedPhaseIds = new Set(); // phases dépliées (par défaut : tout est plié)
+let vzExpandedOthers   = new Set(); // phases où "à lancer / réalisés" est aussi affiché
 
 function toggleVzPhaseCollapse(id) {
-  if (vzCollapsedPhases.has(id)) vzCollapsedPhases.delete(id);
-  else vzCollapsedPhases.add(id);
+  if (vzExpandedPhaseIds.has(id)) vzExpandedPhaseIds.delete(id);
+  else vzExpandedPhaseIds.add(id);
   renderVisuelChantiers();
 }
 
@@ -3560,12 +3563,12 @@ function toggleVzPhaseOthers(id) {
 }
 
 function vzExpandAllPhases() {
-  vzCollapsedPhases.clear();
+  buildFrtHierarchy().filter(p => p._depth === 0).forEach(p => vzExpandedPhaseIds.add(p.id));
   renderVisuelChantiers();
 }
 
 function vzCollapseAllPhases() {
-  buildFrtHierarchy().filter(p => p._depth === 0).forEach(p => vzCollapsedPhases.add(p.id));
+  vzExpandedPhaseIds.clear();
   renderVisuelChantiers();
 }
 
@@ -3618,6 +3621,18 @@ function subChantierRowHtml(c) {
   </div>`;
 }
 
+function populateVzPiloteFilter(allRows) {
+  const sel = document.getElementById('vzFilterPilote');
+  if (!sel) return;
+  const current = sel.value;
+  const ids = new Set();
+  allRows.forEach(p => projetPiloteIds(p).forEach(id => ids.add(id)));
+  const actors = [...ids].map(id => allActors.find(a => a.id === id)).filter(Boolean)
+    .sort((a, b) => a.nom.localeCompare(b.nom));
+  sel.innerHTML = '<option value="">Pilote</option>' + actors.map(a => `<option value="${a.id}">${esc(a.nom)}</option>`).join('');
+  if (current && ids.has(Number(current))) sel.value = current;
+}
+
 function renderVisuelChantiers() {
   const grid = document.getElementById('vzGrid');
   if (!grid) return;
@@ -3626,11 +3641,15 @@ function renderVisuelChantiers() {
     const c = document.getElementById('vzCount'); if (c) c.textContent = '—';
     return;
   }
-  const search = (document.getElementById('vzSearch')?.value || '').trim().toLowerCase();
-  const fEtat  = document.getElementById('vzFilterEtat')?.value || '';
   const allRows = buildFrtHierarchy();
+  populateVzPiloteFilter(allRows);
+
+  const search  = (document.getElementById('vzSearch')?.value || '').trim().toLowerCase();
+  const fEtat   = document.getElementById('vzFilterEtat')?.value || '';
+  const fPilote = document.getElementById('vzFilterPilote')?.value || '';
   const countEl = document.getElementById('vzCount');
   const matchSearch = p => !search || ((p.nom || '') + ' ' + (p.code || '')).toLowerCase().includes(search);
+  const matchPilote = p => !fPilote || projetPiloteIds(p).includes(Number(fPilote));
 
   // Carte de phase en accordéon + sous-chantiers en liste dessous
   const phases = allRows.filter(p => p._depth === 0);
@@ -3639,14 +3658,14 @@ function renderVisuelChantiers() {
 
   phases.forEach(phase => {
     const children = allRows.filter(p => p._depth === 1 && p.ref === phase.id);
-    const visibleChildren = children.filter(c => (!fEtat || projetStatut(c) === fEtat) && matchSearch(c));
-    const phaseItself = matchSearch(phase) && (!fEtat || projetStatut(phase) === fEtat);
+    const visibleChildren = children.filter(c => (!fEtat || projetStatut(c) === fEtat) && matchSearch(c) && matchPilote(c));
+    const phaseItself = matchSearch(phase) && (!fEtat || projetStatut(phase) === fEtat) && matchPilote(phase);
     if (!phaseItself && !visibleChildren.length) return;
 
     phaseCount++;
     chantierCount += children.length;
 
-    const collapsed = vzCollapsedPhases.has(phase.id);
+    const collapsed = !vzExpandedPhaseIds.has(phase.id);
     const chevron = `<span class="phase-card-chevron${collapsed ? '' : ' open'}">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 6 15 12 9 18"/></svg>
       </span>`;
