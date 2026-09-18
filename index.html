@@ -801,6 +801,16 @@ tr:hover .cr-del-btn { opacity: 1; }
 .chantier-card-deadline { font-size: 10.5px; color: var(--text-muted); white-space: nowrap; }
 .chantier-card-deadline.overdue { color: var(--danger); font-weight: 600; }
 .chantier-card-children { font-size: 10.5px; color: var(--text-faint); }
+/* Cartes de phase (compactes) + regroupement des chantiers dessous */
+.chantier-card--compact { padding: 9px 14px 8px; gap: 5px; }
+.chantier-card--compact .chantier-card-nom { font-size: 13px; }
+.phase-block { padding: 0 16px; margin-top: 16px; }
+.phase-block:first-child { margin-top: 16px; }
+.phase-children-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; padding: 10px 0 4px 22px; margin: 0; position: relative; }
+.phase-children-grid::before { content: ''; position: absolute; left: 8px; top: 0; bottom: 10px; width: 2px; background: var(--border); }
+.phase-children-empty { padding: 8px 0 2px 22px; font-size: 11.5px; color: var(--text-faint); }
+.vz-toggle-others { margin: 6px 0 0 22px; padding: 5px 11px; border: 1px dashed var(--border); border-radius: 999px; background: transparent; color: var(--text-muted); font-size: 11.5px; font-weight: 600; cursor: pointer; }
+.vz-toggle-others:hover { background: var(--surface2); color: var(--text-primary); }
 .vz-detail-section { padding: 14px 18px; border-bottom: 1px solid var(--border); }
 .vz-detail-section:last-child { border-bottom: none; }
 .vz-detail-row { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 12px; color: var(--text-secondary); }
@@ -1277,7 +1287,7 @@ tr:hover .cr-del-btn { opacity: 1; }
               <option value="realise">Réalisé</option>
             </select>
             <select class="filter-select" id="vzFilterNiveau" onchange="renderVisuelChantiers()">
-              <option value="1" selected>Chantiers (niveau 1)</option>
+              <option value="1" selected>Phases + chantiers en cours</option>
               <option value="2">Jusqu'au niveau 2</option>
               <option value="99">Tous les niveaux</option>
             </select>
@@ -3518,6 +3528,46 @@ function vzProgress(projetId) {
   return { done, total: tasks.length, pct: Math.round(done / tasks.length * 100) };
 }
 
+let vzExpandedPhases = new Set();
+
+function toggleVzPhase(id) {
+  if (vzExpandedPhases.has(id)) vzExpandedPhases.delete(id);
+  else vzExpandedPhases.add(id);
+  renderVisuelChantiers();
+}
+
+function chantierCardHtml(p, opts) {
+  opts = opts || {};
+  const hex = projetHex(p) || '#9CA3AF';
+  const statut = VZ_STATUT[projetStatut(p)] || VZ_STATUT.alancer;
+  const prog = vzProgress(p.id);
+  const overdue = p.fin && !p.finreelle && (p.fin * 86400000 < Date.now());
+  const childrenCount = allProjets.filter(x => x.ref === p.id).length;
+  const progressHtml = opts.compact
+    ? (prog ? `<div class="chantier-card-progress-track"><div class="chantier-card-progress-fill" style="width:${prog.pct}%"></div></div>` : '')
+    : (prog
+        ? `<div class="chantier-card-progress-track"><div class="chantier-card-progress-fill" style="width:${prog.pct}%"></div></div>
+           <div class="chantier-card-progress-label">${prog.done}/${prog.total} tâche${prog.total>1?'s':''} réalisée${prog.done>1?'s':''}</div>`
+        : `<div class="chantier-card-progress-label">Aucune tâche</div>`);
+  return `
+    <div class="chantier-card${opts.compact ? ' chantier-card--compact' : ''}" style="--card-color:${hex}" onclick="openChantierDetail(${p.id})">
+      <div class="chantier-card-top">
+        <div>
+          ${p.code ? `<div class="chantier-card-code">${esc(p.code)}</div>` : ''}
+          <div class="chantier-card-nom">${esc(p.nom || 'Sans nom')}</div>
+        </div>
+        <span class="vz-pill" style="background:${statut.color}22;color:${statut.color}"><span class="vz-pill-dot"></span>${statut.label}</span>
+      </div>
+      ${progressHtml}
+      ${(!opts.compact && p.theme) ? `<div>${themeBadgesHtml(p.theme, true)}</div>` : ''}
+      <div class="chantier-card-foot">
+        <div>${piloteChipsHtml(p) || '<span class="chantier-card-deadline">Pilote non défini</span>'}</div>
+        ${p.fin ? `<span class="chantier-card-deadline${overdue?' overdue':''}">${overdue?'⚠ ':''}${fmtDateShort(p.fin)}</span>` : ''}
+      </div>
+      ${(!opts.compact && childrenCount) ? `<div class="chantier-card-children">${childrenCount} sous-chantier${childrenCount>1?'s':''}</div>` : ''}
+    </div>`;
+}
+
 function renderVisuelChantiers() {
   const grid = document.getElementById('vzGrid');
   if (!grid) return;
@@ -3529,15 +3579,64 @@ function renderVisuelChantiers() {
   const search = (document.getElementById('vzSearch')?.value || '').trim().toLowerCase();
   const fEtat  = document.getElementById('vzFilterEtat')?.value || '';
   const fNiv   = parseInt(document.getElementById('vzFilterNiveau')?.value || '1', 10);
+  const allRows = buildFrtHierarchy();
+  const countEl = document.getElementById('vzCount');
+  const matchSearch = p => !search || ((p.nom || '') + ' ' + (p.code || '')).toLowerCase().includes(search);
 
-  const rows = buildFrtHierarchy().filter(p => {
+  // Mode "Phases" (niveau 1) : carte de phase compacte + chantiers en cours affichés directement dessous
+  if (fNiv === 1) {
+    const phases = allRows.filter(p => p._depth === 0);
+    const blocks = [];
+    let phaseCount = 0, chantierCount = 0;
+
+    phases.forEach(phase => {
+      const children = allRows.filter(p => p._depth === 1 && p.ref === phase.id);
+      const visibleChildren = children.filter(c => (!fEtat || projetStatut(c) === fEtat) && matchSearch(c));
+      const phaseItself = matchSearch(phase) && (!fEtat || projetStatut(phase) === fEtat);
+      if (!phaseItself && !visibleChildren.length) return;
+
+      const defaultState = fEtat || 'encours';
+      const shown  = visibleChildren.filter(c => projetStatut(c) === defaultState);
+      const others = visibleChildren.filter(c => projetStatut(c) !== defaultState);
+      const expanded = vzExpandedPhases.has(phase.id);
+      const displayed = expanded ? visibleChildren : shown;
+
+      phaseCount++;
+      chantierCount += children.length;
+
+      const childrenGridHtml = displayed.length
+        ? `<div class="chantier-grid phase-children-grid">${displayed.map(c => chantierCardHtml(c)).join('')}</div>`
+        : (children.length ? `<div class="phase-children-empty">Aucun chantier « en cours » pour cette phase.</div>` : '');
+
+      const toggleHtml = (others.length && !fEtat)
+        ? `<button class="vz-toggle-others" onclick="event.stopPropagation();toggleVzPhase(${phase.id})">
+             ${expanded ? 'Masquer les autres chantiers' : `Voir ${others.length} autre${others.length > 1 ? 's' : ''} chantier${others.length > 1 ? 's' : ''} (à lancer / réalisés)`}
+           </button>`
+        : '';
+
+      blocks.push(`<div class="phase-block">${chantierCardHtml(phase, { compact: true })}${childrenGridHtml}${toggleHtml}</div>`);
+    });
+
+    if (countEl) countEl.textContent = phaseCount + (phaseCount > 1 ? ' phases' : ' phase') + ' · ' + chantierCount + (chantierCount > 1 ? ' chantiers' : ' chantier');
+
+    if (!blocks.length) {
+      grid.innerHTML = emptyState('Aucun chantier', 'Ajoutez un sous-projet pour le voir apparaître ici.', 'folder');
+      return;
+    }
+    grid.className = '';
+    grid.innerHTML = blocks.join('');
+    return;
+  }
+
+  // Modes "Jusqu'au niveau 2" / "Tous les niveaux" : liste à plat, comme avant
+  grid.className = 'chantier-grid';
+  const rows = allRows.filter(p => {
     if (p._depth > fNiv - 1) return false;
     if (fEtat && projetStatut(p) !== fEtat) return false;
-    if (search && !((p.nom + ' ' + p.code).toLowerCase().includes(search))) return false;
+    if (!matchSearch(p)) return false;
     return true;
   });
 
-  const countEl = document.getElementById('vzCount');
   if (countEl) countEl.textContent = rows.length + (rows.length > 1 ? ' chantiers' : ' chantier');
 
   if (!rows.length) {
@@ -3545,34 +3644,7 @@ function renderVisuelChantiers() {
     return;
   }
 
-  grid.innerHTML = rows.map(p => {
-    const hex = projetHex(p) || '#9CA3AF';
-    const statut = VZ_STATUT[projetStatut(p)] || VZ_STATUT.alancer;
-    const prog = vzProgress(p.id);
-    const overdue = p.fin && !p.finreelle && (p.fin * 86400000 < Date.now());
-    const childrenCount = allProjets.filter(x => x.ref === p.id).length;
-    const progressHtml = prog
-      ? `<div class="chantier-card-progress-track"><div class="chantier-card-progress-fill" style="width:${prog.pct}%"></div></div>
-         <div class="chantier-card-progress-label">${prog.done}/${prog.total} tâche${prog.total>1?'s':''} réalisée${prog.done>1?'s':''}</div>`
-      : `<div class="chantier-card-progress-label">Aucune tâche</div>`;
-    return `
-      <div class="chantier-card" style="--card-color:${hex}" onclick="openChantierDetail(${p.id})">
-        <div class="chantier-card-top">
-          <div>
-            ${p.code ? `<div class="chantier-card-code">${esc(p.code)}</div>` : ''}
-            <div class="chantier-card-nom">${esc(p.nom || 'Sans nom')}</div>
-          </div>
-          <span class="vz-pill" style="background:${statut.color}22;color:${statut.color}"><span class="vz-pill-dot"></span>${statut.label}</span>
-        </div>
-        ${progressHtml}
-        ${p.theme ? `<div>${themeBadgesHtml(p.theme, true)}</div>` : ''}
-        <div class="chantier-card-foot">
-          <div>${piloteChipsHtml(p) || '<span class="chantier-card-deadline">Pilote non défini</span>'}</div>
-          ${p.fin ? `<span class="chantier-card-deadline${overdue?' overdue':''}">${overdue?'⚠ ':''}${fmtDateShort(p.fin)}</span>` : ''}
-        </div>
-        ${childrenCount ? `<div class="chantier-card-children">${childrenCount} sous-chantier${childrenCount>1?'s':''}</div>` : ''}
-      </div>`;
-  }).join('');
+  grid.innerHTML = rows.map(p => chantierCardHtml(p)).join('');
 }
 
 function openChantierDetail(id) {
