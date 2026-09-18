@@ -829,11 +829,13 @@ tr:hover .cr-del-btn { opacity: 1; }
 .vz-detail-row { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 12px; color: var(--text-secondary); }
 .vz-detail-label { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-faint); font-weight: 600; margin-bottom: 4px; }
 .vz-detail-text { font-size: 12.5px; color: var(--text-secondary); line-height: 1.45; white-space: pre-wrap; }
-.vz-task-row { display: flex; align-items: center; gap: 8px; padding: 7px 4px; border-bottom: 1px solid var(--border); cursor: pointer; font-size: 12.5px; }
+.vz-task-row { display: flex; align-items: flex-start; gap: 8px; padding: 8px 4px; border-bottom: 1px solid var(--border); cursor: pointer; font-size: 12.5px; }
 .vz-task-row:last-child { border-bottom: none; }
 .vz-task-row:hover { background: var(--surface2); }
 .vz-task-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.vz-task-label { flex: 1; color: var(--text-primary); }
+.vz-task-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.vz-task-label { color: var(--text-primary); }
+.vz-task-meta-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .vz-task-meta { font-size: 10.5px; color: var(--text-muted); white-space: nowrap; }
 .vz-subchantier-row { display: flex; align-items: center; gap: 8px; padding: 6px 4px; cursor: pointer; font-size: 12.5px; border-radius: var(--radius-sm); }
 .vz-subchantier-row:hover { background: var(--surface2); }
@@ -3768,10 +3770,14 @@ function renderChantierDetailBody(id) {
         const et  = ETAT_KANBAN.find(e => e.key === t.etat) || ETAT_KANBAN[0];
         const qui = t.qui ? allActors.find(a => a.id === t.qui) : null;
         return `<div class="vz-task-row" onclick="closeChantierDetail();openActionModal(${t.id})">
-          <span class="vz-pill" style="background:${et.bg};color:${et.text};flex-shrink:0">${esc(et.key)}</span>
-          <span class="vz-task-label">${esc(t.action || 'Sans intitulé')}</span>
-          ${qui ? `<span class="vz-task-meta">${esc(qui.nom)}</span>` : ''}
-          ${t.echeance ? `<span class="vz-task-meta">${fmtDateShort(t.echeance)}</span>` : ''}
+          <span class="vz-pill" style="background:${et.bg};color:${et.text};flex-shrink:0;margin-top:1px">${esc(et.key)}</span>
+          <div class="vz-task-body">
+            <span class="vz-task-label">${esc(t.action || 'Sans intitulé')}</span>
+            ${(qui || t.echeance) ? `<div class="vz-task-meta-row">
+              ${qui ? `<span class="vz-task-meta">${esc(qui.nom)}</span>` : ''}
+              ${t.echeance ? `<span class="vz-task-meta">${fmtDateShort(t.echeance)}</span>` : ''}
+            </div>` : ''}
+          </div>
         </div>`;
       }).join('') : '<div class="vz-detail-text" style="color:var(--text-muted)">Aucune tâche pour ce chantier.</div>'}
     </div>
@@ -8704,15 +8710,25 @@ function themeHex(tag) {
   if (m && m.couleur) return couleurs[m.couleur]?.hex || '#CCCCCC';
   return '#CCCCCC'; // thème hors table Themes : pas de couleur définie
 }
+function contrastTextColor(hex) {
+  if (!hex) return '#333';
+  let h = hex.replace('#', '');
+  if (h.length === 3) h = h.split('').map(c => c + c).join('');
+  if (h.length !== 6) return '#333';
+  const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return lum > 0.6 ? '#1a1a1a' : '#fff';
+}
 function themeBadgesHtml(themeStr, compact = false) {
   return parseThemes(themeStr).map(t => {
     const m = themeMeta(t);
     const hex = themeHex(t);
+    const txt = contrastTextColor(hex);
     const picto = m?.picto ? `<span style="display:inline-flex;width:12px;height:12px;vertical-align:-1px">${m.picto}</span> ` : '';
     if (compact) {
-      return `<span class="badge" style="background:${hex};color:#333;padding:2px 5px" title="${esc(t)}">${picto || esc(t.slice(0,1).toUpperCase())}</span>`;
+      return `<span class="badge" style="background:${hex};color:${txt};padding:2px 5px" title="${esc(t)}">${picto || esc(t.slice(0,1).toUpperCase())}</span>`;
     }
-    return `<span class="badge" style="background:${hex};color:#333">${picto}${esc(t)}</span>`;
+    return `<span class="badge" style="background:${hex};color:${txt}">${picto}${esc(t)}</span>`;
   }).join('');
 }
 
