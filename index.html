@@ -3768,7 +3768,7 @@ function renderChantierDetailBody(id) {
         const et  = ETAT_KANBAN.find(e => e.key === t.etat) || ETAT_KANBAN[0];
         const qui = t.qui ? allActors.find(a => a.id === t.qui) : null;
         return `<div class="vz-task-row" onclick="closeChantierDetail();openActionModal(${t.id})">
-          <span class="vz-task-dot" style="background:${et.dot}"></span>
+          <span class="vz-pill" style="background:${et.bg};color:${et.text};flex-shrink:0">${esc(et.key)}</span>
           <span class="vz-task-label">${esc(t.action || 'Sans intitulé')}</span>
           ${qui ? `<span class="vz-task-meta">${esc(qui.nom)}</span>` : ''}
           ${t.echeance ? `<span class="vz-task-meta">${fmtDateShort(t.echeance)}</span>` : ''}
