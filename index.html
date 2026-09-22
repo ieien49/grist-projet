@@ -91,6 +91,10 @@ body { font-family: var(--font); background: var(--bg); color: var(--text-primar
 .search-wrap svg { position: absolute; left: 7px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }
 .search-input { width: 100%; padding: 4px 7px 4px 26px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface2); font-family: var(--font); font-size: 12.5px; color: var(--text-primary); outline: none; transition: border-color 0.15s, background 0.15s; }
 .search-input:focus { border-color: var(--border-strong); background: var(--bg); box-shadow: 0 0 0 2px rgba(0,0,0,0.06); }
+.search-wrap .search-clear { position: absolute; right: 5px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; border: none; background: transparent; color: var(--text-muted); cursor: pointer; display: none; align-items: center; justify-content: center; padding: 0; border-radius: 50%; line-height: 0; }
+.search-wrap .search-clear:hover { color: var(--text-primary); background: var(--surface3); }
+.search-wrap.has-value .search-input { padding-right: 24px; }
+.search-wrap.has-value .search-clear { display: flex; }
 .filter-select { padding: 4px 22px 4px 7px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface2); font-family: var(--font); font-size: 12.5px; color: var(--text-primary); outline: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='9' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 6px center; cursor: pointer; }
 .filter-select:focus { border-color: var(--border-strong); }
 /* ══ PROJECT MODEL CANVAS ══ */
@@ -11947,6 +11951,35 @@ function crOutlookFallback(html) {
   </body></html>`);
   win.document.close();
 }
+
+// ══ CROIX DE RÉINITIALISATION SUR LES CHAMPS DE RECHERCHE ══
+function initSearchClearButtons() {
+  document.querySelectorAll('.search-wrap').forEach(wrap => {
+    const input = wrap.querySelector('.search-input');
+    if (!input || wrap.querySelector('.search-clear')) return; // déjà initialisé ou pas de champ
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'search-clear';
+    btn.setAttribute('aria-label', 'Effacer la recherche');
+    btn.tabIndex = -1;
+    btn.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+    wrap.appendChild(btn);
+
+    const toggle = () => wrap.classList.toggle('has-value', input.value.length > 0);
+    toggle();
+
+    input.addEventListener('input', toggle);
+
+    btn.addEventListener('click', () => {
+      input.value = '';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.focus();
+      toggle();
+    });
+  });
+}
+document.addEventListener('DOMContentLoaded', initSearchClearButtons);
 </script>
 </body>
 </html>
