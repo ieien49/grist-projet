@@ -12000,7 +12000,11 @@ function closeFrtExportMenu() {
   document.getElementById('frtExportMenu')?.classList.remove('open');
 }
 
-document.addEventListener('DOMContentLoaded', initSearchClearButtons);
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initSearchClearButtons);
+} else {
+  initSearchClearButtons();
+}
 </script>
 </body>
 </html>
