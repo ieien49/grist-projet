@@ -242,6 +242,13 @@ textarea.form-control { resize: vertical; min-height: 64px; line-height: 1.5; }
 .ms-item-add { border-top: 1px solid var(--border); color: var(--text-secondary); font-weight: 500; }
 .ms-item-add:hover { color: var(--text-primary); }
 
+/* ══ MENU DÉROULANT (ex: export PDF feuille de route) ══ */
+.dd-wrap { position: relative; }
+.dd-menu { position: absolute; top: calc(100% + 2px); left: 0; min-width: 220px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); box-shadow: var(--shadow-md); z-index: 250; display: none; overflow: hidden; }
+.dd-menu.open { display: block; }
+.dd-item { padding: 7px 12px; font-size: 12.5px; cursor: pointer; white-space: nowrap; }
+.dd-item:hover { background: var(--surface2); }
+
 /* ══ KANBAN ══ */
 .kb-col { flex:1 1 0; min-width:230px; display:flex; flex-direction:column; border-radius:var(--radius); background:var(--bg); border:1px solid var(--border); max-height:100%; }
 .kb-col-header { padding:8px 12px; display:flex; align-items:center; gap:7px; border-bottom:1px solid var(--border); flex-shrink:0; border-radius:var(--radius) var(--radius) 0 0; }
@@ -1246,18 +1253,18 @@ tr:hover .cr-del-btn { opacity: 1; }
     <button class="btn-add-ghost" onclick="populateSuiviFrtFilters();renderSuiviFeuilleRoute()" title="Rafraîchir">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
     </button>
-    <button class="btn-add-ghost" onclick="exportFeuilleRouteReportPdf()" title="Exporter en PDF (par thème)">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-      PDF (Thèmes)
-    </button>
-    <button class="btn-add-ghost" onclick="exportFeuilleRouteReportPdfParInstance()" title="Exporter en PDF (par instance / GT)">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-      PDF (GT)
-    </button>
-    <button class="btn-add-ghost" onclick="exportFeuilleRouteReportPdfParPhase()" title="Exporter en PDF (par phase)">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-      PDF (Phase)
-    </button>
+    <div class="dd-wrap" id="frtExportWrap">
+      <button class="btn-add-ghost" onclick="toggleFrtExportMenu()" title="Exporter en PDF">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Exporter PDF
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="dd-menu" id="frtExportMenu">
+        <div class="dd-item" onclick="closeFrtExportMenu();exportFeuilleRouteReportPdf()">Chantiers par engagement</div>
+        <div class="dd-item" onclick="closeFrtExportMenu();exportFeuilleRouteReportPdfParInstance()">Chantiers par groupes de travail</div>
+        <div class="dd-item" onclick="closeFrtExportMenu();exportFeuilleRouteReportPdfParPhase()">Chantiers par phase</div>
+      </div>
+    </div>
     <span class="count-badge" id="frtCount" style="margin-left:auto">—</span>
     <button class="btn-add" onclick="openSousProjetModal()">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -11979,6 +11986,20 @@ function initSearchClearButtons() {
     });
   });
 }
+// ══ MENU EXPORT PDF (Feuille de route) ══
+function toggleFrtExportMenu() {
+  const menu = document.getElementById('frtExportMenu');
+  const isOpen = menu.classList.contains('open');
+  document.querySelectorAll('.dd-menu.open').forEach(m => m.classList.remove('open'));
+  if (!isOpen) {
+    menu.classList.add('open');
+    setTimeout(() => document.addEventListener('click', closeFrtExportMenu, { once: true }), 0);
+  }
+}
+function closeFrtExportMenu() {
+  document.getElementById('frtExportMenu')?.classList.remove('open');
+}
+
 document.addEventListener('DOMContentLoaded', initSearchClearButtons);
 </script>
 </body>
