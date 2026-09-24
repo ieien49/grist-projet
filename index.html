@@ -664,6 +664,36 @@ tr:hover .cr-del-btn { opacity: 1; }
 .obeya-empty-text { font-size: 12px; color: var(--text-faint); font-style: italic; padding: 10px 4px; }
 @media (max-width: 900px) { .obeya-grid-3 { grid-template-columns: 1fr; } .obeya-grid-2 { grid-template-columns: 1fr; } }
 
+/* ── Obeya : panneaux cliquables façon mur tactile ── */
+.obeya-clickable { position: relative; cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
+.obeya-clickable:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--border-strong); }
+.obeya-clickable:active { transform: translateY(0) scale(0.99); }
+.obeya-expand-icon { position: absolute; top: 8px; right: 8px; width: 22px; height: 22px; border-radius: 50%; background: var(--surface3); border: 1px solid var(--border); color: var(--text-muted); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity .15s ease; pointer-events: none; }
+.obeya-clickable:hover .obeya-expand-icon { opacity: 1; }
+.obeya-kpi-row.obeya-clickable { padding-right: 44px; }
+
+.obeya-zoom-overlay { position: fixed; inset: 0; background: rgba(10,10,10,.7); backdrop-filter: blur(3px); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 5vh 5vw; }
+.obeya-zoom-overlay.open { display: flex; animation: obeyaFadeIn .16s ease; }
+.obeya-zoom-panel { background: var(--bg); border-radius: 14px; width: min(1100px, 92vw); max-height: 88vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 24px 64px rgba(0,0,0,.35); animation: obeyaPopIn .2s cubic-bezier(.2,.8,.3,1.1); }
+.obeya-zoom-panel-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 26px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.obeya-zoom-panel-title { font-size: 18px; font-weight: 700; color: var(--text-primary); letter-spacing: .01em; }
+.obeya-zoom-close { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface2); color: var(--text-secondary); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background .12s, color .12s; flex-shrink: 0; }
+.obeya-zoom-close:hover { background: var(--surface3); color: var(--text-primary); }
+.obeya-zoom-panel-body { flex: 1; overflow-y: auto; padding: 28px 30px; }
+.obeya-zoom-text { font-size: 17px; line-height: 1.8; color: var(--text-primary); white-space: pre-wrap; max-width: 760px; margin: 0 auto; }
+.obeya-zoom-kpi { transform: scale(1.15); transform-origin: top center; padding: 20px 0 44px; }
+.obeya-zoom-row { display: flex; align-items: flex-start; gap: 14px; padding: 14px 6px; border-bottom: 1px solid var(--border); }
+.obeya-zoom-row:last-child { border-bottom: none; }
+.obeya-dot-lg { width: 12px; height: 12px; margin-top: 5px; flex-shrink: 0; }
+.obeya-zoom-row-main { flex: 1; min-width: 0; }
+.obeya-zoom-row-title { font-size: 15px; font-weight: 500; color: var(--text-primary); }
+.obeya-zoom-row-sub { font-size: 12.5px; color: var(--text-secondary); margin-top: 3px; }
+.obeya-zoom-row-meta { font-size: 12.5px; color: var(--text-muted); white-space: nowrap; padding-top: 2px; }
+.obeya-zoom-row-date { font-size: 12.5px; color: var(--text-muted); white-space: nowrap; padding-top: 2px; min-width: 74px; text-align: right; }
+@keyframes obeyaFadeIn { from { opacity: 0 } to { opacity: 1 } }
+@keyframes obeyaPopIn { from { opacity: 0; transform: scale(.94) translateY(8px) } to { opacity: 1; transform: scale(1) translateY(0) } }
+@media (max-width: 720px) { .obeya-zoom-row { flex-wrap: wrap; } .obeya-zoom-row-meta, .obeya-zoom-row-date { min-width: 0; text-align: left; } }
+
 /* Anneau de progression */
 .kpi-ring-row { display: flex; align-items: center; gap: 16px; }
 .kpi-ring-svg { flex-shrink: 0; }
@@ -1129,6 +1159,17 @@ tr:hover .cr-del-btn { opacity: 1; }
           </div>
           <div class="table-scroll">
             <div id="obeyaContainer" class="table-inner"><div class="loading"><div class="spinner"></div> Chargement…</div></div>
+          </div>
+          <div class="obeya-zoom-overlay" id="obeyaZoomOverlay" onclick="closeObeyaZoomBackdrop(event)">
+            <div class="obeya-zoom-panel">
+              <div class="obeya-zoom-panel-header">
+                <span class="obeya-zoom-panel-title" id="obeyaZoomTitle"></span>
+                <button class="obeya-zoom-close" onclick="closeObeyaZoom()" aria-label="Fermer">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                </button>
+              </div>
+              <div class="obeya-zoom-panel-body" id="obeyaZoomBody"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -9679,6 +9720,8 @@ function buildKpiSectionsHtml() {
 }
 
 // ══ OBEYA ══
+const OBEYA_EXPAND_ICON = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18-5h-3a2 2 0 0 0-2 2v3M3 16v3a2 2 0 0 0 2 2h3m11-5v3a2 2 0 0 1-2 2h-3"/></svg>';
+
 function renderObeya() {
   const cont = document.getElementById('obeyaContainer');
   if (!cont) return;
@@ -9689,17 +9732,18 @@ function renderObeya() {
   const p   = masterProjet;
   const now = Date.now();
 
-  const cadrageField = (label, val) => `
-    <div class="obeya-card">
+  const cadrageField = (label, val, kind) => `
+    <div class="obeya-card obeya-clickable" onclick="openObeyaZoom('${kind}')">
       <div class="obeya-card-title">${esc(label)}</div>
       <div class="obeya-card-body">${val && val.trim() ? esc(val.trim()).split('\n').join('<br>') : '<span class="obeya-empty-text">Non renseigné</span>'}</div>
+      <span class="obeya-expand-icon">${OBEYA_EXPAND_ICON}</span>
     </div>`;
   const cadrageHtml = `
     <div class="obeya-section-title">Cadrage du projet</div>
     <div class="obeya-grid obeya-grid-3">
-      ${cadrageField('Objectifs', p.objectifs)}
-      ${cadrageField('Périmètre', p.perimetre)}
-      ${cadrageField('Risques et impacts', p.risques)}
+      ${cadrageField('Objectifs', p.objectifs, 'objectifs')}
+      ${cadrageField('Périmètre', p.perimetre, 'perimetre')}
+      ${cadrageField('Risques et impacts', p.risques, 'risques')}
     </div>`;
 
   const actionRow = (a) => {
@@ -9738,20 +9782,116 @@ function renderObeya() {
 
   cont.innerHTML = `
     <div class="obeya-section-title">Indicateurs</div>
-    <div class="obeya-kpi-row">${buildKpiSectionsHtml()}</div>
+    <div class="obeya-kpi-row obeya-clickable" onclick="openObeyaZoom('kpi')">
+      ${buildKpiSectionsHtml()}
+      <span class="obeya-expand-icon">${OBEYA_EXPAND_ICON}</span>
+    </div>
     ${cadrageHtml}
     <div class="obeya-grid obeya-grid-2">
       <div>
         <div class="obeya-section-title">Actions en retard</div>
-        <div class="obeya-list">${retardHtml}</div>
+        <div class="obeya-list obeya-clickable" onclick="openObeyaZoom('retard')">
+          ${retardHtml}
+          <span class="obeya-expand-icon">${OBEYA_EXPAND_ICON}</span>
+        </div>
       </div>
       <div>
         <div class="obeya-section-title">Prochaines échéances</div>
-        <div class="obeya-list">${prochainesHtml}</div>
+        <div class="obeya-list obeya-clickable" onclick="openObeyaZoom('prochaines')">
+          ${prochainesHtml}
+          <span class="obeya-expand-icon">${OBEYA_EXPAND_ICON}</span>
+        </div>
       </div>
     </div>
     <div class="obeya-section-title">Décisions récentes</div>
-    <div class="obeya-list">${recentesHtml}</div>`;
+    <div class="obeya-list obeya-clickable" onclick="openObeyaZoom('decisions')">
+      ${recentesHtml}
+      <span class="obeya-expand-icon">${OBEYA_EXPAND_ICON}</span>
+    </div>`;
+}
+
+// ── Zoom plein écran (mur tactile) ──
+const OBEYA_ZOOM_TITLES = {
+  kpi:        'Indicateurs',
+  objectifs:  'Objectifs',
+  perimetre:  'Périmètre',
+  risques:    'Risques et impacts',
+  retard:     'Actions en retard',
+  prochaines: 'Prochaines échéances',
+  decisions:  'Décisions récentes',
+};
+
+function openObeyaZoom(kind) {
+  const overlay = document.getElementById('obeyaZoomOverlay');
+  const body    = document.getElementById('obeyaZoomBody');
+  const title   = document.getElementById('obeyaZoomTitle');
+  if (!overlay || !body || !title) return;
+  title.textContent = OBEYA_ZOOM_TITLES[kind] || '';
+  body.innerHTML = buildObeyaZoomContent(kind);
+  overlay.classList.add('open');
+  document.addEventListener('keydown', obeyaZoomEscHandler);
+}
+function closeObeyaZoom() {
+  const overlay = document.getElementById('obeyaZoomOverlay');
+  if (overlay) overlay.classList.remove('open');
+  document.removeEventListener('keydown', obeyaZoomEscHandler);
+}
+function closeObeyaZoomBackdrop(e) {
+  if (e.target.id === 'obeyaZoomOverlay') closeObeyaZoom();
+}
+function obeyaZoomEscHandler(e) {
+  if (e.key === 'Escape') closeObeyaZoom();
+}
+
+function buildObeyaZoomContent(kind) {
+  const now = Date.now();
+
+  if (kind === 'kpi') {
+    return `<div class="obeya-zoom-kpi">${buildKpiSectionsHtml()}</div>`;
+  }
+  if (kind === 'objectifs' || kind === 'perimetre' || kind === 'risques') {
+    const val = masterProjet ? masterProjet[kind] : '';
+    return `<div class="obeya-zoom-text">${val && val.trim() ? esc(val.trim()).split('\n').join('<br>') : '<span class="obeya-empty-text">Non renseigné</span>'}</div>`;
+  }
+
+  const bigActionRow = (a) => {
+    const actor = a.qui ? allActors.find(x => x.id === a.qui) : null;
+    return `<div class="obeya-zoom-row">
+      <span class="obeya-dot obeya-dot-lg" style="background:${etatAcDot(a.etat)}"></span>
+      <div class="obeya-zoom-row-main">
+        <div class="obeya-zoom-row-title">${esc(a.action || '—')}</div>
+        ${a.description ? `<div class="obeya-zoom-row-sub">${esc(a.description)}</div>` : ''}
+      </div>
+      <span class="obeya-zoom-row-meta">${actor ? esc(actor.nom) : '—'}</span>
+      <span class="obeya-zoom-row-date">${fmtDateShort(a.echeance)}</span>
+    </div>`;
+  };
+
+  if (kind === 'retard') {
+    const rows = allActions
+      .filter(a => a.echeance && a.etat !== 'Réalisé' && (a.echeance * 86400000) < now)
+      .sort((a, b) => a.echeance - b.echeance);
+    return rows.length ? rows.map(bigActionRow).join('') : `<div class="obeya-empty-text">Aucune action en retard</div>`;
+  }
+  if (kind === 'prochaines') {
+    const rows = allActions
+      .filter(a => a.echeance && a.etat !== 'Réalisé' && (a.echeance * 86400000) >= now)
+      .sort((a, b) => a.echeance - b.echeance);
+    return rows.length ? rows.map(bigActionRow).join('') : `<div class="obeya-empty-text">Aucune échéance à venir</div>`;
+  }
+  if (kind === 'decisions') {
+    const rows = [...allDecisions].filter(d => d.etat !== 'Ordre du jour').sort((a, b) => (b.date || 0) - (a.date || 0));
+    return rows.length ? rows.map(d => `<div class="obeya-zoom-row">
+        <span class="obeya-dot obeya-dot-lg" style="background:${etatAcDot(d.etat)}"></span>
+        <div class="obeya-zoom-row-main">
+          <div class="obeya-zoom-row-title">${esc(d.decision || d.probleme || '—')}</div>
+          ${d.commentaire ? `<div class="obeya-zoom-row-sub">${esc(d.commentaire)}</div>` : ''}
+        </div>
+        <span class="obeya-zoom-row-meta">${esc(d.qui || '—')}</span>
+        <span class="obeya-zoom-row-date">${d.date ? fmtDateShort(d.date) : '—'}</span>
+      </div>`).join('') : `<div class="obeya-empty-text">Aucune décision enregistrée</div>`;
+  }
+  return '';
 }
 
 // ══ NOTE DE CADRAGE ══
