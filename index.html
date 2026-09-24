@@ -644,6 +644,25 @@ tr:hover .cr-del-btn { opacity: 1; }
 .kpi-inner  { max-width: var(--content-max); margin: 0 auto; padding: var(--content-pad); display: flex; flex-direction: column; gap: 28px; }
 
 .kpi-section-title { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 10px; }
+/* ══ OBEYA ══ */
+.obeya-section-title { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.07em; margin: 26px 0 10px; }
+.obeya-section-title:first-child { margin-top: 0; }
+.obeya-kpi-row { display: flex; flex-wrap: wrap; gap: 24px; padding: 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface2); }
+.obeya-kpi-row > div { flex: 1; min-width: 220px; }
+.obeya-grid { display: grid; gap: 12px; }
+.obeya-grid-3 { grid-template-columns: repeat(3, 1fr); }
+.obeya-grid-2 { grid-template-columns: 1fr 1fr; }
+.obeya-card { border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); padding: 10px 12px; }
+.obeya-card-title { font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; }
+.obeya-card-body { font-size: 12px; line-height: 1.55; color: var(--text-primary); white-space: pre-wrap; }
+.obeya-list { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.obeya-list-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-bottom: 1px solid var(--border); font-size: 12.5px; }
+.obeya-list-item:last-child { border-bottom: none; }
+.obeya-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.obeya-list-main { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-primary); }
+.obeya-list-meta { font-size: 11px; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
+.obeya-empty-text { font-size: 12px; color: var(--text-faint); font-style: italic; padding: 10px 4px; }
+@media (max-width: 900px) { .obeya-grid-3 { grid-template-columns: 1fr; } .obeya-grid-2 { grid-template-columns: 1fr; } }
 
 /* Anneau de progression */
 .kpi-ring-row { display: flex; align-items: center; gap: 16px; }
@@ -959,6 +978,10 @@ tr:hover .cr-del-btn { opacity: 1; }
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
           <span class="subtab-label">Documents</span>
         </div>
+        <div class="cadre-subtab" data-sub="def-obeya" onclick="switchDefTab('def-obeya')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 9v12"/></svg>
+          <span class="subtab-label">Obeya</span>
+        </div>
 
         
       </nav>
@@ -1091,6 +1114,21 @@ tr:hover .cr-del-btn { opacity: 1; }
           </div>
           <div class="table-scroll">
             <div id="documentTable"><div class="loading"><div class="spinner"></div> Chargement…</div></div>
+          </div>
+        </div>
+        <!-- Sous-panel Obeya -->
+        <div class="cadre-subpanel" id="def-obeya">
+          <div class="panel-header">
+            <span class="panel-title">Obeya</span>
+            <span class="count-badge">Vue d'ensemble</span>
+            <div class="spacer"></div>
+            <button class="btn-add-ghost" onclick="renderObeya()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+              Actualiser
+            </button>
+          </div>
+          <div class="table-scroll">
+            <div id="obeyaContainer" class="table-inner"><div class="loading"><div class="spinner"></div> Chargement…</div></div>
           </div>
         </div>
       </div>
@@ -2169,6 +2207,7 @@ const PCFG_SUBTABS = [
   { key: 'def-instances',  group: 'definition', label: 'Instances',           selector: '#panel-definition [data-sub="def-instances"]',  activate: () => switchDefTab('def-instances') },
   { key: 'def-themes',     group: 'definition', label: 'Thème',               selector: '#panel-definition [data-sub="def-themes"]',     activate: () => switchDefTab('def-themes') },
   { key: 'def-documents',  group: 'definition', label: 'Documents',           selector: '#panel-definition [data-sub="def-documents"]',  activate: () => switchDefTab('def-documents') },
+  { key: 'def-obeya',      group: 'definition', label: 'Obeya',               selector: '#panel-definition [data-sub="def-obeya"]',       activate: () => switchDefTab('def-obeya') },
   { key: 'sp-visuel',      group: 'objectifs',  label: 'Vue visuelle',        selector: '#spModeVisuel',          activate: () => switchSpMode('visuel') },
   { key: 'sp-suivi',       group: 'objectifs',  label: 'Feuille de route',    selector: '#spModeSuivi',           activate: () => switchSpMode('suivi') },
   { key: 'sp-gantt',       group: 'objectifs',  label: 'Gantt',                selector: '#spModeGantt',           activate: () => switchSpMode('gantt') },
@@ -5961,6 +6000,7 @@ function switchDefTab(sub) {
   if (sub === 'def-instances') renderInstances();
   if (sub === 'def-themes') renderThemes();
   if (sub === 'def-documents') { populateDocumentFilters(); renderDocuments(); }
+  if (sub === 'def-obeya') renderObeya();
 }
 
 // ══ RENDER ACTEURS ══
@@ -9509,7 +9549,10 @@ async function exportSubCanvasPng() {
 function renderKpi() {
   const cont = document.getElementById('kpiContainer');
   if (!cont) return;
+  cont.innerHTML = buildKpiSectionsHtml();
+}
 
+function buildKpiSectionsHtml() {
   const now = Date.now();
 
   // ── anneau de progression (r=38, stroke=7) ──
@@ -9632,7 +9675,83 @@ function renderKpi() {
       </div>
     </div>`;
 
-  cont.innerHTML = sectionActions + sectionTaches + sectionDecisions;
+  return sectionActions + sectionTaches + sectionDecisions;
+}
+
+// ══ OBEYA ══
+function renderObeya() {
+  const cont = document.getElementById('obeyaContainer');
+  if (!cont) return;
+  if (!masterProjet) {
+    cont.innerHTML = emptyState('Aucun projet maître', "Définissez d'abord le projet dans l'onglet Présentation.", 'folder');
+    return;
+  }
+  const p   = masterProjet;
+  const now = Date.now();
+
+  const cadrageField = (label, val) => `
+    <div class="obeya-card">
+      <div class="obeya-card-title">${esc(label)}</div>
+      <div class="obeya-card-body">${val && val.trim() ? esc(val.trim()).split('\n').join('<br>') : '<span class="obeya-empty-text">Non renseigné</span>'}</div>
+    </div>`;
+  const cadrageHtml = `
+    <div class="obeya-section-title">Cadrage du projet</div>
+    <div class="obeya-grid obeya-grid-3">
+      ${cadrageField('Objectifs', p.objectifs)}
+      ${cadrageField('Périmètre', p.perimetre)}
+      ${cadrageField('Risques et impacts', p.risques)}
+    </div>`;
+
+  const actionRow = (a) => {
+    const actor = a.qui ? allActors.find(x => x.id === a.qui) : null;
+    return `<div class="obeya-list-item">
+      <span class="obeya-dot" style="background:${etatAcDot(a.etat)}"></span>
+      <span class="obeya-list-main">${esc(a.action || '—')}</span>
+      <span class="obeya-list-meta">${actor ? esc(actor.nom) : '—'} · ${fmtDateShort(a.echeance)}</span>
+    </div>`;
+  };
+
+  const enRetard = allActions
+    .filter(a => a.echeance && a.etat !== 'Réalisé' && (a.echeance * 86400000) < now)
+    .sort((a, b) => a.echeance - b.echeance)
+    .slice(0, 8);
+  const retardHtml = enRetard.length ? enRetard.map(actionRow).join('')
+    : `<div class="obeya-empty-text">Aucune action en retard</div>`;
+
+  const prochaines = allActions
+    .filter(a => a.echeance && a.etat !== 'Réalisé' && (a.echeance * 86400000) >= now)
+    .sort((a, b) => a.echeance - b.echeance)
+    .slice(0, 8);
+  const prochainesHtml = prochaines.length ? prochaines.map(actionRow).join('')
+    : `<div class="obeya-empty-text">Aucune échéance à venir</div>`;
+
+  const recentes = [...allDecisions]
+    .filter(d => d.etat !== 'Ordre du jour')
+    .sort((a, b) => (b.date || 0) - (a.date || 0))
+    .slice(0, 6);
+  const recentesHtml = recentes.length ? recentes.map(d => `<div class="obeya-list-item">
+      <span class="obeya-dot" style="background:${etatAcDot(d.etat)}"></span>
+      <span class="obeya-list-main">${esc(d.decision || d.probleme || '—')}</span>
+      <span class="obeya-list-meta">${esc(d.qui || '—')} · ${d.date ? fmtDateShort(d.date) : '—'}</span>
+    </div>`).join('')
+    : `<div class="obeya-empty-text">Aucune décision enregistrée</div>`;
+
+  cont.innerHTML = `
+    <div class="obeya-section-title">Indicateurs</div>
+    <div class="obeya-kpi-row">${buildKpiSectionsHtml()}</div>
+    ${cadrageHtml}
+    <div class="obeya-grid obeya-grid-2">
+      <div>
+        <div class="obeya-section-title">Actions en retard</div>
+        <div class="obeya-list">${retardHtml}</div>
+      </div>
+      <div>
+        <div class="obeya-section-title">Prochaines échéances</div>
+        <div class="obeya-list">${prochainesHtml}</div>
+      </div>
+    </div>
+    <div class="obeya-section-title">Décisions récentes</div>
+    <div class="obeya-list">${recentesHtml}</div>`;
 }
 
 // ══ NOTE DE CADRAGE ══
