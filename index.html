@@ -3854,7 +3854,7 @@ function renderChantierDetailBody(id) {
       <div class="vz-detail-row" style="margin-bottom:8px">
         <span class="vz-pill" style="background:${statut.color}22;color:${statut.color}"><span class="vz-pill-dot"></span>${statut.label}</span>
         ${p.theme ? themeBadgesHtml(p.theme) : ''}
-        ${inst ? `<span class="badge" style="background:var(--surface2);color:var(--text-secondary)">${esc(inst.nom || inst.sigle)}</span>` : ''}
+        ${inst ? `<span style="font-size:11px;color:var(--text-muted)">Groupe de travail :</span> <span class="badge" style="background:var(--surface2);color:var(--text-secondary)">${esc(inst.nom || inst.sigle)}</span>` : ''}
       </div>
       <div class="vz-detail-row">
         <div><div class="vz-detail-label">Pilote(s)</div>${piloteChipsHtml(p) || '—'}</div>
