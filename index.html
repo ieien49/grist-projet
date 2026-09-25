@@ -10356,7 +10356,7 @@ renderRefPicker(currentRefVal);
         const el = document.createElement('div');
         el.className = 'ms-item';
         el.dataset.id = a.id;
-        el.innerHTML = `<span>${esc(a.nom)}${a.role ? ' — ' + esc(a.role) : ''}</span><span class="ms-check">✓</span>`;
+        el.innerHTML = `<span>${esc(a.nom)}</span><span class="ms-check">✓</span>`;
         el.addEventListener('click', e => { e.stopPropagation(); toggleProjetPiloteItem(a.id); });
         pilDrop.appendChild(el);
       });
