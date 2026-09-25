@@ -191,7 +191,7 @@ tr:hover .row-actions { opacity: 1; }
 .modal-overlay.open { opacity: 1; pointer-events: all; }
 .modal { background: var(--bg); border-radius: 8px; width: 100%; max-width: 560px; box-shadow: var(--shadow-lg); transform: translateY(6px); transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1); max-height: 88vh; overflow-y: auto; border: 1px solid var(--border); }
 .modal-overlay.open .modal { transform: translateY(0); }
-.modal-wide { max-width: 680px; }
+.modal-wide { max-width: 680px; max-height: 96vh; }
 .modal-box { background: var(--bg); border-radius: 8px; width: 100%; max-width: 560px; box-shadow: var(--shadow-lg); max-height: 88vh; overflow-y: auto; border: 1px solid var(--border); }
 .modal-head { padding: 16px 18px 0; display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
 .modal-head h2 { font-size: 14px; font-weight: 600; color: var(--text-primary); }
@@ -234,6 +234,7 @@ textarea.form-control { resize: vertical; min-height: 64px; line-height: 1.5; }
 .ms-tag-x:hover { color: var(--danger); }
 .ms-dropdown { position: absolute; top: calc(100% + 2px); left: 0; right: 0; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); box-shadow: var(--shadow-md); z-index: 250; max-height: 180px; overflow-y: auto; display: none; }
 .ms-dropdown.open { display: block; }
+.ms-dropdown.ms-fixed { position: fixed; right: auto; z-index: 3000; }
 .ms-item { display: flex; align-items: center; gap: 6px; padding: 5px 10px; font-size: 12.5px; cursor: pointer; }
 .ms-item:hover { background: var(--surface2); }
 .ms-item.sel { background: var(--surface3); }
@@ -6686,19 +6687,56 @@ function refreshInstActeursUI() {
     item.classList.toggle('sel', selectedInstanceActeurs.map(Number).includes(parseInt(item.dataset.id)));
   });
 }
+function positionMsDropdown(wrap, drop) {
+  const r = wrap.getBoundingClientRect();
+  const vh = window.innerHeight;
+  const spaceBelow = vh - r.bottom;
+  const spaceAbove = r.top;
+  const openUp = spaceBelow < 200 && spaceAbove > spaceBelow;
+  drop.style.left = r.left + 'px';
+  drop.style.width = r.width + 'px';
+  if (openUp) {
+    drop.style.top = 'auto';
+    drop.style.bottom = (vh - r.top + 2) + 'px';
+    drop.style.maxHeight = Math.max(80, Math.min(240, spaceAbove - 10)) + 'px';
+  } else {
+    drop.style.bottom = 'auto';
+    drop.style.top = (r.bottom + 2) + 'px';
+    drop.style.maxHeight = Math.max(80, Math.min(240, spaceBelow - 10)) + 'px';
+  }
+}
 function toggleMsDropdown(wrapId, dropId) {
   const drop = document.getElementById(dropId);
   const wrap = document.getElementById(wrapId);
   const open = drop.classList.contains('open');
-  if (open) { drop.classList.remove('open'); wrap.classList.remove('open'); }
+  if (open) { closeMsDropdown(wrapId, dropId); }
   else {
-    drop.classList.add('open'); wrap.classList.add('open');
+    if (drop.parentElement !== document.body) { drop.dataset.msHome = wrapId; document.body.appendChild(drop); }
+    drop.classList.add('ms-fixed', 'open'); wrap.classList.add('open');
+    positionMsDropdown(wrap, drop);
+    const reposition = () => positionMsDropdown(wrap, drop);
+    drop._msReposition = reposition;
+    window.addEventListener('scroll', reposition, true);
+    window.addEventListener('resize', reposition);
     setTimeout(() => document.addEventListener('click', () => closeMsDropdown(wrapId,dropId), {once:true}), 0);
   }
 }
 function closeMsDropdown(wrapId, dropId) {
-  document.getElementById(dropId)?.classList.remove('open');
-  document.getElementById(wrapId)?.classList.remove('open');
+  const drop = document.getElementById(dropId);
+  const wrap = document.getElementById(wrapId);
+  drop?.classList.remove('open');
+  wrap?.classList.remove('open');
+  if (drop?._msReposition) {
+    window.removeEventListener('scroll', drop._msReposition, true);
+    window.removeEventListener('resize', drop._msReposition);
+    drop._msReposition = null;
+  }
+  if (drop && drop.dataset.msHome === wrapId && wrap) {
+    wrap.appendChild(drop);
+    drop.classList.remove('ms-fixed');
+    drop.style.top = ''; drop.style.bottom = ''; drop.style.left = ''; drop.style.width = ''; drop.style.maxHeight = '';
+    delete drop.dataset.msHome;
+  }
 }
 
 // ══ SORT ══
