@@ -3712,6 +3712,12 @@ function vzCollapseAllPhases() {
   renderVisuelChantiers();
 }
 
+function vzPhaseCountLabel(list) {
+  const n = list.length;
+  const enCours = list.filter(c => projetStatut(c) === 'encours').length;
+  return `${n} chantier${n > 1 ? 's' : ''} · ${enCours} en cours`;
+}
+
 function chantierCardHtml(p, opts) {
   opts = opts || {};
   const hex = projetHex(p) || '#9CA3AF';
@@ -3735,6 +3741,7 @@ function chantierCardHtml(p, opts) {
         <span class="vz-pill" style="background:${statut.color}22;color:${statut.color}"><span class="vz-pill-dot"></span>${statut.label}</span>
       </div>
       ${progressHtml}
+      ${opts.countLabel ? `<div class="chantier-card-children">${opts.countLabel}</div>` : ''}
       ${(!opts.compact && p.theme) ? `<div>${themeBadgesHtml(p.theme, true)}</div>` : ''}
       <div class="chantier-card-foot">
         <div>${piloteChipsHtml(p) || '<span class="chantier-card-deadline">Pilote non défini</span>'}</div>
@@ -3920,7 +3927,7 @@ function renderVisuelChantiers() {
     const chevron = `<span class="phase-card-chevron${collapsed ? '' : ' open'}">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 6 15 12 9 18"/></svg>
       </span>`;
-    const phaseCardHtml = `<div class="phase-card-wrap" onclick="toggleVzPhaseCollapse(${phase.id})">${chantierCardHtml(phase, { compact: true, noClick: true })}${chevron}</div>`;
+    const phaseCardHtml = `<div class="phase-card-wrap" onclick="toggleVzPhaseCollapse(${phase.id})">${chantierCardHtml(phase, { compact: true, noClick: true, countLabel: vzPhaseCountLabel(visibleChildren) })}${chevron}</div>`;
 
     let bodyHtml = '';
     if (!collapsed) {
