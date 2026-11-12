@@ -920,6 +920,12 @@ tr:hover .cr-del-btn { opacity: 1; }
 .vz-task-meta { font-size: 10.5px; color: var(--text-muted); white-space: nowrap; }
 .vz-subchantier-row { display: flex; align-items: center; gap: 8px; padding: 6px 4px; cursor: pointer; font-size: 12.5px; border-radius: var(--radius-sm); }
 .vz-subchantier-row:hover { background: var(--surface2); }
+/* Bascule d'icônes : regrouper par phase / par engagement */
+.vz-group-toggle { display: inline-flex; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; flex-shrink: 0; }
+.vz-group-btn { width: 30px; height: 26px; display: flex; align-items: center; justify-content: center; border: none; background: var(--surface2); color: var(--text-muted); cursor: pointer; transition: background 0.12s, color 0.12s; }
+.vz-group-btn + .vz-group-btn { border-left: 1px solid var(--border); }
+.vz-group-btn:hover:not(.active) { color: var(--text-primary); background: var(--surface3); }
+.vz-group-btn.active { background: var(--text-primary); color: #fff; }
 </style>
 </head>
 <body>
@@ -1415,10 +1421,15 @@ tr:hover .cr-del-btn { opacity: 1; }
             <select class="filter-select" id="vzFilterPilote" onchange="renderVisuelChantiers()">
               <option value="">Pilote</option>
             </select>
-            <select class="filter-select" id="vzGroupBy" onchange="renderVisuelChantiers()" title="Regrouper les chantiers">
-              <option value="phase">Regrouper : par phase</option>
-              <option value="engagement">Regrouper : par engagement</option>
-            </select>
+            <select id="vzGroupBy" style="display:none"><option value="phase">phase</option><option value="engagement">engagement</option></select>
+            <div class="vz-group-toggle" role="group" aria-label="Regrouper les chantiers">
+              <button type="button" class="vz-group-btn active" data-group="phase" title="Regrouper par phase" aria-label="Regrouper par phase" onclick="vzSetGroupBy('phase')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
+              </button>
+              <button type="button" class="vz-group-btn" data-group="engagement" title="Regrouper par engagement" aria-label="Regrouper par engagement" onclick="vzSetGroupBy('engagement')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg>
+              </button>
+            </div>
             <button class="btn-add-ghost" onclick="vzExpandAllPhases()" title="Tout déplier" style="padding:3px 9px">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/><path d="M6 3l6 6 6-6" opacity=".4"/></svg>
             </button>
@@ -3716,6 +3727,13 @@ function vzPhaseCountLabel(list) {
   const n = list.length;
   const enCours = list.filter(c => projetStatut(c) === 'encours').length;
   return `${n} chantier${n > 1 ? 's' : ''} · ${enCours} en cours`;
+}
+
+function vzSetGroupBy(mode) {
+  const sel = document.getElementById('vzGroupBy');
+  if (sel) sel.value = mode;
+  document.querySelectorAll('.vz-group-btn').forEach(b => b.classList.toggle('active', b.dataset.group === mode));
+  renderVisuelChantiers();
 }
 
 function chantierCardHtml(p, opts) {
