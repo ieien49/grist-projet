@@ -926,6 +926,17 @@ tr:hover .cr-del-btn { opacity: 1; }
 .vz-group-btn + .vz-group-btn { border-left: 1px solid var(--border); }
 .vz-group-btn:hover:not(.active) { color: var(--text-primary); background: var(--surface3); }
 .vz-group-btn.active { background: var(--text-primary); color: #fff; }
+/* Filtre Suivi en tags */
+.vz-tag-filter { display: inline-flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+.vz-tag { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface2); color: var(--text-secondary); font-family: var(--font); font-size: 11.5px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: background 0.12s, color 0.12s, border-color 0.12s; }
+.vz-tag:hover:not(.active) { color: var(--text-primary); background: var(--surface3); }
+.vz-tag-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--tag-hex, #999); flex-shrink: 0; }
+.vz-tag.active { background: var(--tag-hex, #1A1A1A); border-color: transparent; color: #fff; }
+.vz-tag.active .vz-tag-dot { background: #fff; }
+/* Filtre Pilote avec picto */
+.vz-pilote-wrap { position: relative; display: inline-flex; align-items: center; }
+.vz-pilote-wrap > svg { position: absolute; left: 8px; color: var(--text-muted); pointer-events: none; }
+.vz-pilote-wrap .filter-select { padding-left: 24px; }
 </style>
 </head>
 <body>
@@ -1412,15 +1423,19 @@ tr:hover .cr-del-btn { opacity: 1; }
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
               <input type="text" class="search-input" id="vzSearch" placeholder="Rechercher…" oninput="renderVisuelChantiers()">
             </div>
-            <select class="filter-select" id="vzFilterEtat" onchange="renderVisuelChantiers()">
-              <option value="">Suivi</option>
-              <option value="alancer">À lancer</option>
-              <option value="encours">En cours</option>
-              <option value="realise">Réalisé</option>
-            </select>
-            <select class="filter-select" id="vzFilterPilote" onchange="renderVisuelChantiers()">
-              <option value="">Pilote</option>
-            </select>
+            <select id="vzFilterEtat" style="display:none"><option value=""></option><option value="alancer"></option><option value="encours"></option><option value="realise"></option></select>
+            <div class="vz-tag-filter" role="group" aria-label="Filtrer par suivi">
+              <button type="button" class="vz-tag active" data-etat="" style="--tag-hex:#1A1A1A" onclick="vzSetEtat('')">Tous</button>
+              <button type="button" class="vz-tag" data-etat="alancer" style="--tag-hex:#9CA3AF" onclick="vzSetEtat('alancer')"><span class="vz-tag-dot"></span>À lancer</button>
+              <button type="button" class="vz-tag" data-etat="encours" style="--tag-hex:#2563EB" onclick="vzSetEtat('encours')"><span class="vz-tag-dot"></span>En cours</button>
+              <button type="button" class="vz-tag" data-etat="realise" style="--tag-hex:#15803D" onclick="vzSetEtat('realise')"><span class="vz-tag-dot"></span>Réalisé</button>
+            </div>
+            <div class="vz-pilote-wrap" title="Pilote">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>
+              <select class="filter-select" id="vzFilterPilote" onchange="renderVisuelChantiers()" aria-label="Pilote">
+                <option value="">Pilote</option>
+              </select>
+            </div>
             <select id="vzGroupBy" style="display:none"><option value="phase">phase</option><option value="engagement">engagement</option></select>
             <div class="vz-group-toggle" role="group" aria-label="Regrouper les chantiers">
               <button type="button" class="vz-group-btn active" data-group="phase" title="Regrouper par phase" aria-label="Regrouper par phase" onclick="vzSetGroupBy('phase')">
@@ -3727,6 +3742,13 @@ function vzPhaseCountLabel(list) {
   const n = list.length;
   const enCours = list.filter(c => projetStatut(c) === 'encours').length;
   return `${n} chantier${n > 1 ? 's' : ''} · ${enCours} en cours`;
+}
+
+function vzSetEtat(v) {
+  const sel = document.getElementById('vzFilterEtat');
+  if (sel) sel.value = v;
+  document.querySelectorAll('.vz-tag').forEach(b => b.classList.toggle('active', b.dataset.etat === v));
+  renderVisuelChantiers();
 }
 
 function vzSetGroupBy(mode) {
