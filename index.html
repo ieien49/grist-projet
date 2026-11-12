@@ -294,6 +294,12 @@ textarea.form-control { resize: vertical; min-height: 64px; line-height: 1.5; }
 
 .btn-ghost { padding: 4px 11px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: transparent; font-family: var(--font); font-size: 12.5px; color: var(--text-secondary); cursor: pointer; transition: background 0.1s; }
 .btn-ghost:hover { background: var(--surface2); color: var(--text-primary); border-color: var(--border-strong); }
+.btn-danger { padding: 4px 11px; border: 1px solid #fecaca; border-radius: var(--radius-sm); background: transparent; font-family: var(--font); font-size: 12.5px; color: var(--danger); cursor: pointer; transition: background 0.1s; }
+.btn-danger:hover { background: #fef2f2; }
+.btn-danger-solid { padding: 4px 12px; border: none; border-radius: var(--radius-sm); background: var(--danger); color: #fff; font-family: var(--font); font-size: 12.5px; font-weight: 500; cursor: pointer; }
+.btn-danger-solid:hover { opacity: .9; }
+.p-delete-banner { display: none; padding: 10px 18px; background: #fef2f2; border-top: 1px solid #fecaca; font-size: 12.5px; color: #991b1b; align-items: center; justify-content: space-between; gap: 12px; }
+.p-delete-banner.show { display: flex; }
 .btn-primary { padding: 4px 14px; background: var(--text-primary); color: white; border: none; border-radius: var(--radius-sm); font-family: var(--font); font-size: 12.5px; font-weight: 500; cursor: pointer; transition: opacity 0.1s; }
 .btn-primary:hover { opacity: 0.78; }
 
@@ -2063,9 +2069,19 @@ tr:hover .cr-del-btn { opacity: 1; }
       </div>
     </div>
   </div>
-</div>    <div class="modal-foot">
-      <button class="btn-ghost" onclick="closeProjetModal()">Annuler</button>
-      <button class="btn-primary" onclick="saveProjet()"><span id="p_saveLabel">Enregistrer</span></button>
+</div>    <div class="p-delete-banner" id="p_deleteBanner">
+      <span id="p_deleteMsg"></span>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button class="btn-ghost" onclick="resetProjetDeleteUi()">Non</button>
+        <button class="btn-danger-solid" onclick="confirmDeleteProjetFromModal()">Oui, supprimer</button>
+      </div>
+    </div>
+    <div class="modal-foot" style="justify-content:space-between">
+      <button class="btn-danger" id="p_deleteBtn" style="display:none" onclick="askDeleteProjetFromModal()">Supprimer</button>
+      <div style="display:flex;gap:6px;margin-left:auto">
+        <button class="btn-ghost" onclick="closeProjetModal()">Annuler</button>
+        <button class="btn-primary" onclick="saveProjet()"><span id="p_saveLabel">Enregistrer</span></button>
+      </div>
     </div>
   </div>
 </div>
@@ -10291,6 +10307,8 @@ function openProjetModal(projet = null, mode = null) {
     ? (isSub ? 'Modifier le sous-projet' : 'Modifier le projet')
     : (isSub ? 'Nouveau sous-projet' : 'Créer le projet');
   document.getElementById('p_saveLabel').textContent = projet ? 'Enregistrer' : 'Créer';
+  resetProjetDeleteUi();
+  document.getElementById('p_deleteBtn').style.display = (projet && isSub) ? '' : 'none';
 
   // Show/hide ref field
   document.getElementById('p_refGroup').style.display = isSub ? '' : 'none';
@@ -10602,12 +10620,75 @@ function renderKbProjetClosed(selectedVal) {
 
   function closeProjetModal() {
   document.getElementById('projetModalOverlay').classList.remove('open');
+  resetProjetDeleteUi();
   editingProjetId = null;
   _refPickerOpen.clear();
   closeMsDropdown('p_piloteWrap','p_piloteDrop');
   selectedProjetPilotes = [];
 }
 function handleProjetOverlay(e) { if (e.target.id==='projetModalOverlay') closeProjetModal(); }
+
+function resetProjetDeleteUi() {
+  document.getElementById('p_deleteBanner')?.classList.remove('show');
+  const b = document.getElementById('p_deleteBtn');
+  if (b && editingProjetId && projetModalMode === 'sousprojet') b.style.display = '';
+}
+
+function _projetDescendantIds(id) {
+  const out = [];
+  const walk = pid => allProjets.filter(x => x.ref === pid).forEach(c => { out.push(c.id); walk(c.id); });
+  walk(id);
+  return out;
+}
+
+function askDeleteProjetFromModal() {
+  const p = allProjets.find(x => x.id === editingProjetId);
+  if (!p) return;
+  const desc  = _projetDescendantIds(p.id);
+  const ids   = [p.id, ...desc];
+  const nbAct = allActions.filter(a => ids.includes(a.projet)).length;
+
+  let msg = `Supprimer définitivement « ${p.nom || 'Sans nom'} » ? Action irréversible.`;
+  if (desc.length) msg += ` ${desc.length} sous-projet(s) rattaché(s) seront aussi supprimés.`;
+  if (nbAct)       msg += ` ${nbAct} action(s) liée(s) seront conservées mais détachées de tout projet.`;
+
+  document.getElementById('p_deleteMsg').textContent = msg;
+  document.getElementById('p_deleteBtn').style.display = 'none';
+  document.getElementById('p_deleteBanner').classList.add('show');
+}
+
+async function confirmDeleteProjetFromModal() {
+  const id = editingProjetId;
+  const p  = allProjets.find(x => x.id === id);
+  if (!p) return;
+
+  const ids   = [id, ..._projetDescendantIds(id)];
+  const idSet = new Set(ids);
+  const actions = [];
+
+  // Actions liées : détachées (pas supprimées)
+  allActions.filter(a => idSet.has(a.projet))
+    .forEach(a => actions.push(['UpdateRecord', 'Taches', a.id, { projet: 0 }]));
+  // Antécédents pointant vers un projet supprimé
+  allProjets.filter(x => !idSet.has(x.id) && idSet.has(x.antecedent))
+    .forEach(x => actions.push(['UpdateRecord', 'Projet', x.id, { antecedent: 0 }]));
+  // Suppression (descendants + le projet)
+  ids.forEach(i => actions.push(['RemoveRecord', 'Projet', i]));
+
+  try {
+    await grist.docApi.applyUserActions(actions);
+    showToast('Sous-projet supprimé');
+    closeProjetModal();
+    await fetchProjets();
+    await fetchActions();
+    renderDefinition();
+    renderKpi();
+    refreshObjectifsView();
+    if (spMode === 'suivi')  { populateSuiviFrtFilters(); renderSuiviFeuilleRoute(); }
+    if (spMode === 'visuel') renderVisuelChantiers();
+    refreshChantierDetailIfOpen();
+  } catch (e) { showToast(e.message, 'error'); }
+}
 
 async function saveProjet() {
   const nom = document.getElementById('p_nom').value.trim();
