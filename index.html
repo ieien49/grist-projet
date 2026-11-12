@@ -898,6 +898,11 @@ tr:hover .cr-del-btn { opacity: 1; }
 .vz-theme-title { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; color: var(--text-primary); }
 .vz-theme-code { font-size: 9.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; margin-right: 6px; }
 .vz-theme-meta { font-size: 11.5px; color: var(--text-muted); flex-shrink: 0; }
+.vz-theme-sub { display: flex; align-items: center; gap: 6px; margin: 10px 0 3px; padding-left: 2px; font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--text-muted); }
+.vz-theme-sub:first-child { margin-top: 0; }
+.vz-theme-sub-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: var(--vz-theme-hex, #9CA3AF); }
+.vz-theme-sub .vz-theme-picto { width: 12px; height: 12px; }
+.vz-theme-sub-count { font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--text-faint); }
 .vz-phase-tag { flex-shrink: 0; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10.5px; color: var(--text-muted); background: var(--surface2); border: 1px solid var(--border); border-radius: 999px; padding: 1px 7px; }
 .vz-subchantier-row-meta { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .vz-detail-section { padding: 14px 18px; border-bottom: 1px solid var(--border); }
@@ -3786,6 +3791,29 @@ function toggleVzThemeOthers(enc) {
   renderVisuelChantiers();
 }
 
+// Chantiers d'une phase regroupés par engagement, avec un sous-titre par groupe
+function vzChantiersGroupedHtml(list) {
+  const groups = [];
+  [...getAllThemes(), VZ_NO_THEME].forEach(name => {
+    const isNone = name === VZ_NO_THEME;
+    const items = list.filter(c => isNone ? !parseThemes(c.theme).length : parseThemes(c.theme).includes(name));
+    if (items.length) groups.push({ name, isNone, items });
+  });
+  // Aucun engagement renseigné dans cette phase : liste simple, sans sous-titre
+  if (groups.length === 1 && groups[0].isNone) return list.map(c => subChantierRowHtml(c)).join('');
+
+  return groups.map(g => {
+    const meta  = g.isNone ? null : themeMeta(g.name);
+    const hex   = g.isNone ? '#9CA3AF' : themeHex(g.name);
+    const label = g.isNone ? 'Sans engagement' : (meta?.nom || g.name);
+    const mark  = (!g.isNone && meta?.picto)
+      ? `<span class="vz-theme-picto">${meta.picto}</span>`
+      : `<span class="vz-theme-sub-dot"></span>`;
+    return `<div class="vz-theme-sub" style="--vz-theme-hex:${hex}">${mark}<span>${esc(label)}</span><span class="vz-theme-sub-count">${g.items.length}</span></div>`
+      + g.items.map(c => subChantierRowHtml(c)).join('');
+  }).join('');
+}
+
 function renderVisuelByEngagement(allRows, f) {
   const grid    = document.getElementById('vzGrid');
   const countEl = document.getElementById('vzCount');
@@ -3903,7 +3931,7 @@ function renderVisuelChantiers() {
       const displayed = showOthers ? visibleChildren : shown;
 
       const listHtml = displayed.length
-        ? `<div class="phase-children-list">${displayed.map(c => subChantierRowHtml(c)).join('')}</div>`
+        ? `<div class="phase-children-list">${vzChantiersGroupedHtml(displayed)}</div>`
         : (children.length ? `<div class="phase-children-empty">Aucun chantier « en cours » pour cette phase.</div>` : '');
 
       const toggleHtml = (others.length && !fEtat)
