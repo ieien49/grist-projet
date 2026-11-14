@@ -1260,9 +1260,6 @@ tr:hover .cr-del-btn { opacity: 1; }
         <div id="sp-gantt" style="flex:1;flex-direction:column;overflow:hidden;display:none">
           <div id="ganttProjetFilters" style="padding:8px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;background:var(--bg)">
             <div class="vz-tag-filter" id="gpPhaseTags" role="group" aria-label="Phase"></div>
-            <select class="filter-select" id="gpFilterProjet" onchange="renderGanttProjet()">
-  <option value="">Phase</option>
-</select>
             <select class="filter-select" id="gpFilterTheme" onchange="renderGanttProjet()">
               <option value="">Engagements</option>
             </select>
@@ -8087,20 +8084,6 @@ function renderGantt() {
 // ══ GANTT SOUS-PROJETS ══
 
 function populateGanttProjetFilters() {
-  const pSel = document.getElementById('gpFilterProjet');
-  if (pSel) {
-    const pCur = pSel.value;
-    while (pSel.options.length > 1) pSel.remove(1);
-    const masterId = masterProjet ? masterProjet.id : null;
-    allProjets
-      .filter(p => p.ref === masterId && masterId !== null)
-      .sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999))
-      .forEach(p => {
-        const label = (p.code ? p.code + ' – ' : '') + p.nom;
-        pSel.appendChild(new Option(label, p.id));
-      });
-    if (pCur && [...pSel.options].some(o => o.value === pCur)) pSel.value = pCur;
-  }
   const sel = document.getElementById('gpFilterPilote');
   if (!sel) return;
   const cur = sel.value;
@@ -8165,8 +8148,8 @@ function renderGpPhaseTags(phases, selId) {
   host.innerHTML = phases.map(p => {
     const hex = projetHex(p) || '#1A1A1A';
     const active = p.id === selId;
-    const label = (p.code ? p.code + ' · ' : '') + (p.nom || 'Sans nom');
-    return `<button type="button" class="vz-tag${active ? ' active' : ''}" style="--tag-hex:${hex}" onclick="gpSetPhase(${p.id})"><span class="vz-tag-dot"></span>${esc(label)}</button>`;
+    const label = p.code || p.nom || 'Sans nom';
+    return `<button type="button" class="vz-tag${active ? ' active' : ''}" style="--tag-hex:${hex}" title="${esc(p.nom || '')}" onclick="gpSetPhase(${p.id})"><span class="vz-tag-dot"></span>${esc(label)}</button>`;
   }).join('');
 }
 
@@ -8207,7 +8190,6 @@ function renderGanttProjet() {
   const showDep  = document.getElementById('gpShowDepBtn')?.classList.contains('on') ?? true;
   const showTasks = document.getElementById('gpShowTasksBtn')?.classList.contains('on') ?? true;
   const maxDepth = parseInt(document.getElementById('gpFilterNiveau2')?.value || '2');
-  const fProjetGantt = document.getElementById('gpFilterProjet')?.value || '';
   const fThemeGantt  = document.getElementById('gpFilterTheme')?.value  || '';
   const fInstanceGantt = document.getElementById('gpFilterInstance')?.value || '';
 
@@ -8248,15 +8230,6 @@ function renderGanttProjet() {
   }
 
   // Filtres
-  if (fProjetGantt) {
-    const keepIds = new Set();
-    const collect = (id) => {
-      keepIds.add(id);
-      subs.filter(c => c.ref === id).forEach(c => collect(c.id));
-    };
-    collect(parseInt(fProjetGantt));
-    rows = rows.filter(r => keepIds.has(r.id));
-  }
   
 if (fEtat === 'alancer')  rows = rows.filter(r => projetStatut(r) === 'alancer');
   if (fEtat === 'encours')  rows = rows.filter(r => projetStatut(r) === 'encours');
