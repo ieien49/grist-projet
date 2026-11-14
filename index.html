@@ -953,6 +953,39 @@ tr:hover .cr-del-btn { opacity: 1; }
 /* Ligne de la liste correspondant au chantier ouvert dans le panneau latéral */
 .vz-subchantier-row.is-selected { background: var(--surface3); box-shadow: inset 3px 0 0 var(--row-hex, #1A1A1A); }
 .vz-subchantier-row.is-selected:hover { background: var(--surface3); }
+/* Datavisualisation (sous-onglet Projet) */
+.dv-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 14px; }
+.dv-kpi { border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); padding: 10px 12px; }
+.dv-kpi-label { font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--text-muted); }
+.dv-kpi-value { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 2px; }
+.dv-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
+.dv-card { border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); padding: 12px 14px; }
+.dv-span2 { grid-column: 1 / -1; }
+.dv-card-title { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 10px; }
+.dv-donut-wrap { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.dv-donut { width: 120px; height: 120px; border-radius: 50%; position: relative; flex-shrink: 0; }
+.dv-donut-hole { position: absolute; inset: 22px; border-radius: 50%; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.dv-donut-hole b { font-size: 18px; font-weight: 600; color: var(--text-primary); }
+.dv-donut-hole span { font-size: 10px; color: var(--text-muted); }
+.dv-legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); margin: 3px 0; }
+.dv-legend-item b { margin-left: auto; padding-left: 14px; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.dv-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dv-row { margin: 8px 0; }
+.dv-row-head { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; gap: 8px; }
+.dv-row-head b { color: var(--text-primary); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dv-stack { height: 10px; border-radius: 5px; background: var(--surface3); overflow: hidden; display: flex; }
+.dv-seg-done { background: #10B981; height: 100%; }
+.dv-seg-late { background: #DC2626; height: 100%; }
+.dv-seg-open { background: #9CA3AF; height: 100%; }
+.dv-bar-track { height: 8px; border-radius: 4px; background: var(--surface3); overflow: hidden; }
+.dv-bar-fill { height: 100%; border-radius: 4px; }
+.dv-months { display: flex; align-items: flex-end; gap: 6px; padding-top: 8px; }
+.dv-month { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; min-width: 0; }
+.dv-month-bar { width: 100%; background: #93C5FD; border-radius: 3px 3px 0 0; }
+.dv-month.dv-now .dv-month-bar { background: #2563EB; }
+.dv-month-val { font-size: 10px; color: var(--text-secondary); margin-bottom: 3px; font-variant-numeric: tabular-nums; }
+.dv-month-lbl { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
+.dv-month.dv-now .dv-month-lbl { color: var(--text-primary); font-weight: 600; }
 </style>
 </head>
 <body>
@@ -1065,6 +1098,10 @@ tr:hover .cr-del-btn { opacity: 1; }
         <div class="cadre-subtab" data-sub="def-obeya" onclick="switchDefTab('def-obeya')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 9v12"/></svg>
           <span class="subtab-label">Obeya</span>
+        </div>
+        <div class="cadre-subtab" data-sub="def-dataviz" onclick="switchDefTab('def-dataviz')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg>
+          <span class="subtab-label">Datavisualisation</span>
         </div>
 
         
@@ -1201,6 +1238,17 @@ tr:hover .cr-del-btn { opacity: 1; }
           </div>
         </div>
         <!-- Sous-panel Obeya -->
+        <div class="cadre-subpanel" id="def-dataviz">
+          <div class="panel-header">
+            <span class="panel-title">Datavisualisation</span>
+            <span class="count-badge">Vue d'ensemble</span>
+            <div class="spacer"></div>
+            <button class="btn-add-ghost" onclick="renderDataviz()">Actualiser</button>
+          </div>
+          <div class="table-scroll">
+            <div id="datavizContainer" class="table-inner" style="padding:14px 16px"><div class="loading"><div class="spinner"></div> Chargement…</div></div>
+          </div>
+        </div>
         <div class="cadre-subpanel" id="def-obeya">
           <div class="panel-header">
             <span class="panel-title">Obeya</span>
@@ -2313,6 +2361,7 @@ const PCFG_SUBTABS = [
   { key: 'def-themes',     group: 'definition', label: 'Thème',               selector: '#panel-definition [data-sub="def-themes"]',     activate: () => switchDefTab('def-themes') },
   { key: 'def-documents',  group: 'definition', label: 'Documents',           selector: '#panel-definition [data-sub="def-documents"]',  activate: () => switchDefTab('def-documents') },
   { key: 'def-obeya',      group: 'definition', label: 'Obeya',               selector: '#panel-definition [data-sub="def-obeya"]',       activate: () => switchDefTab('def-obeya') },
+  { key: 'def-dataviz',   group: 'definition', label: 'Datavisualisation',   selector: '#panel-definition [data-sub="def-dataviz"]',    activate: () => switchDefTab('def-dataviz') },
   { key: 'sp-visuel',      group: 'objectifs',  label: 'Vue visuelle',        selector: '#spModeVisuel',          activate: () => switchSpMode('visuel') },
   { key: 'sp-suivi',       group: 'objectifs',  label: 'Feuille de route',    selector: '#spModeSuivi',           activate: () => switchSpMode('suivi') },
   { key: 'sp-gantt',       group: 'objectifs',  label: 'Gantt',                selector: '#spModeGantt',           activate: () => switchSpMode('gantt') },
@@ -6325,6 +6374,7 @@ function switchDefTab(sub) {
   if (sub === 'def-themes') renderThemes();
   if (sub === 'def-documents') { populateDocumentFilters(); renderDocuments(); }
   if (sub === 'def-obeya') renderObeya();
+  if (sub === 'def-dataviz') renderDataviz();
 }
 
 // ══ RENDER ACTEURS ══
@@ -10111,6 +10161,130 @@ function buildKpiSectionsHtml() {
 
 // ══ OBEYA ══
 const OBEYA_EXPAND_ICON = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18-5h-3a2 2 0 0 0-2 2v3M3 16v3a2 2 0 0 0 2 2h3m11-5v3a2 2 0 0 1-2 2h-3"/></svg>';
+
+// ══ DATAVISUALISATION (sous-onglet Projet) ══
+function renderDataviz() {
+  const cont = document.getElementById('datavizContainer');
+  if (!cont) return;
+  if (!masterProjet) {
+    cont.innerHTML = emptyState('Aucun projet maître', "Définissez d'abord le projet dans l'onglet Présentation.", 'folder');
+    return;
+  }
+  const DAY = 86400000;
+  const now = Date.now();
+  const acts = allActions;
+  const total = acts.length;
+  const isDone = a => a.etat === 'Réalisé';
+  const isLate = a => !isDone(a) && a.echeance && a.echeance * DAY < now;
+  const done = acts.filter(isDone).length;
+  const late = acts.filter(isLate).length;
+  const next30 = acts.filter(a => !isDone(a) && a.echeance && a.echeance * DAY >= now && a.echeance * DAY <= now + 30 * DAY).length;
+  const pct = total ? Math.round(done / total * 100) : 0;
+
+  // KPI
+  const kpi = (label, value, color) => `<div class="dv-kpi"><div class="dv-kpi-label">${label}</div><div class="dv-kpi-value" style="color:${color}">${value}</div></div>`;
+  const kpisHtml = `<div class="dv-kpis">
+    ${kpi('Actions', total, 'var(--text-primary)')}
+    ${kpi('Réalisées', total ? pct + ' %' : '—', '#10B981')}
+    ${kpi('En retard', late, late ? '#DC2626' : 'var(--text-primary)')}
+    ${kpi('Échéances 30 j', next30, 'var(--text-primary)')}
+  </div>`;
+
+  // Répartition par état (anneau)
+  const etatCounts = {};
+  acts.forEach(a => { const k = a.etat || 'Non renseigné'; etatCounts[k] = (etatCounts[k] || 0) + 1; });
+  const etatEntries = Object.entries(etatCounts).sort((x, y) => y[1] - x[1]);
+  let acc = 0;
+  const stops = etatEntries.map(([k, v]) => {
+    const from = total ? acc / total * 100 : 0;
+    acc += v;
+    const to = total ? acc / total * 100 : 0;
+    return `${etatAcDot(k)} ${from.toFixed(2)}% ${to.toFixed(2)}%`;
+  });
+  const donutHtml = total
+    ? `<div class="dv-donut-wrap">
+         <div class="dv-donut" style="background:conic-gradient(${stops.join(',')})"><div class="dv-donut-hole"><b>${pct}%</b><span>réalisé</span></div></div>
+         <div style="flex:1;min-width:140px">${etatEntries.map(([k, v]) => `<div class="dv-legend-item"><span class="dv-dot" style="background:${etatAcDot(k)}"></span>${esc(k)}<b>${v}</b></div>`).join('')}</div>
+       </div>`
+    : '<div class="obeya-empty-text">Aucune action</div>';
+
+  // Par phase (barres empilées : réalisé / en retard / autre)
+  const phases = allProjets.filter(x => x.ref === masterProjet.id).sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999));
+  const phaseOf = projetId => {
+    let cur = allProjets.find(x => x.id === projetId);
+    let guard = 0;
+    while (cur && cur.ref !== masterProjet.id && guard++ < 50) cur = allProjets.find(x => x.id === cur.ref);
+    return cur && cur.ref === masterProjet.id ? cur.id : null;
+  };
+  const phaseHtml = phases.length ? phases.map(ph => {
+    const ta = acts.filter(a => phaseOf(a.projet) === ph.id);
+    const d = ta.filter(isDone).length;
+    const l = ta.filter(isLate).length;
+    const o = ta.length - d - l;
+    const pc = ta.length ? Math.round(d / ta.length * 100) : 0;
+    const seg = n => ta.length ? (n / ta.length * 100).toFixed(2) : 0;
+    return `<div class="dv-row">
+      <div class="dv-row-head"><span>${esc((ph.code ? ph.code + ' · ' : '') + (ph.nom || ''))}</span><b>${d}/${ta.length} · ${pc}%</b></div>
+      <div class="dv-stack">
+        <div class="dv-seg-done" style="width:${seg(d)}%"></div>
+        <div class="dv-seg-late" style="width:${seg(l)}%"></div>
+        <div class="dv-seg-open" style="width:${seg(o)}%"></div>
+      </div>
+    </div>`;
+  }).join('') : '<div class="obeya-empty-text">Aucune phase</div>';
+
+  // Par responsable (barres : total, part réalisée)
+  const byActor = {};
+  acts.forEach(a => {
+    const actor = a.qui ? allActors.find(x => x.id === a.qui) : null;
+    const k = actor ? actor.nom : 'Non assigné';
+    if (!byActor[k]) byActor[k] = { n: 0, d: 0 };
+    byActor[k].n++;
+    if (isDone(a)) byActor[k].d++;
+  });
+  const actorEntries = Object.entries(byActor).sort((x, y) => y[1].n - x[1].n).slice(0, 8);
+  const maxN = actorEntries.length ? actorEntries[0][1].n : 1;
+  const actorHtml = actorEntries.length ? actorEntries.map(([k, v]) => `<div class="dv-row">
+      <div class="dv-row-head"><span>${esc(k)}</span><b>${v.d}/${v.n}</b></div>
+      <div class="dv-bar-track" style="position:relative">
+        <div class="dv-bar-fill" style="width:${(v.n / maxN * 100).toFixed(2)}%;background:#CBD5E1;position:absolute;left:0;top:0"></div>
+        <div class="dv-bar-fill" style="width:${(v.d / maxN * 100).toFixed(2)}%;background:#10B981;position:absolute;left:0;top:0"></div>
+      </div>
+    </div>`).join('') : '<div class="obeya-empty-text">Aucune action</div>';
+
+  // Échéances par mois (6 mois avant, 6 mois après)
+  const today = new Date(now);
+  const months = [];
+  for (let i = -6; i <= 6; i++) {
+    const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
+    months.push({ y: d.getFullYear(), m: d.getMonth(), cur: i === 0, n: 0 });
+  }
+  acts.forEach(a => {
+    if (!a.echeance) return;
+    const d = new Date(a.echeance * DAY);
+    const slot = months.find(x => x.y === d.getFullYear() && x.m === d.getMonth());
+    if (slot) slot.n++;
+  });
+  const maxM = Math.max(1, ...months.map(x => x.n));
+  const monthsHtml = `<div class="dv-months">${months.map(x => {
+    const h = Math.round(x.n / maxM * 110);
+    const lbl = new Date(x.y, x.m, 1).toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '');
+    return `<div class="dv-month${x.cur ? ' dv-now' : ''}">
+      <div class="dv-month-val">${x.n || ''}</div>
+      <div class="dv-month-bar" style="height:${Math.max(x.n ? 4 : 2, h)}px"></div>
+      <div class="dv-month-lbl">${lbl}</div>
+    </div>`;
+  }).join('')}</div>`;
+
+  cont.innerHTML = `
+    ${kpisHtml}
+    <div class="dv-grid">
+      <div class="dv-card"><div class="dv-card-title">Répartition par état</div>${donutHtml}</div>
+      <div class="dv-card"><div class="dv-card-title">Avancement par phase</div>${phaseHtml}</div>
+      <div class="dv-card"><div class="dv-card-title">Actions par responsable</div>${actorHtml}</div>
+      <div class="dv-card dv-span2"><div class="dv-card-title">Échéances par mois</div>${monthsHtml}</div>
+    </div>`;
+}
 
 function renderObeya() {
   const cont = document.getElementById('obeyaContainer');
