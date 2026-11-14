@@ -1260,34 +1260,11 @@ tr:hover .cr-del-btn { opacity: 1; }
         <div id="sp-gantt" style="flex:1;flex-direction:column;overflow:hidden;display:none">
           <div id="ganttProjetFilters" style="padding:8px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;background:var(--bg)">
             <div class="vz-tag-filter" id="gpPhaseTags" role="group" aria-label="Phase"></div>
-            <select class="filter-select" id="gpFilterTheme" onchange="renderGanttProjet()">
-              <option value="">Engagements</option>
-            </select>
-            <select class="filter-select" id="gpFilterInstance" onchange="renderGanttProjet()">
-  <option value="">Groupes de travail</option>
-</select>
-            <select class="filter-select" id="gpFilterEtat" onchange="renderGanttProjet()">
-              <option value="">Suivi</option>
-              <option value="alancer">À lancer</option>
-              <option value="encours">En cours</option>
-              <option value="realise">Réalisé</option>
-            </select>
-            <select class="filter-select" id="gpFilterPilote" onchange="renderGanttProjet()">
+                                    <div class="vz-tag-filter" id="gpEtatTags" role="group" aria-label="Filtrer par suivi"></div>
+                        <select class="filter-select" id="gpFilterPilote" onchange="renderGanttProjet()">
               <option value="">Tous les pilotes</option>
             </select>
-            <select class="filter-select" id="gpFilterNiveau2" onchange="renderGanttProjet()">
-  <option value="2">Jusqu'au niveau 2</option>
-  <option value="3">Jusqu'au niveau 3</option>
-  <option value="4">Jusqu'au niveau 4</option>
-  <option value="99" selected>Tous les niveaux</option>
-</select>
-            <select class="filter-select" id="gpFilterZoom" onchange="renderGanttProjet()">
-  <option value="month">Vue mensuelle</option>
-  <option value="quarter">Vue trimestrielle</option>
-  <option value="semester">Vue semestrielle</option>
-  <option value="year">Vue annuelle</option>
-</select>
-            <button class="gantt-toggle-actions on" id="gpShowDepBtn" onclick="toggleGanttDep()" title="Masquer les dépendances">
+                                    <button class="gantt-toggle-actions on" id="gpShowDepBtn" onclick="toggleGanttDep()" title="Masquer les dépendances">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 0 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
               Dépendances
             </button>
@@ -8139,6 +8116,25 @@ function showGanttTaskInfo(evt, id) {
   tip.style.top  = (evt.clientY - 8)  + 'px';
   tip.classList.add('show');
 }
+// ── Filtre Suivi du Gantt (tags, clic sur le tag actif = pas de filtre) ──
+let gpSelectedEtat = '';
+const GP_ETATS = [
+  { v: 'alancer', label: 'À lancer', hex: '#9CA3AF' },
+  { v: 'encours', label: 'En cours', hex: '#2563EB' },
+  { v: 'realise', label: 'Réalisé',  hex: '#15803D' }
+];
+function gpRenderEtatTags() {
+  const host = document.getElementById('gpEtatTags');
+  if (!host) return;
+  host.innerHTML = GP_ETATS.map(e =>
+    `<button type="button" class="vz-tag${gpSelectedEtat === e.v ? ' active' : ''}" data-etat="${e.v}" style="--tag-hex:${e.hex}" onclick="gpSetEtat('${e.v}')"><span class="vz-tag-dot"></span>${e.label}</button>`
+  ).join('');
+}
+function gpSetEtat(v) {
+  gpSelectedEtat = (gpSelectedEtat === v) ? '' : v;
+  renderGanttProjet();
+}
+
 // ── Sélecteur de phase du Gantt (une phase affichée à la fois, phase 1 par défaut) ──
 let gpSelectedPhaseId = null;
 
@@ -8184,12 +8180,13 @@ function renderGanttProjet() {
   if (!cont) return;
 
   
-  const fEtat    = document.getElementById('gpFilterEtat')?.value    || '';
-  const zoom = document.getElementById('gpFilterZoom')?.value || 'month';
+  const fEtat    = gpSelectedEtat;
+  gpRenderEtatTags();
+  const zoom = 'month'; // vue fixée au mois (sélecteur retiré)
   const fPilote  = document.getElementById('gpFilterPilote')?.value  || '';
   const showDep  = document.getElementById('gpShowDepBtn')?.classList.contains('on') ?? true;
   const showTasks = document.getElementById('gpShowTasksBtn')?.classList.contains('on') ?? true;
-  const maxDepth = parseInt(document.getElementById('gpFilterNiveau2')?.value || '2');
+  const maxDepth = 99; // tous les niveaux (sélecteur retiré)
   const fThemeGantt  = document.getElementById('gpFilterTheme')?.value  || '';
   const fInstanceGantt = document.getElementById('gpFilterInstance')?.value || '';
 
