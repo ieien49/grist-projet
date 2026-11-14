@@ -947,6 +947,9 @@ tr:hover .cr-del-btn { opacity: 1; }
 .vz-synth-track { height: 6px; border-radius: 3px; background: var(--surface3); overflow: hidden; }
 .vz-synth-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
 .vz-synth-note { font-size: 11px; color: var(--text-muted); margin-top: 8px; }
+/* Ligne de la liste correspondant au chantier ouvert dans le panneau latéral */
+.vz-subchantier-row.is-selected { background: var(--surface3); box-shadow: inset 3px 0 0 var(--row-hex, #1A1A1A); }
+.vz-subchantier-row.is-selected:hover { background: var(--surface3); }
 </style>
 </head>
 <body>
@@ -3805,11 +3808,23 @@ function chantierCardHtml(p, opts) {
 }
 
 // Ligne "sous-chantier" façon liste (même style que dans le panneau de détail), cliquable → panneau latéral
+// Chantier ouvert dans le panneau = premier élément de la pile (celui cliqué dans la liste)
+function vzIsSelectedInList(id) {
+  const ov = document.getElementById('chantierDetailOverlay');
+  return !!(ov && ov.classList.contains('open') && chantierDetailStack[0] === id);
+}
+function vzMarkSelectedRow() {
+  document.querySelectorAll('[data-chantier-id]').forEach(r => {
+    r.classList.toggle('is-selected', vzIsSelectedInList(Number(r.dataset.chantierId)));
+  });
+}
+
 function subChantierRowHtml(c, opts) {
   const chex = projetHex(c) || '#9CA3AF';
   const cst  = VZ_STATUT[projetStatutAffiche(c)] || VZ_STATUT.alancer;
   const overdue = c.fin && !c.finreelle && (c.fin * 86400000 < Date.now());
-  return `<div class="vz-subchantier-row" onclick="openChantierDetail(${c.id})">
+  const isSel = vzIsSelectedInList(c.id);
+  return `<div class="vz-subchantier-row${isSel ? ' is-selected' : ''}" data-chantier-id="${c.id}" style="--row-hex:${chex}" onclick="openChantierDetail(${c.id})">
     <span class="vz-task-dot" style="background:${chex}"></span>
     ${c.code ? `<span class="chantier-card-code" style="flex-shrink:0">${esc(c.code)}</span>` : ''}
     <span style="flex:1;color:var(--text-primary)">${esc(c.nom || 'Sans nom')}</span>
@@ -4019,11 +4034,13 @@ function openChantierDetail(id) {
   chantierDetailStack = [id];
   document.getElementById('chantierDetailOverlay').classList.add('open');
   renderChantierDetailBody(id);
+  vzMarkSelectedRow();
 }
 
 function closeChantierDetail() {
   document.getElementById('chantierDetailOverlay').classList.remove('open');
   chantierDetailStack = [];
+  vzMarkSelectedRow();
 }
 
 function refreshChantierDetailIfOpen() {
