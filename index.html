@@ -933,6 +933,9 @@ tr:hover .cr-del-btn { opacity: 1; }
 .vz-tag-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--tag-hex, #999); flex-shrink: 0; }
 .vz-tag.active { background: var(--tag-hex, #1A1A1A); border-color: transparent; color: #fff; }
 .vz-tag.active .vz-tag-dot { background: #fff; }
+/* Groupes de filtres du Gantt */
+.gp-group-label { font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--text-muted); }
+.gp-sep { width: 1px; height: 20px; background: var(--border); margin: 0 6px; flex-shrink: 0; }
 /* Filtre Pilote avec picto */
 .vz-pilote-wrap { position: relative; display: inline-flex; align-items: center; }
 .vz-pilote-wrap > svg { position: absolute; left: 8px; color: var(--text-muted); pointer-events: none; }
@@ -1259,11 +1262,17 @@ tr:hover .cr-del-btn { opacity: 1; }
         <!-- Vue Gantt sous-projets -->
         <div id="sp-gantt" style="flex:1;flex-direction:column;overflow:hidden;display:none">
           <div id="ganttProjetFilters" style="padding:8px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;background:var(--bg)">
+            <span class="gp-group-label">Phase</span>
             <div class="vz-tag-filter" id="gpPhaseTags" role="group" aria-label="Phase"></div>
-                                    <div class="vz-tag-filter" id="gpEtatTags" role="group" aria-label="Filtrer par suivi"></div>
-                        <select class="filter-select" id="gpFilterPilote" onchange="renderGanttProjet()">
+                                    <span class="gp-sep" aria-hidden="true"></span>
+            <span class="gp-group-label">Suivi</span>
+            <div class="vz-tag-filter" id="gpEtatTags" role="group" aria-label="Filtrer par suivi"></div>
+                        <div class="vz-pilote-wrap" title="Pilote">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>
+              <select class="filter-select" id="gpFilterPilote" onchange="renderGanttProjet()">
               <option value="">Tous les pilotes</option>
             </select>
+            </div>
                                     <button class="gantt-toggle-actions on" id="gpShowDepBtn" onclick="toggleGanttDep()" title="Masquer les dépendances">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 0 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
               Dépendances
