@@ -937,6 +937,16 @@ tr:hover .cr-del-btn { opacity: 1; }
 .vz-pilote-wrap { position: relative; display: inline-flex; align-items: center; }
 .vz-pilote-wrap > svg { position: absolute; left: 8px; color: var(--text-muted); pointer-events: none; }
 .vz-pilote-wrap .filter-select { padding-left: 24px; }
+/* Bandeau de synthèse du panneau détail chantier */
+.vz-synth { padding: 14px 16px 12px; border-bottom: 1px solid var(--border); background: var(--surface2); }
+.vz-synth-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.vz-synth-title { font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--text-muted); }
+.vz-synth-row + .vz-synth-row { margin-top: 9px; }
+.vz-synth-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 11.5px; color: var(--text-secondary); margin-bottom: 4px; }
+.vz-synth-val { font-weight: 600; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.vz-synth-track { height: 6px; border-radius: 3px; background: var(--surface3); overflow: hidden; }
+.vz-synth-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+.vz-synth-note { font-size: 11px; color: var(--text-muted); margin-top: 8px; }
 </style>
 </head>
 <body>
@@ -4032,6 +4042,61 @@ function vzBackChantier() {
   }
 }
 
+// ══ BANDEAU DE SYNTHÈSE (panneau détail chantier) ══
+function vzSynthHtml(p, tasks) {
+  const total = tasks.length;
+  const done  = tasks.filter(t => t.etat === 'Réalisé').length;
+  const taskPct = total ? Math.round(done / total * 100) : null;
+
+  const hasDates = !!(p.debut && p.fin && p.fin > p.debut);
+  let timePct = null;
+  if (hasDates) {
+    const start = p.debut * 86400000;
+    const end   = p.fin   * 86400000;
+    timePct = Math.max(0, Math.min(100, Math.round((Date.now() - start) / (end - start) * 100)));
+  }
+
+  const hex = projetHex(p) || '#2563EB';
+
+  // Verdict : écart entre avancement des tâches et temps écoulé (seuil ±10 points)
+  let verdict = null, vColor = 'var(--text-secondary)';
+  if (p.finreelle) {
+    verdict = 'Réalisé'; vColor = 'var(--success)';
+  } else if (taskPct !== null && timePct !== null) {
+    const ecart = taskPct - timePct;
+    if (ecart >= 10)      { verdict = 'En avance';     vColor = 'var(--success)'; }
+    else if (ecart <= -10){ verdict = 'En retard';     vColor = 'var(--danger)'; }
+    else                  { verdict = 'Dans les temps'; vColor = 'var(--text-secondary)'; }
+  }
+
+  const bar = (pct, color, label, sub) => `
+    <div class="vz-synth-row">
+      <div class="vz-synth-head"><span>${label}</span><span class="vz-synth-val">${sub}</span></div>
+      <div class="vz-synth-track"><div class="vz-synth-fill" style="width:${pct}%;background:${color}"></div></div>
+    </div>`;
+
+  const rows = [];
+  if (total) {
+    rows.push(bar(taskPct, hex, 'Tâches réalisées', `${done}/${total} · ${taskPct}%`));
+  }
+  if (hasDates) {
+    rows.push(bar(timePct, '#B8BEC6', 'Temps écoulé', `${timePct}%`));
+  }
+
+  const note = !hasDates ? '<div class="vz-synth-note">Dates de début et d’échéance non renseignées : pas de comparaison de temps.</div>' : '';
+  const emptyNote = !total ? '<div class="vz-synth-note">Aucune tâche pour ce chantier.</div>' : '';
+
+  return `
+    <div class="vz-synth">
+      <div class="vz-synth-top">
+        <span class="vz-synth-title">Synthèse</span>
+        ${verdict ? `<span class="vz-pill" style="background:${vColor}22;color:${vColor}">${verdict}</span>` : ''}
+      </div>
+      ${rows.join('')}
+      ${note}${emptyNote}
+    </div>`;
+}
+
 function renderChantierDetailBody(id) {
   const p = allProjets.find(x => x.id === id);
   const body    = document.getElementById('vzDetailBody');
@@ -4051,6 +4116,7 @@ function renderChantierDetailBody(id) {
   const tasks    = vzTasksFor(p.id).sort((a,b) => (a.echeance||Infinity) - (b.echeance||Infinity));
 
   body.innerHTML = `
+    ${vzSynthHtml(p, tasks)}
     <div class="vz-detail-section">
       <div class="vz-detail-row" style="margin-bottom:8px">
         <span class="vz-pill" style="background:${statut.color}22;color:${statut.color}"><span class="vz-pill-dot"></span>${statut.label}</span>
