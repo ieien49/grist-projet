@@ -10452,6 +10452,25 @@ function isoFullscreen() {
   if (el && el.requestFullscreen) el.requestFullscreen();
 }
 
+let isoMode = 'phase'; // 'phase' | 'engagement'
+function isoSetMode(m) {
+  isoMode = m;
+  renderIso();
+}
+// Toutes les tâches d'un projet et de ses descendants
+function isoSubtreeTasks(pid) {
+  const ids = new Set();
+  const walk = id => {
+    if (ids.has(id)) return;
+    ids.add(id);
+    allProjets.filter(c => c.ref === id).forEach(c => walk(c.id));
+  };
+  walk(pid);
+  return allActions.filter(a => ids.has(a.projet));
+}
+const ISO_STATUT_COLOR = { alancer: '#9CA3AF', encours: '#2563EB', realise: '#15803D', enretard: '#DC2626' };
+const ISO_STATUT_LABEL = { alancer: 'À lancer', encours: 'En cours', realise: 'Réalisé', enretard: 'En retard' };
+
 function renderIso() {
   const cont = document.getElementById('isoContainer');
   if (!cont) return;
@@ -10466,39 +10485,39 @@ function renderIso() {
     cont.innerHTML = emptyState('Aucune phase', "Ajoutez des phases dans le plan d'actions pour voir la vue isométrique.", 'folder');
     return;
   }
+  const phaseIds = new Set(phases.map(p => p.id));
+  const isDone = a => a.etat === 'Réalisé';
+  const isLate = a => !isDone(a) && a.echeance && a.echeance * DAY < now;
 
-  const stats = phases.map(ph => {
-    const ta = allActions.filter(a => isoPhaseOf(a.projet) === ph.id);
-    const d = ta.filter(a => a.etat === 'Réalisé').length;
-    const late = ta.filter(a => a.etat !== 'Réalisé' && a.echeance && a.echeance * DAY < now).length;
-    const hex = projetHex(ph);
+  // Chantiers (niveau 1, rattachés à une phase) avec leurs indicateurs
+  const cData = allProjets.filter(x => phaseIds.has(x.ref)).sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999)).map(c => {
+    const ts = isoSubtreeTasks(c.id);
+    const d = ts.filter(isDone).length;
     return {
-      ph, n: ta.length, d, late,
-      pct: ta.length ? d / ta.length : 0,
-      color: (hex && /^#[0-9a-fA-F]{6}$/.test(hex)) ? hex : '#64748B',
-      hasTasks: ta.length > 0
+      c, n: ts.length, d,
+      late: ts.filter(isLate).length,
+      pct: ts.length ? d / ts.length : 0,
+      statut: projetStatutAffiche(c),
+      theme: parseThemes(c.theme)[0] || null
     };
   });
+  const validHex = h => (h && /^#[0-9a-fA-F]{6}$/.test(h)) ? h : '#64748B';
 
-  const totN = stats.reduce((x, s) => x + s.n, 0);
-  const totD = stats.reduce((x, s) => x + s.d, 0);
-  const totLate = stats.reduce((x, s) => x + s.late, 0);
+  const totN = cData.reduce((x, c) => x + c.n, 0);
+  const totD = cData.reduce((x, c) => x + c.d, 0);
+  const totLate = cData.reduce((x, c) => x + c.late, 0);
   const globalPct = totN ? Math.round(totD / totN * 100) : 0;
 
-  // Projection isométrique : x, y au sol, z vers le haut (unités)
+  // Projection isométrique : x, y au sol, z vers le haut
   const K = 36, C = Math.cos(Math.PI / 6), S = 0.5;
   const P = (x, y, z) => [(x - y) * K * C, (x + y) * K * S - z * K];
   const pts = arr => arr.map(p => p.join(',')).join(' ');
-  const W = 1.25, D = 1.25, GAP = 0.55;
-  const polys = [];
-  const labels = [];
   const bounds = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity };
   const track = ([x, y]) => {
     bounds.minX = Math.min(bounds.minX, x); bounds.maxX = Math.max(bounds.maxX, x);
     bounds.minY = Math.min(bounds.minY, y); bounds.maxY = Math.max(bounds.maxY, y);
   };
-
-  const box = (x0, y0, w, d, z0, z1, cTop, cX, cY, extra = '') => {
+  const box = (x0, y0, w, d, z0, z1, cTop, cX, cY) => {
     const top = [P(x0, y0, z1), P(x0 + w, y0, z1), P(x0 + w, y0 + d, z1), P(x0, y0 + d, z1)];
     const right = [P(x0 + w, y0, z0), P(x0 + w, y0 + d, z0), P(x0 + w, y0 + d, z1), P(x0 + w, y0, z1)];
     const front = [P(x0, y0 + d, z0), P(x0 + w, y0 + d, z0), P(x0 + w, y0 + d, z1), P(x0, y0 + d, z1)];
@@ -10506,64 +10525,125 @@ function renderIso() {
     return `
       <polygon points="${pts(right)}" fill="${cX}" stroke="${isoShade(cX, -0.12)}" stroke-width="0.8" stroke-linejoin="round"/>
       <polygon points="${pts(front)}" fill="${cY}" stroke="${isoShade(cY, -0.12)}" stroke-width="0.8" stroke-linejoin="round"/>
-      <polygon points="${pts(top)}" fill="${cTop}" stroke="${isoShade(cTop, -0.05)}" stroke-width="0.8" stroke-linejoin="round"/>${extra}`;
+      <polygon points="${pts(top)}" fill="${cTop}" stroke="${isoShade(cTop, -0.05)}" stroke-width="0.8" stroke-linejoin="round"/>`;
+  };
+  const lateBadge = (x, y, z, n) => {
+    if (!n) return '';
+    const c = P(x, y, z); track(c);
+    return `<circle cx="${c[0].toFixed(1)}" cy="${(c[1] - 4).toFixed(1)}" r="9" fill="#DC2626" stroke="#fff" stroke-width="2"><title>${n} tâche(s) en retard</title></circle><text x="${c[0].toFixed(1)}" y="${(c[1] - 0.5).toFixed(1)}" text-anchor="middle" font-size="10" font-weight="700" fill="#fff" font-family="system-ui,sans-serif">${n}</text>`;
+  };
+  const labelAt = (x, y, z, main, sub, value, color) => {
+    const lp = P(x, y, z); track([lp[0], lp[1] - 60]);
+    const txt = (dy, size, weight, fill, t) => `<text x="${lp[0].toFixed(1)}" y="${(lp[1] + dy).toFixed(1)}" text-anchor="middle" font-size="${size}" font-weight="${weight}" fill="${fill}" stroke="#fff" stroke-width="3" paint-order="stroke" font-family="system-ui,sans-serif">${esc(t)}</text>`;
+    return `<g>${txt(-34, 13, 700, '#0F172A', main)}${sub ? txt(-18, 11, 400, '#334155', sub) : ''}${value ? txt(-2, 11, 600, color, value) : ''}</g>`;
   };
 
-  const blocks = stats.map((st, i) => {
-    const x0 = i * (W + GAP);
-    const y0 = 0;
-    const H = st.hasTasks ? 0.4 + st.pct * 2.6 : 0.4;
-    const base = st.hasTasks ? st.color : '#94A3B8';
-    // Socle de l'île
-    const slab = box(x0 - 0.18, y0 - 0.18, W + 0.36, D + 0.36, -0.3, 0, isoShade('#E2E8F0', 0), isoShade('#CBD5E1', 0), isoShade('#94A3B8', 0.1));
-    // Bloc de la phase, hauteur = avancement des tâches
-    const body = box(x0, y0, W, D, 0, H, isoShade(base, 0.22), base, isoShade(base, -0.25));
-    const lateBadge = st.late > 0
-      ? (() => { const c = P(x0 + W, y0, H); track(c); return `<circle cx="${c[0].toFixed(1)}" cy="${(c[1] - 4).toFixed(1)}" r="9" fill="#DC2626" stroke="#fff" stroke-width="2"><title>${st.late} tâche(s) en retard</title></circle><text x="${c[0].toFixed(1)}" y="${(c[1] - 0.5).toFixed(1)}" text-anchor="middle" font-size="10" font-weight="700" fill="#fff" font-family="system-ui,sans-serif">${st.late}</text>`; })()
-      : '';
-    const title = `<title>${esc((st.ph.code ? st.ph.code + ' · ' : '') + (st.ph.nom || ''))} — ${st.d}/${st.n} tâches réalisées (${Math.round(st.pct * 100)} %)</title>`;
-    // Étiquette au-dessus du bloc
-    const lp = P(x0 + W / 2, y0 + D / 2, H);
-    track([lp[0], lp[1] - 60]);
-    const nom = st.ph.nom || '';
-    const nomShort = nom.length > 20 ? nom.slice(0, 19) + '…' : nom;
-    labels.push(`<g>
-      <text x="${lp[0].toFixed(1)}" y="${(lp[1] - 34).toFixed(1)}" text-anchor="middle" font-size="13" font-weight="700" fill="#0F172A" stroke="#fff" stroke-width="3" paint-order="stroke" font-family="system-ui,sans-serif">${esc(st.ph.code || nomShort)}</text>
-      <text x="${lp[0].toFixed(1)}" y="${(lp[1] - 18).toFixed(1)}" text-anchor="middle" font-size="11" fill="#334155" stroke="#fff" stroke-width="3" paint-order="stroke" font-family="system-ui,sans-serif">${esc(st.ph.code ? nomShort : '')}</text>
-      <text x="${lp[0].toFixed(1)}" y="${(lp[1] - 2).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="600" fill="${base}" stroke="#fff" stroke-width="3" paint-order="stroke" font-family="system-ui,sans-serif">${st.hasTasks ? Math.round(st.pct * 100) + ' %' : 'Pas de tâche'}</text>
-    </g>`);
-    return `<g class="iso-block">${title}${slab}${body}${lateBadge}</g>`;
-  });
+  const parts = [];
+  const labels = [];
+  let legendHtml = '';
 
-  // Marges pour l'étiquette et le socle
+  if (isoMode === 'phase') {
+    // Une île (bloc) par phase, hauteur = avancement des tâches de la phase
+    const W = 1.25, D = 1.25, GAP = 0.55;
+    phases.forEach((ph, i) => {
+      const ta = allActions.filter(a => isoPhaseOf(a.projet) === ph.id);
+      const d = ta.filter(isDone).length;
+      const pct = ta.length ? d / ta.length : 0;
+      const base = ta.length ? validHex(projetHex(ph)) : '#94A3B8';
+      const H = ta.length ? 0.4 + pct * 2.6 : 0.4;
+      const x0 = i * (W + GAP), y0 = 0;
+      const title = `<title>${esc((ph.code ? ph.code + ' · ' : '') + (ph.nom || ''))} — ${d}/${ta.length} tâches réalisées</title>`;
+      parts.push(`<g class="iso-block">${title}${box(x0 - 0.18, y0 - 0.18, W + 0.36, D + 0.36, -0.3, 0, '#E2E8F0', '#CBD5E1', '#94A3B8')}${box(x0, y0, W, D, 0, H, isoShade(base, 0.22), base, isoShade(base, -0.25))}${lateBadge(x0 + W, y0, H, ta.filter(isLate).length)}</g>`);
+      const nom = ph.nom || '';
+      const nomShort = nom.length > 20 ? nom.slice(0, 19) + '…' : nom;
+      labels.push(labelAt(x0 + W / 2, y0 + D / 2, H, ph.code || nomShort, ph.code ? nomShort : '', ta.length ? Math.round(pct * 100) + ' %' : 'Pas de tâche', base));
+    });
+    legendHtml = `<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--text-muted);margin-top:8px">
+      <span>Hauteur du bloc = avancement des tâches</span><span>Couleur = phase</span>
+      <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:50%;background:#DC2626;display:inline-block"></span>Tâches en retard</span></div>`;
+  } else {
+    // Une île par engagement, une structure par chantier (hauteur = avancement, couleur = statut)
+    const themeNames = getAllThemes().filter(t => cData.some(cd => cd.theme === t));
+    const hasNone = cData.some(cd => !cd.theme);
+    const islands = [...themeNames, ...(hasNone ? [null] : [])];
+    if (!islands.length) {
+      cont.innerHTML = emptyState('Aucun chantier', "Aucun chantier n'est rattaché à un engagement.", 'folder');
+      return;
+    }
+    const CW = 0.9, G = 0.25, ISL_GAP = 1.0;
+    let cursor = 0;
+    islands.forEach(name => {
+      const members = cData.filter(cd => name === null ? !cd.theme : cd.theme === name);
+      const n = members.length;
+      const cols = Math.min(3, n);
+      const rows = Math.ceil(n / cols);
+      const Wi = cols * CW + (cols - 1) * G + 0.5;
+      const Di = rows * CW + (rows - 1) * G + 0.5;
+      const x0 = cursor, y0 = 0;
+      const base = name === null ? '#94A3B8' : validHex(themeHex(name));
+      const sumN = members.reduce((x, m) => x + m.n, 0);
+      const sumD = members.reduce((x, m) => x + m.d, 0);
+      const islPct = sumN ? sumD / sumN : 0;
+      const meta = name === null ? null : themeMeta(name);
+      const islTitle = name === null ? 'Sans engagement' : (meta?.nom || name);
+
+      // Socle de l'île
+      parts.push(`<g class="iso-block"><title>${esc(islTitle)} — ${Math.round(islPct * 100)} %</title>${box(x0, y0, Wi, Di, -0.35, 0, isoShade(base, 0.35), base, isoShade(base, -0.25))}`);
+      let maxH = 0.4;
+      members.forEach((cd, k) => {
+        const col = k % cols, row = Math.floor(k / cols);
+        const sx = x0 + 0.25 + col * (CW + G);
+        const sy = y0 + 0.25 + row * (CW + G);
+        const H = cd.n ? 0.3 + cd.pct * 2.2 : 0.3;
+        maxH = Math.max(maxH, H);
+        const sc = ISO_STATUT_COLOR[cd.statut] || '#94A3B8';
+        const ctitle = `<title>${esc((cd.c.code ? cd.c.code + ' · ' : '') + (cd.c.nom || ''))} — ${cd.d}/${cd.n} tâches (${Math.round(cd.pct * 100)} %) · ${ISO_STATUT_LABEL[cd.statut] || ''}</title>`;
+        parts.push(`<g class="iso-block">${ctitle}${box(sx, sy, CW, CW, 0, H, isoShade(sc, 0.22), sc, isoShade(sc, -0.25))}</g>`);
+        parts.push(lateBadge(sx + CW, sy, H, cd.late));
+        if (n <= 6 && cd.c.code) {
+          const tp = P(sx + CW / 2, sy + CW / 2, H);
+          labels.push(`<text x="${tp[0].toFixed(1)}" y="${(tp[1] - 6).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="700" fill="#0F172A" stroke="#fff" stroke-width="2.5" paint-order="stroke" font-family="system-ui,sans-serif">${esc(cd.c.code)}</text>`);
+        }
+      });
+      parts.push('</g>');
+      labels.push(labelAt(x0 + Wi / 2, y0 + Di / 2, maxH + 0.25, meta?.code || islTitle, meta?.code ? islTitle : '', Math.round(islPct * 100) + ' %', isoShade(base, -0.2)));
+      cursor += Wi + ISL_GAP;
+    });
+    legendHtml = `<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--text-muted);margin-top:8px">
+      <span>Île = engagement (hauteur = avancement moyen)</span><span>Structure = chantier (hauteur = avancement)</span>
+      ${Object.keys(ISO_STATUT_COLOR).map(k => `<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:${ISO_STATUT_COLOR[k]};display:inline-block"></span>${ISO_STATUT_LABEL[k]}</span>`).join('')}
+    </div>`;
+  }
+
   const pad = 40;
   const vbX = bounds.minX - pad, vbY = bounds.minY - pad;
   const vbW = (bounds.maxX - bounds.minX) + pad * 2;
   const vbH = (bounds.maxY - bounds.minY) + pad * 2;
 
-  const legend = `<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--text-muted);margin-top:8px">
-    <span>Hauteur du bloc = avancement des tâches</span>
-    <span>Couleur = phase</span>
-    <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:50%;background:#DC2626;display:inline-block"></span>Tâches en retard</span>
+  const toggle = `<div class="vz-group-toggle" role="group" aria-label="Regroupement">
+    <button type="button" class="vz-group-btn${isoMode === 'phase' ? ' active' : ''}" style="width:auto;padding:0 10px" onclick="isoSetMode('phase')">Par phase</button>
+    <button type="button" class="vz-group-btn${isoMode === 'engagement' ? ' active' : ''}" style="width:auto;padding:0 10px" onclick="isoSetMode('engagement')">Par engagement</button>
   </div>`;
 
   const chips = `<div class="dv-kpis" style="margin-bottom:12px">
     <div class="dv-kpi"><div class="dv-kpi-label">Avancement global</div><div class="dv-kpi-value" style="color:#10B981">${globalPct} %</div></div>
-    <div class="dv-kpi"><div class="dv-kpi-label">Phases</div><div class="dv-kpi-value">${phases.length}</div></div>
+    <div class="dv-kpi"><div class="dv-kpi-label">Chantiers</div><div class="dv-kpi-value">${cData.length}</div></div>
     <div class="dv-kpi"><div class="dv-kpi-label">Tâches réalisées</div><div class="dv-kpi-value">${totD} / ${totN}</div></div>
     <div class="dv-kpi"><div class="dv-kpi-label">En retard</div><div class="dv-kpi-value" style="color:${totLate ? '#DC2626' : 'var(--text-primary)'}">${totLate}</div></div>
   </div>`;
 
-  cont.innerHTML = `${chips}
+  cont.innerHTML = `
+    <div style="display:flex;justify-content:flex-end;margin-bottom:8px">${toggle}</div>
+    ${chips}
     <div id="isoStage" style="position:relative;border:1px solid var(--border);border-radius:var(--radius);background:radial-gradient(ellipse at 50% 20%, #FFFFFF 0%, #EEF2F7 70%, #E2E8F0 100%);padding:12px 8px 6px">
       <div style="font-size:13px;font-weight:700;color:var(--text-primary);text-align:center;margin-bottom:4px">${esc(masterProjet.nom || 'Projet')}</div>
       <svg viewBox="${vbX.toFixed(1)} ${vbY.toFixed(1)} ${vbW.toFixed(1)} ${vbH.toFixed(1)}" style="width:100%;height:auto;max-height:560px;display:block" xmlns="http://www.w3.org/2000/svg">
         <style>.iso-block{transition:transform .2s ease;transform-box:fill-box;transform-origin:center}.iso-block:hover{transform:translateY(-3px)}</style>
-        ${blocks.join('')}
+        ${parts.join('')}
         ${labels.join('')}
       </svg>
     </div>
-    ${legend}`;
+    ${legendHtml}`;
 }
 
 function renderObeya() {
