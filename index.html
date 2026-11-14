@@ -10453,8 +10453,24 @@ function isoFullscreen() {
 }
 
 let isoMode = 'phase'; // 'phase' | 'engagement'
+let isoStep = -1;      // -1 = vue d'ensemble, sinon index de l'île (présentation pas à pas)
+let isoStatutFilter = null; // filtre par statut (mode engagement)
+let isoIslands = [];   // îles de la vue courante (pour la navigation)
+
 function isoSetMode(m) {
   isoMode = m;
+  isoStep = -1;
+  isoStatutFilter = null;
+  renderIso();
+}
+function isoGo(delta) {
+  if (!isoIslands.length) return;
+  if (delta === 0) isoStep = -1;
+  else isoStep = Math.max(-1, Math.min(isoIslands.length - 1, isoStep + delta));
+  renderIso();
+}
+function isoSetStatut(k) {
+  isoStatutFilter = isoStatutFilter === k ? null : k;
   renderIso();
 }
 // Toutes les tâches d'un projet et de ses descendants
@@ -10480,7 +10496,7 @@ function renderIso() {
   }
   const DAY = 86400000;
   const now = Date.now();
-  const phases = allProjets.filter(x => x.ref === masterProjet.id).sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999));
+  const phases = allProjets.filter(x => x.ref === masterProjet.id).sort((x, y) => (x.ordre ?? 9999) - (y.ordre ?? 9999));
   if (!phases.length) {
     cont.innerHTML = emptyState('Aucune phase', "Ajoutez des phases dans le plan d'actions pour voir la vue isométrique.", 'folder');
     return;
@@ -10490,7 +10506,7 @@ function renderIso() {
   const isLate = a => !isDone(a) && a.echeance && a.echeance * DAY < now;
 
   // Chantiers (niveau 1, rattachés à une phase) avec leurs indicateurs
-  const cData = allProjets.filter(x => phaseIds.has(x.ref)).sort((a, b) => (a.ordre ?? 9999) - (b.ordre ?? 9999)).map(c => {
+  const cData = allProjets.filter(x => phaseIds.has(x.ref)).sort((x, y) => (x.ordre ?? 9999) - (y.ordre ?? 9999)).map(c => {
     const ts = isoSubtreeTasks(c.id);
     const d = ts.filter(isDone).length;
     return {
@@ -10517,6 +10533,15 @@ function renderIso() {
     bounds.minX = Math.min(bounds.minX, x); bounds.maxX = Math.max(bounds.maxX, x);
     bounds.minY = Math.min(bounds.minY, y); bounds.maxY = Math.max(bounds.maxY, y);
   };
+  // Cadre écran d'une île (socle, structures jusqu'à hTop, plaque ou étiquette)
+  const frameOf = (x0, y0, w, d, hTop) => {
+    const list = [];
+    [x0, x0 + w].forEach(x => [y0, y0 + d].forEach(y => { list.push(P(x, y, hTop)); list.push(P(x, y, -0.35)); }));
+    const q = P(x0 + w / 2, y0 + d + 0.6, 0);
+    list.push([q[0] - 95, q[1] - 26], [q[0] + 95, q[1] + 18]);
+    const xs = list.map(p => p[0]), ys = list.map(p => p[1]);
+    return { minX: Math.min(...xs), maxX: Math.max(...xs), minY: Math.min(...ys), maxY: Math.max(...ys) };
+  };
   const box = (x0, y0, w, d, z0, z1, cTop, cX, cY) => {
     const top = [P(x0, y0, z1), P(x0 + w, y0, z1), P(x0 + w, y0 + d, z1), P(x0, y0 + d, z1)];
     const right = [P(x0 + w, y0, z0), P(x0 + w, y0 + d, z0), P(x0 + w, y0 + d, z1), P(x0 + w, y0, z1)];
@@ -10540,10 +10565,10 @@ function renderIso() {
 
   const parts = [];
   const labels = [];
+  const islandsMeta = [];
   let legendHtml = '';
 
   if (isoMode === 'phase') {
-    // Une île (bloc) par phase, hauteur = avancement des tâches de la phase
     const W = 1.25, D = 1.25, GAP = 0.55;
     phases.forEach((ph, i) => {
       const ta = allActions.filter(a => isoPhaseOf(a.projet) === ph.id);
@@ -10553,26 +10578,34 @@ function renderIso() {
       const H = ta.length ? 0.4 + pct * 2.6 : 0.4;
       const x0 = i * (W + GAP), y0 = 0;
       const title = `<title>${esc((ph.code ? ph.code + ' · ' : '') + (ph.nom || ''))} — ${d}/${ta.length} tâches réalisées</title>`;
-      parts.push(`<g class="iso-block">${title}${box(x0 - 0.18, y0 - 0.18, W + 0.36, D + 0.36, -0.3, 0, '#E2E8F0', '#CBD5E1', '#94A3B8')}${box(x0, y0, W, D, 0, H, isoShade(base, 0.22), base, isoShade(base, -0.25))}${lateBadge(x0 + W, y0, H, ta.filter(isLate).length)}</g>`);
+      const dim = isoStep >= 0 && isoStep !== i ? ' is-dim' : '';
+      parts.push(`<g class="iso-island${dim}" data-idx="${i}">${title}${box(x0 - 0.18, y0 - 0.18, W + 0.36, D + 0.36, -0.3, 0, '#E2E8F0', '#CBD5E1', '#94A3B8')}${box(x0, y0, W, D, 0, H, isoShade(base, 0.22), base, isoShade(base, -0.25))}${lateBadge(x0 + W, y0, H, ta.filter(isLate).length)}</g>`);
       const nom = ph.nom || '';
       const nomShort = nom.length > 20 ? nom.slice(0, 19) + '…' : nom;
       labels.push(labelAt(x0 + W / 2, y0 + D / 2, H, ph.code || nomShort, ph.code ? nomShort : '', ta.length ? Math.round(pct * 100) + ' %' : 'Pas de tâche', base));
+      islandsMeta.push({
+        label: (ph.code ? ph.code + ' · ' : '') + nom,
+        n: cData.filter(cd => cd.c.ref === ph.id).length,
+        d, total: ta.length, late: ta.filter(isLate).length, pct,
+        statuts: null,
+        bounds: frameOf(x0, y0, W, D, H + 1.2)
+      });
     });
     legendHtml = `<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--text-muted);margin-top:8px">
       <span>Hauteur du bloc = avancement des tâches</span><span>Couleur = phase</span>
       <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:50%;background:#DC2626;display:inline-block"></span>Tâches en retard</span></div>`;
   } else {
-    // Une île par engagement, une structure par chantier (hauteur = avancement, couleur = statut)
     const themeNames = getAllThemes().filter(t => cData.some(cd => cd.theme === t));
     const hasNone = cData.some(cd => !cd.theme);
     const islands = [...themeNames, ...(hasNone ? [null] : [])];
     if (!islands.length) {
       cont.innerHTML = emptyState('Aucun chantier', "Aucun chantier n'est rattaché à un engagement.", 'folder');
+      isoIslands = [];
       return;
     }
     const CW = 0.9, G = 0.25, ISL_GAP = 1.0;
     let cursor = 0;
-    islands.forEach(name => {
+    islands.forEach((name, idx) => {
       const members = cData.filter(cd => name === null ? !cd.theme : cd.theme === name);
       const n = members.length;
       const cols = Math.min(3, n);
@@ -10586,26 +10619,29 @@ function renderIso() {
       const islPct = sumN ? sumD / sumN : 0;
       const meta = name === null ? null : themeMeta(name);
       const islTitle = name === null ? 'Sans engagement' : (meta?.nom || name);
+      const dimIsl = isoStep >= 0 && isoStep !== idx ? ' is-dim' : '';
 
-      // Socle de l'île
-      parts.push(`<g class="iso-island"><title>${esc(islTitle)} — ${Math.round(islPct * 100)} %</title>${box(x0, y0, Wi, Di, -0.35, 0, isoShade(base, 0.35), base, isoShade(base, -0.25))}`);
+      parts.push(`<g class="iso-island${dimIsl}" data-idx="${idx}"><title>${esc(islTitle)} — ${Math.round(islPct * 100)} %</title>${box(x0, y0, Wi, Di, -0.35, 0, isoShade(base, 0.35), base, isoShade(base, -0.25))}`);
       let maxH = 0.4;
+      const statuts = { alancer: 0, encours: 0, realise: 0, enretard: 0 };
       members.forEach((cd, k) => {
         const col = k % cols, row = Math.floor(k / cols);
         const sx = x0 + 0.25 + col * (CW + G);
         const sy = y0 + 0.25 + row * (CW + G);
         const H = cd.n ? 0.3 + cd.pct * 2.2 : 0.3;
         maxH = Math.max(maxH, H);
+        if (statuts[cd.statut] !== undefined) statuts[cd.statut]++;
         const sc = ISO_STATUT_COLOR[cd.statut] || '#94A3B8';
+        const dimS = isoStatutFilter && cd.statut !== isoStatutFilter ? ' is-dim' : '';
         const ctitle = `<title>${esc((cd.c.code ? cd.c.code + ' · ' : '') + (cd.c.nom || ''))} — ${cd.d}/${cd.n} tâches (${Math.round(cd.pct * 100)} %) · ${ISO_STATUT_LABEL[cd.statut] || ''}</title>`;
-        parts.push(`<g class="iso-block" style="cursor:pointer" onclick="openChantierDetail(${cd.c.id})">${ctitle}${box(sx, sy, CW, CW, 0, H, isoShade(sc, 0.22), sc, isoShade(sc, -0.25))}</g>`);
-        parts.push(lateBadge(sx + CW, sy, H, cd.late));
+        parts.push(`<g class="iso-block${dimS}" style="cursor:pointer" onclick="openChantierDetail(${cd.c.id})">${ctitle}${box(sx, sy, CW, CW, 0, H, isoShade(sc, 0.22), sc, isoShade(sc, -0.25))}${lateBadge(sx + CW, sy, H, cd.late)}</g>`);
         if (n <= 6 && cd.c.code) {
           const tp = P(sx + CW / 2, sy + CW / 2, H);
-          labels.push(`<text x="${tp[0].toFixed(1)}" y="${(tp[1] - 6).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="700" fill="#0F172A" stroke="#fff" stroke-width="2.5" paint-order="stroke" font-family="system-ui,sans-serif">${esc(cd.c.code)}</text>`);
+          labels.push(`<text class="${dimS.trim()}" x="${tp[0].toFixed(1)}" y="${(tp[1] - 6).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="700" fill="#0F172A" stroke="#fff" stroke-width="2.5" paint-order="stroke" font-family="system-ui,sans-serif">${esc(cd.c.code)}</text>`);
         }
       });
       parts.push('</g>');
+
       const pctTxt = Math.round(islPct * 100) + ' %';
       const short = islTitle.length > 24 ? islTitle.slice(0, 23) + '…' : islTitle;
       const line1 = meta?.code || short;
@@ -10618,22 +10654,48 @@ function renderIso() {
         <text x="${q[0].toFixed(1)}" y="${(q[1] - 8).toFixed(1)}" text-anchor="middle" font-size="12" font-weight="700" fill="#0F172A" font-family="system-ui,sans-serif">${esc(line1)}</text>
         <text x="${q[0].toFixed(1)}" y="${(q[1] + 7).toFixed(1)}" text-anchor="middle" font-size="10.5" fill="${isoShade(base, -0.2)}" font-family="system-ui,sans-serif">${esc(line2)}</text>
       </g>`);
+
+      islandsMeta.push({
+        label: islTitle, n, d: sumD, total: sumN, late: members.reduce((x, m) => x + m.late, 0),
+        pct: islPct, statuts,
+        bounds: frameOf(x0, y0, Wi, Di, maxH + 0.4)
+      });
       cursor += Wi + ISL_GAP;
     });
-    legendHtml = `<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--text-muted);margin-top:8px">
-      <span>Île = engagement (hauteur = avancement moyen)</span><span>Structure = chantier (hauteur = avancement)</span>
-      ${Object.keys(ISO_STATUT_COLOR).map(k => `<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:2px;background:${ISO_STATUT_COLOR[k]};display:inline-block"></span>${ISO_STATUT_LABEL[k]}</span>`).join('')}
+
+    const statutChips = Object.keys(ISO_STATUT_COLOR).map(k => {
+      const active = isoStatutFilter === k ? ' active' : '';
+      return `<button type="button" class="iso-leg-btn${active}" onclick="isoSetStatut('${k}')" title="Filtrer : ${ISO_STATUT_LABEL[k]}"><span style="width:10px;height:10px;border-radius:2px;background:${ISO_STATUT_COLOR[k]};display:inline-block"></span>${ISO_STATUT_LABEL[k]}</button>`;
+    }).join('');
+    legendHtml = `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--text-muted);margin-top:10px">
+      <span>Statut :</span>${statutChips}
+      <span style="margin-left:6px">Île = engagement · Structure = chantier (hauteur = avancement)</span>
     </div>`;
   }
 
+  isoIslands = islandsMeta;
+
+  // Vue d'ensemble et vue focalisée
   const pad = 40;
-  const vbX = bounds.minX - pad, vbY = bounds.minY - pad;
-  const vbW = (bounds.maxX - bounds.minX) + pad * 2;
-  const vbH = (bounds.maxY - bounds.minY) + pad * 2;
+  const fullVB = `${(bounds.minX - pad).toFixed(1)} ${(bounds.minY - pad).toFixed(1)} ${((bounds.maxX - bounds.minX) + pad * 2).toFixed(1)} ${((bounds.maxY - bounds.minY) + pad * 2).toFixed(1)}`;
+  let vb = fullVB;
+  if (isoStep >= 0 && islandsMeta[isoStep]) {
+    const f = islandsMeta[isoStep].bounds;
+    const fp = 24;
+    vb = `${(f.minX - fp).toFixed(1)} ${(f.minY - fp).toFixed(1)} ${((f.maxX - f.minX) + fp * 2).toFixed(1)} ${((f.maxY - f.minY) + fp * 2).toFixed(1)}`;
+  }
 
   const toggle = `<div class="vz-group-toggle" role="group" aria-label="Regroupement">
     <button type="button" class="vz-group-btn${isoMode === 'phase' ? ' active' : ''}" style="width:auto;padding:0 10px" onclick="isoSetMode('phase')">Par phase</button>
     <button type="button" class="vz-group-btn${isoMode === 'engagement' ? ' active' : ''}" style="width:auto;padding:0 10px" onclick="isoSetMode('engagement')">Par engagement</button>
+  </div>`;
+
+  const N = islandsMeta.length;
+  const nav = `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+    <button class="btn-add-ghost" onclick="isoGo(-1)"${isoStep < 0 ? ' disabled style="opacity:.4"' : ''}>‹ Précédent</button>
+    <button class="btn-add-ghost" onclick="isoGo(0)">Vue d'ensemble</button>
+    <button class="btn-add-ghost" onclick="isoGo(1)"${isoStep >= N - 1 ? ' disabled style="opacity:.4"' : ''}>Suivant ›</button>
+    <span class="count-badge">${isoStep >= 0 ? (isoStep + 1) + ' / ' + N : N + (N > 1 ? ' îles' : ' île')}</span>
   </div>`;
 
   const chips = `<div class="dv-kpis" style="margin-bottom:12px">
@@ -10643,17 +10705,41 @@ function renderIso() {
     <div class="dv-kpi"><div class="dv-kpi-label">En retard</div><div class="dv-kpi-value" style="color:${totLate ? '#DC2626' : 'var(--text-primary)'}">${totLate}</div></div>
   </div>`;
 
+  // Carte de synthèse de l'île en cours de présentation
+  let stepCard = '';
+  if (isoStep >= 0 && islandsMeta[isoStep]) {
+    const im = islandsMeta[isoStep];
+    const statutLine = im.statuts ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">${Object.keys(ISO_STATUT_COLOR).map(k => `<span class="iso-leg-btn" style="cursor:default"><span style="width:8px;height:8px;border-radius:2px;background:${ISO_STATUT_COLOR[k]};display:inline-block"></span>${ISO_STATUT_LABEL[k]} <b style="margin-left:4px">${im.statuts[k]}</b></span>`).join('')}</div>` : '';
+    stepCard = `<div class="dv-card" style="margin-top:12px">
+      <div class="dv-card-title">${esc(im.label)}</div>
+      <div class="dv-kpis" style="margin-bottom:0">
+        <div class="dv-kpi"><div class="dv-kpi-label">Avancement</div><div class="dv-kpi-value" style="color:#10B981">${Math.round(im.pct * 100)} %</div></div>
+        <div class="dv-kpi"><div class="dv-kpi-label">Chantiers</div><div class="dv-kpi-value">${im.n}</div></div>
+        <div class="dv-kpi"><div class="dv-kpi-label">Tâches réalisées</div><div class="dv-kpi-value">${im.d} / ${im.total}</div></div>
+        <div class="dv-kpi"><div class="dv-kpi-label">En retard</div><div class="dv-kpi-value" style="color:${im.late ? '#DC2626' : 'var(--text-primary)'}">${im.late}</div></div>
+      </div>
+      ${statutLine}
+    </div>`;
+  }
+
   cont.innerHTML = `
-    <div style="display:flex;justify-content:flex-end;margin-bottom:8px">${toggle}</div>
+    <style>
+      .iso-leg-btn{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--border);background:var(--bg);border-radius:999px;padding:2px 9px;font-size:11px;color:var(--text-secondary);cursor:pointer;font-family:inherit}
+      .iso-leg-btn.active{border-color:var(--text-primary);color:var(--text-primary);font-weight:600}
+    </style>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+      ${nav}${toggle}
+    </div>
     ${chips}
     <div id="isoStage" style="position:relative;border:1px solid var(--border);border-radius:var(--radius);background:radial-gradient(ellipse at 50% 20%, #FFFFFF 0%, #EEF2F7 70%, #E2E8F0 100%);padding:12px 8px 6px">
       <div style="font-size:13px;font-weight:700;color:var(--text-primary);text-align:center;margin-bottom:4px">${esc(masterProjet.nom || 'Projet')}</div>
-      <svg viewBox="${vbX.toFixed(1)} ${vbY.toFixed(1)} ${vbW.toFixed(1)} ${vbH.toFixed(1)}" style="width:100%;height:auto;max-height:560px;display:block" xmlns="http://www.w3.org/2000/svg">
-        <style>.iso-block{transition:transform .2s ease,opacity .2s ease;transform-box:fill-box;transform-origin:center}.iso-block:hover{transform:translateY(-3px)}.iso-island{transition:opacity .2s ease}#isoStage:hover .iso-island{opacity:.5}#isoStage .iso-island:hover{opacity:1}.iso-plaque{pointer-events:none}</style>
+      <svg id="isoSvg" viewBox="${vb}" style="width:100%;height:auto;max-height:560px;display:block;transition:all .3s ease" xmlns="http://www.w3.org/2000/svg">
+        <style>.iso-block{transition:transform .2s ease,opacity .2s ease;transform-box:fill-box;transform-origin:center}.iso-block:hover{transform:translateY(-3px)}.iso-block.is-dim,text.is-dim{opacity:.15}.iso-island{transition:opacity .25s ease}.iso-island.is-dim{opacity:.25}#isoStage:hover .iso-island{opacity:.5}#isoStage .iso-island:hover{opacity:1}.iso-plaque{pointer-events:none}</style>
         ${parts.join('')}
         ${labels.join('')}
       </svg>
     </div>
+    ${stepCard}
     ${legendHtml}`;
 }
 
