@@ -1259,6 +1259,7 @@ tr:hover .cr-del-btn { opacity: 1; }
         <!-- Vue Gantt sous-projets -->
         <div id="sp-gantt" style="flex:1;flex-direction:column;overflow:hidden;display:none">
           <div id="ganttProjetFilters" style="padding:8px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;background:var(--bg)">
+            <div class="vz-tag-filter" id="gpPhaseTags" role="group" aria-label="Phase"></div>
             <select class="filter-select" id="gpFilterProjet" onchange="renderGanttProjet()">
   <option value="">Phase</option>
 </select>
@@ -8155,6 +8156,25 @@ function showGanttTaskInfo(evt, id) {
   tip.style.top  = (evt.clientY - 8)  + 'px';
   tip.classList.add('show');
 }
+// ── Sélecteur de phase du Gantt (une phase affichée à la fois, phase 1 par défaut) ──
+let gpSelectedPhaseId = null;
+
+function renderGpPhaseTags(phases, selId) {
+  const host = document.getElementById('gpPhaseTags');
+  if (!host) return;
+  host.innerHTML = phases.map(p => {
+    const hex = projetHex(p) || '#1A1A1A';
+    const active = p.id === selId;
+    const label = (p.code ? p.code + ' · ' : '') + (p.nom || 'Sans nom');
+    return `<button type="button" class="vz-tag${active ? ' active' : ''}" style="--tag-hex:${hex}" onclick="gpSetPhase(${p.id})"><span class="vz-tag-dot"></span>${esc(label)}</button>`;
+  }).join('');
+}
+
+function gpSetPhase(id) {
+  gpSelectedPhaseId = id;
+  renderGanttProjet();
+}
+
 // Avancement des tâches d'un projet et de ses descendants (null si aucune tâche)
 function ganttTaskProg(pid) {
   const ids = new Set();
@@ -8216,6 +8236,16 @@ function renderGanttProjet() {
     rows.push({ ...p1, depth: 0 });
     collectGanttRows(p1.id, 1);
   });
+
+  // Phase affichée : phase 1 par défaut, puis celle choisie par les tags
+  if (!gpSelectedPhaseId || !lvl1.some(p => p.id === gpSelectedPhaseId)) gpSelectedPhaseId = lvl1[0] ? lvl1[0].id : null;
+  renderGpPhaseTags(lvl1, gpSelectedPhaseId);
+  if (gpSelectedPhaseId != null) {
+    const keepPhase = new Set();
+    const collectPhase = id => { keepPhase.add(id); subs.filter(c => c.ref === id).forEach(c => collectPhase(c.id)); };
+    collectPhase(gpSelectedPhaseId);
+    rows = rows.filter(r => keepPhase.has(r.id));
+  }
 
   // Filtres
   if (fProjetGantt) {
