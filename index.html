@@ -10588,7 +10588,7 @@ function renderIso() {
       const islTitle = name === null ? 'Sans engagement' : (meta?.nom || name);
 
       // Socle de l'île
-      parts.push(`<g class="iso-block"><title>${esc(islTitle)} — ${Math.round(islPct * 100)} %</title>${box(x0, y0, Wi, Di, -0.35, 0, isoShade(base, 0.35), base, isoShade(base, -0.25))}`);
+      parts.push(`<g class="iso-island"><title>${esc(islTitle)} — ${Math.round(islPct * 100)} %</title>${box(x0, y0, Wi, Di, -0.35, 0, isoShade(base, 0.35), base, isoShade(base, -0.25))}`);
       let maxH = 0.4;
       members.forEach((cd, k) => {
         const col = k % cols, row = Math.floor(k / cols);
@@ -10598,7 +10598,7 @@ function renderIso() {
         maxH = Math.max(maxH, H);
         const sc = ISO_STATUT_COLOR[cd.statut] || '#94A3B8';
         const ctitle = `<title>${esc((cd.c.code ? cd.c.code + ' · ' : '') + (cd.c.nom || ''))} — ${cd.d}/${cd.n} tâches (${Math.round(cd.pct * 100)} %) · ${ISO_STATUT_LABEL[cd.statut] || ''}</title>`;
-        parts.push(`<g class="iso-block">${ctitle}${box(sx, sy, CW, CW, 0, H, isoShade(sc, 0.22), sc, isoShade(sc, -0.25))}</g>`);
+        parts.push(`<g class="iso-block" style="cursor:pointer" onclick="openChantierDetail(${cd.c.id})">${ctitle}${box(sx, sy, CW, CW, 0, H, isoShade(sc, 0.22), sc, isoShade(sc, -0.25))}</g>`);
         parts.push(lateBadge(sx + CW, sy, H, cd.late));
         if (n <= 6 && cd.c.code) {
           const tp = P(sx + CW / 2, sy + CW / 2, H);
@@ -10606,7 +10606,18 @@ function renderIso() {
         }
       });
       parts.push('</g>');
-      labels.push(labelAt(x0 + Wi / 2, y0 + Di / 2, maxH + 0.25, meta?.code || islTitle, meta?.code ? islTitle : '', Math.round(islPct * 100) + ' %', isoShade(base, -0.2)));
+      const pctTxt = Math.round(islPct * 100) + ' %';
+      const short = islTitle.length > 24 ? islTitle.slice(0, 23) + '…' : islTitle;
+      const line1 = meta?.code || short;
+      const line2 = meta?.code ? short + ' · ' + pctTxt : pctTxt;
+      const q = P(x0 + Wi / 2, y0 + Di + 0.6, 0);
+      track([q[0] - 90, q[1] - 24]); track([q[0] + 90, q[1] + 16]);
+      const pw = Math.max(line1.length, line2.length) * 6.4 + 18;
+      labels.push(`<g class="iso-plaque"><title>${esc(islTitle)} — ${pctTxt}</title>
+        <rect x="${(q[0] - pw / 2).toFixed(1)}" y="${(q[1] - 22).toFixed(1)}" width="${pw.toFixed(1)}" height="36" rx="8" fill="#FFFFFF" stroke="${base}" stroke-width="1.5"/>
+        <text x="${q[0].toFixed(1)}" y="${(q[1] - 8).toFixed(1)}" text-anchor="middle" font-size="12" font-weight="700" fill="#0F172A" font-family="system-ui,sans-serif">${esc(line1)}</text>
+        <text x="${q[0].toFixed(1)}" y="${(q[1] + 7).toFixed(1)}" text-anchor="middle" font-size="10.5" fill="${isoShade(base, -0.2)}" font-family="system-ui,sans-serif">${esc(line2)}</text>
+      </g>`);
       cursor += Wi + ISL_GAP;
     });
     legendHtml = `<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--text-muted);margin-top:8px">
@@ -10638,7 +10649,7 @@ function renderIso() {
     <div id="isoStage" style="position:relative;border:1px solid var(--border);border-radius:var(--radius);background:radial-gradient(ellipse at 50% 20%, #FFFFFF 0%, #EEF2F7 70%, #E2E8F0 100%);padding:12px 8px 6px">
       <div style="font-size:13px;font-weight:700;color:var(--text-primary);text-align:center;margin-bottom:4px">${esc(masterProjet.nom || 'Projet')}</div>
       <svg viewBox="${vbX.toFixed(1)} ${vbY.toFixed(1)} ${vbW.toFixed(1)} ${vbH.toFixed(1)}" style="width:100%;height:auto;max-height:560px;display:block" xmlns="http://www.w3.org/2000/svg">
-        <style>.iso-block{transition:transform .2s ease;transform-box:fill-box;transform-origin:center}.iso-block:hover{transform:translateY(-3px)}</style>
+        <style>.iso-block{transition:transform .2s ease,opacity .2s ease;transform-box:fill-box;transform-origin:center}.iso-block:hover{transform:translateY(-3px)}.iso-island{transition:opacity .2s ease}#isoStage:hover .iso-island{opacity:.5}#isoStage .iso-island:hover{opacity:1}.iso-plaque{pointer-events:none}</style>
         ${parts.join('')}
         ${labels.join('')}
       </svg>
