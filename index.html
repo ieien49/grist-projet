@@ -1273,13 +1273,11 @@ tr:hover .cr-del-btn { opacity: 1; }
               <option value="">Tous les pilotes</option>
             </select>
             </div>
-                                    <button class="gantt-toggle-actions on" id="gpShowDepBtn" onclick="toggleGanttDep()" title="Masquer les dépendances">
+                                    <button class="gantt-toggle-actions on" id="gpShowDepBtn" onclick="toggleGanttDep()" title="Masquer les dépendances" aria-label="Dépendances">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 0 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-              Dépendances
             </button>
-            <button class="gantt-toggle-actions on" id="gpShowTasksBtn" onclick="toggleGanttTasks()" title="Masquer les jalons">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14l-5-4.87 6.91-1.01L12 2z" transform="rotate(45 12 12)"/></svg>
-              Jalons
+            <button class="gantt-toggle-actions on" id="gpShowTasksBtn" onclick="toggleGanttTasks()" title="Masquer les jalons" aria-label="Jalons">
+              <svg width="11" height="11" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" fill="currentColor" transform="rotate(45 12 12)"/></svg>
             </button>
             <button class="btn-add-ghost" onclick="exportGanttPng()" style="margin-left:auto">
   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
