@@ -1425,7 +1425,6 @@ tr:hover .cr-del-btn { opacity: 1; }
             </div>
             <select id="vzFilterEtat" style="display:none"><option value=""></option><option value="alancer"></option><option value="encours"></option><option value="realise"></option></select>
             <div class="vz-tag-filter" role="group" aria-label="Filtrer par suivi">
-              <button type="button" class="vz-tag active" data-etat="" style="--tag-hex:#1A1A1A" onclick="vzSetEtat('')">Tous</button>
               <button type="button" class="vz-tag" data-etat="alancer" style="--tag-hex:#9CA3AF" onclick="vzSetEtat('alancer')"><span class="vz-tag-dot"></span>À lancer</button>
               <button type="button" class="vz-tag" data-etat="encours" style="--tag-hex:#2563EB" onclick="vzSetEtat('encours')"><span class="vz-tag-dot"></span>En cours</button>
               <button type="button" class="vz-tag" data-etat="realise" style="--tag-hex:#15803D" onclick="vzSetEtat('realise')"><span class="vz-tag-dot"></span>Réalisé</button>
@@ -1445,12 +1444,14 @@ tr:hover .cr-del-btn { opacity: 1; }
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg>
               </button>
             </div>
-            <button class="btn-add-ghost" onclick="vzExpandAllPhases()" title="Tout déplier" style="padding:3px 9px">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/><path d="M6 3l6 6 6-6" opacity=".4"/></svg>
-            </button>
-            <button class="btn-add-ghost" onclick="vzCollapseAllPhases()" title="Tout replier" style="padding:3px 9px">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 15l-6-6-6 6"/><path d="M18 21l-6-6-6 6" opacity=".4"/></svg>
-            </button>
+            <div class="vz-group-toggle" role="group" aria-label="Déplier ou replier les chantiers">
+              <button type="button" class="vz-group-btn" title="Tout déplier" aria-label="Tout déplier" onclick="vzExpandAllPhases()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <button type="button" class="vz-group-btn" title="Tout replier" aria-label="Tout replier" onclick="vzCollapseAllPhases()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
+              </button>
+            </div>
             <span class="count-badge" id="vzCount" style="margin-left:auto">—</span>
             <button class="btn-add" onclick="openSousProjetModal()">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -3746,6 +3747,8 @@ function vzPhaseCountLabel(list) {
 
 function vzSetEtat(v) {
   const sel = document.getElementById('vzFilterEtat');
+  const current = sel ? sel.value : '';
+  if (v === current) v = ''; // recliquer sur le tag actif = pas de filtre
   if (sel) sel.value = v;
   document.querySelectorAll('.vz-tag').forEach(b => b.classList.toggle('active', b.dataset.etat === v));
   renderVisuelChantiers();
