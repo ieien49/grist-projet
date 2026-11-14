@@ -986,6 +986,7 @@ tr:hover .cr-del-btn { opacity: 1; }
 .dv-month-val { font-size: 10px; color: var(--text-secondary); margin-bottom: 3px; font-variant-numeric: tabular-nums; }
 .dv-month-lbl { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
 .dv-month.dv-now .dv-month-lbl { color: var(--text-primary); font-weight: 600; }
+.dv-section-title { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.07em; margin: 22px 0 10px; }
 </style>
 </head>
 <body>
@@ -10276,6 +10277,117 @@ function renderDataviz() {
     </div>`;
   }).join('')}</div>`;
 
+  // ── Helpers communs ──
+  const barList = (entries, showDone = true) => {
+    if (!entries.length) return '<div class="obeya-empty-text">Aucune donnée</div>';
+    const max = Math.max(1, ...entries.map(e => e.n));
+    return entries.map(e => `<div class="dv-row">
+      <div class="dv-row-head"><span>${esc(e.label)}</span><b>${showDone ? e.d + '/' : ''}${e.n}</b></div>
+      <div class="dv-bar-track" style="position:relative">
+        <div class="dv-bar-fill" style="width:${(e.n / max * 100).toFixed(2)}%;background:#CBD5E1;position:absolute;left:0;top:0"></div>
+        <div class="dv-bar-fill" style="width:${(e.d / max * 100).toFixed(2)}%;background:#10B981;position:absolute;left:0;top:0"></div>
+      </div>
+    </div>`).join('');
+  };
+  const BUCKET_ORDER = ['En retard', '0 à 7 j', '8 à 30 j', 'Plus de 30 j', 'Sans échéance'];
+  const BUCKET_COLOR = { 'En retard': '#DC2626', '0 à 7 j': '#F59E0B', '8 à 30 j': '#3B82F6', 'Plus de 30 j': '#93C5FD', 'Sans échéance': '#9CA3AF' };
+  const bucketOf = ms => {
+    if (!ms) return 'Sans échéance';
+    const diff = ms - now;
+    if (diff < 0) return 'En retard';
+    if (diff <= 7 * DAY) return '0 à 7 j';
+    if (diff <= 30 * DAY) return '8 à 30 j';
+    return 'Plus de 30 j';
+  };
+  const bucketHtml = items => {
+    const counts = Object.fromEntries(BUCKET_ORDER.map(k => [k, 0]));
+    items.forEach(ms => counts[bucketOf(ms)]++);
+    const total = items.length;
+    if (!total) return '<div class="obeya-empty-text">Aucune donnée</div>';
+    return BUCKET_ORDER.map(k => `<div class="dv-row">
+      <div class="dv-row-head"><span><span class="dv-dot" style="display:inline-block;background:${BUCKET_COLOR[k]};margin-right:6px;vertical-align:middle"></span>${k}</span><b>${counts[k]}</b></div>
+      <div class="dv-bar-track"><div class="dv-bar-fill" style="width:${(counts[k] / total * 100).toFixed(2)}%;background:${BUCKET_COLOR[k]}"></div></div>
+    </div>`).join('');
+  };
+  const tagsOfAction = a => {
+    const pr = allProjets.find(x => x.id === a.projet);
+    return pr && pr.theme ? pr.theme.split(',').map(t => t.trim()).filter(Boolean) : [];
+  };
+  const instOfProjet = projetId => {
+    const pr = allProjets.find(x => x.id === projetId);
+    return pr ? pr.instance || 0 : 0;
+  };
+  const instLabel = id => {
+    const i = id ? instances[id] : null;
+    return i ? (i.sigle || i.nom || 'Sans nom') : 'Sans instance';
+  };
+
+  // ── Suivi des tâches ──
+  const openActs = acts.filter(a => !isDone(a));
+
+  const themeMap = {};
+  acts.forEach(a => {
+    const tags = tagsOfAction(a);
+    (tags.length ? tags : ['Sans thème']).forEach(tg => {
+      if (!themeMap[tg]) themeMap[tg] = { label: tg, n: 0, d: 0 };
+      themeMap[tg].n++;
+      if (isDone(a)) themeMap[tg].d++;
+    });
+  });
+  const themeHtml = barList(Object.values(themeMap).sort((x, y) => y.n - x.n).slice(0, 10));
+
+  const instMap = {};
+  acts.forEach(a => {
+    const id = instOfProjet(a.projet);
+    const k = String(id);
+    if (!instMap[k]) instMap[k] = { label: instLabel(id), n: 0, d: 0 };
+    instMap[k].n++;
+    if (isDone(a)) instMap[k].d++;
+  });
+  const instTasksHtml = barList(Object.values(instMap).sort((x, y) => y.n - x.n).slice(0, 10));
+
+  const prioMap = {};
+  acts.forEach(a => {
+    const k = a.priorite || 'Non renseignée';
+    if (!prioMap[k]) prioMap[k] = { label: k, n: 0, d: 0 };
+    prioMap[k].n++;
+    if (isDone(a)) prioMap[k].d++;
+  });
+  const prioHtml = barList(Object.values(prioMap).sort((x, y) => y.n - x.n));
+
+  const tasksBucketsHtml = bucketHtml(openActs.map(a => a.echeance ? a.echeance * DAY : null));
+
+  // ── Suivi des décisions ──
+  const DONE_DEC = ['Réalisé', 'Réalisée', 'Clôturé', 'Clôturée', 'Terminé', 'Terminée', 'Fait'];
+  const decs = allDecisions;
+  const decIsDone = d => DONE_DEC.includes(d.etat);
+  const decOpen = decs.filter(d => !decIsDone(d));
+  const decLate = decOpen.filter(d => d.echeance && d.echeance * DAY < now).length;
+
+  const decKpis = `<div class="dv-kpis">
+    ${kpi('Décisions', decs.length, 'var(--text-primary)')}
+    ${kpi('Ouvertes', decOpen.length, 'var(--text-primary)')}
+    ${kpi('En retard', decLate, decLate ? '#DC2626' : 'var(--text-primary)')}
+  </div>`;
+
+  const decEtatMap = {};
+  decs.forEach(d => {
+    const k = d.etat || 'Non renseigné';
+    if (!decEtatMap[k]) decEtatMap[k] = { label: k, n: 0, d: 0 };
+    decEtatMap[k].n++;
+  });
+  const decEtatHtml = barList(Object.values(decEtatMap).sort((x, y) => y.n - x.n), false);
+
+  const decInstMap = {};
+  decs.forEach(d => {
+    const k = String(d.instance || 0);
+    if (!decInstMap[k]) decInstMap[k] = { label: instLabel(d.instance), n: 0, d: 0 };
+    decInstMap[k].n++;
+  });
+  const decInstHtml = barList(Object.values(decInstMap).sort((x, y) => y.n - x.n), false);
+
+  const decBucketsHtml = bucketHtml(decOpen.map(d => d.echeance ? d.echeance * DAY : null));
+
   cont.innerHTML = `
     ${kpisHtml}
     <div class="dv-grid">
@@ -10283,6 +10395,22 @@ function renderDataviz() {
       <div class="dv-card"><div class="dv-card-title">Avancement par phase</div>${phaseHtml}</div>
       <div class="dv-card"><div class="dv-card-title">Actions par responsable</div>${actorHtml}</div>
       <div class="dv-card dv-span2"><div class="dv-card-title">Échéances par mois</div>${monthsHtml}</div>
+    </div>
+
+    <div class="dv-section-title">Suivi des tâches</div>
+    <div class="dv-grid">
+      <div class="dv-card"><div class="dv-card-title">Actions par thème</div>${themeHtml}</div>
+      <div class="dv-card"><div class="dv-card-title">Actions par instance</div>${instTasksHtml}</div>
+      <div class="dv-card"><div class="dv-card-title">Actions par priorité</div>${prioHtml}</div>
+      <div class="dv-card"><div class="dv-card-title">Actions ouvertes par échéance</div>${tasksBucketsHtml}</div>
+    </div>
+
+    <div class="dv-section-title">Suivi des décisions</div>
+    ${decKpis}
+    <div class="dv-grid">
+      <div class="dv-card"><div class="dv-card-title">Décisions par état</div>${decEtatHtml}</div>
+      <div class="dv-card"><div class="dv-card-title">Décisions par instance</div>${decInstHtml}</div>
+      <div class="dv-card"><div class="dv-card-title">Décisions ouvertes par échéance</div>${decBucketsHtml}</div>
     </div>`;
 }
 
