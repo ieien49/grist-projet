@@ -8155,6 +8155,21 @@ function showGanttTaskInfo(evt, id) {
   tip.style.top  = (evt.clientY - 8)  + 'px';
   tip.classList.add('show');
 }
+// Avancement des tâches d'un projet et de ses descendants (null si aucune tâche)
+function ganttTaskProg(pid) {
+  const ids = new Set();
+  const walk = id => {
+    if (ids.has(id)) return;
+    ids.add(id);
+    allProjets.filter(c => c.ref === id).forEach(c => walk(c.id));
+  };
+  walk(pid);
+  const ts = allActions.filter(a => ids.has(a.projet));
+  if (!ts.length) return null;
+  const done = ts.filter(a => a.etat === 'Réalisé').length;
+  return { done, total: ts.length, pct: Math.round(done / ts.length * 100) };
+}
+
 function instHexFor(p) {
   const inst = p.instance ? instances[p.instance] : null;
   if (!inst) return null;
@@ -8329,6 +8344,8 @@ while (cur2.getTime() < dEnd.getTime()) {
         const x1 = msX(sMs), x2 = msX(eMs);
         const bw = Math.max(x2 - x1, 60);
         const by = l.y + (l.h - BAR_H) / 2;
+       const tpP = ganttTaskProg(p.id);
+       const progPhase = (tpP && bw > 0) ? `<rect x="${x1.toFixed(1)}" y="${by.toFixed(1)}" width="${(bw * tpP.pct / 100).toFixed(1)}" height="${BAR_H}" rx="${BAR_R}" fill="#000" opacity="0.22"/>` : '';
        const codeLabelPhase = p.code || label;
         const maxCharsPhase = Math.max(4, Math.floor((bw - 16) / (5.6 * ganttScale)));
         const labelUp = codeLabelPhase.length > maxCharsPhase ? codeLabelPhase.slice(0, maxCharsPhase - 1) + '…' : codeLabelPhase;
@@ -8342,6 +8359,7 @@ while (cur2.getTime() < dEnd.getTime()) {
           : '';
         svgBody += `<g style="cursor:pointer" onclick="showGanttInfo(event, ${p.id})">
   <rect x="${x1.toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(1)}" height="${BAR_H}" rx="${BAR_R}" fill="${barColor}" opacity="${termine ? 0.7 : 0.95}"/>
+  ${progPhase}
   ${instIconPhase}
   <text x="${(x1 + 10 + dotOffsetPhase).toFixed(1)}" y="${(by + BAR_H / 2).toFixed(1)}" dominant-baseline="central" font-size="${fsPhase}" font-weight="700" fill="#fff" font-family="system-ui,sans-serif" letter-spacing="0.02em">${esc(labelUp.toUpperCase())}</text>
 </g>`;
@@ -8354,6 +8372,8 @@ while (cur2.getTime() < dEnd.getTime()) {
       if (sMs && eMs) {
         const x1 = msX(sMs), x2 = msX(eMs);
         const cy = l.y + l.h - 5;
+     const tpS = ganttTaskProg(p.id);
+     const progLblSub = (tpS && tpS.total) ? `<text x="${(x2 + 7).toFixed(1)}" y="${(cy + 3).toFixed(1)}" font-size="${Math.round(9 * ganttScale)}" font-weight="600" fill="${tpS.pct === 100 ? '#15803D' : '#666'}" font-family="system-ui,sans-serif">${tpS.pct}%</text>` : '';
      const codeLabelSub = p.code || label;
         const maxCharsSub = Math.max(5, Math.floor((TOTAL_W - x1 - 14) / (5.4 * ganttScale)));
         const labelSub = codeLabelSub.length > maxCharsSub ? codeLabelSub.slice(0, maxCharsSub - 1) + '…' : codeLabelSub;
@@ -8369,6 +8389,7 @@ while (cur2.getTime() < dEnd.getTime()) {
   <line x1="${x1.toFixed(1)}" y1="${cy.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${cy.toFixed(1)}" stroke="${barColor}" stroke-width="2"/>
   <circle cx="${x1.toFixed(1)}" cy="${cy.toFixed(1)}" r="3.2" fill="${barColor}"/>
   <circle cx="${x2.toFixed(1)}" cy="${cy.toFixed(1)}" r="3.2" fill="${barColor}"/>
+  ${progLblSub}
   ${instIconSub}
   <text x="${(x1 + dotOffsetSub).toFixed(1)}" y="${(cy - 8).toFixed(1)}" font-size="${fsSub}" font-weight="600" fill="#1a1a1a" font-family="system-ui,sans-serif">${esc(labelSub)}</text>
 </g>`;
@@ -8392,7 +8413,8 @@ while (cur2.getTime() < dEnd.getTime()) {
       const tx = msX(t.echeance * 86400000);
       const ty = l.y + l.h / 2;
       const done = t.etat === 'Réalisé';
-      const dColor = done ? '#999999' : barColor;
+      const lateT = !done && t.echeance > 0 && (t.echeance * 86400000) < Date.now();
+      const dColor = done ? '#999999' : (lateT ? '#DC2626' : barColor);
       const tLabel = t.action || '(tâche sans nom)';
       const charW = 4.7 * ganttScale;
       const availLeft = tx - CHART_PAD_L - 12;
@@ -8461,10 +8483,31 @@ while (cur2.getTime() < dEnd.getTime()) {
   // Marqueur flèche
   const defs = showDep ? `<defs><marker id="arrowGP" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><polygon points="0 0, 7 3.5, 0 7" fill="#6366f1" opacity="0.7"/></marker></defs>` : '';
 
+  // Indicateurs de synthèse sur les lignes affichées
+  const rowIds = new Set(rows.map(r => r.id));
+  const kTasks = allActions.filter(a => rowIds.has(a.projet));
+  const kDone  = kTasks.filter(a => a.etat === 'Réalisé').length;
+  const kPct   = kTasks.length ? Math.round(kDone / kTasks.length * 100) : null;
+  const kLate  = kTasks.filter(a => a.etat !== 'Réalisé' && a.echeance > 0 && a.echeance * 86400000 < Date.now()).length;
+  const kEnCours = rows.filter(r => projetStatutAffiche(r) === 'encours').length;
+  const kRetard  = rows.filter(r => projetStatutAffiche(r) === 'enretard').length;
+  const kCard = (label, value, color, extra = '') => `<div style="border:1px solid var(--border);border-radius:var(--radius);padding:6px 12px;background:var(--surface2);min-width:120px">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text-muted)">${label}</div>
+      <div style="font-size:16px;font-weight:600;color:${color};font-variant-numeric:tabular-nums">${value}</div>${extra}
+    </div>`;
+  const kProgBar = kPct !== null ? `<div style="height:4px;border-radius:2px;background:var(--surface3);overflow:hidden;margin-top:4px"><div style="height:100%;width:${kPct}%;background:#1A7A4F"></div></div>` : '';
+  const kpiHtml = `<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+    ${kCard('Sous-projets', rows.length, 'var(--text-primary)')}
+    ${kCard('En cours', kEnCours, '#2563EB')}
+    ${kCard('En retard', kRetard, kRetard ? '#DC2626' : 'var(--text-primary)')}
+    ${kCard('Tâches réalisées', kPct !== null ? kPct + ' %' : '—', '#1A7A4F', kProgBar)}
+    ${kCard('Tâches en retard', kLate, kLate ? '#DC2626' : 'var(--text-primary)')}
+  </div>`;
+
   cont._ganttLayout = layout;
   cont._ganttDims = { HEADER_H, TOTAL_W };
 
-  cont.innerHTML = `<svg id="ganttProjetSvg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${TOTAL_W} ${totalH}" width="100%" style="display:block;height:auto;min-height:${totalH}px;cursor:default">
+  cont.innerHTML = `${kpiHtml}<svg id="ganttProjetSvg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${TOTAL_W} ${totalH}" width="100%" style="display:block;height:auto;min-height:${totalH}px;cursor:default">
     ${defs}
     ${svgBody}
     ${svgArrows}
@@ -8476,6 +8519,8 @@ while (cur2.getTime() < dEnd.getTime()) {
     <span style="font-size:10.5px;color:var(--text-muted);display:inline-flex;align-items:center;gap:4px"><span style="width:6px;height:6px;background:#1A7A4F;display:inline-block;transform:rotate(45deg)"></span>Tâche (jalon daté)</span>
     <span style="font-size:10.5px;color:var(--text-muted);display:inline-flex;align-items:center;gap:4px"><span style="width:12px;height:7px;border-radius:2px;background:#888888;opacity:0.7;display:inline-block"></span>Réalisé</span>
     <span style="font-size:10.5px;color:#DC2626;display:inline-flex;align-items:center;gap:4px"><span style="width:1.5px;height:10px;background:#DC2626;display:inline-block"></span>Aujourd'hui</span>
+    <span style="font-size:10.5px;color:#DC2626;display:inline-flex;align-items:center;gap:4px"><span style="width:6px;height:6px;background:#DC2626;display:inline-block;transform:rotate(45deg)"></span>Tâche en retard</span>
+    <span style="font-size:10.5px;color:var(--text-muted);display:inline-flex;align-items:center;gap:4px"><span style="width:12px;height:7px;border-radius:2px;background:#000;opacity:0.22;display:inline-block"></span>Avancement des tâches</span>
     ${showDep ? '<span style="font-size:10.5px;color:#6366f1;display:inline-flex;align-items:center;gap:4px"><span style="width:14px;height:1.5px;background:#6366f1;display:inline-block;border-top:1.5px dashed #6366f1"></span>Dépendance</span>' : ''}
   </div>`;
 
